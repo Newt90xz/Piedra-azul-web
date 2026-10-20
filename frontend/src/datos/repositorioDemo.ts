@@ -2,9 +2,11 @@ import type {
   Curso,
   Docente,
   Estudiante,
+  MiembroSala,
   Observacion,
   RegistroEmocion,
   ResultadoActividad,
+  Sala,
 } from '../dominio/tipos.ts'
 import { AJUSTES_POR_DEFECTO, type Repositorio } from './repositorio.ts'
 
@@ -21,6 +23,8 @@ interface Estado {
   emociones: RegistroEmocion[]
   resultados: ResultadoActividad[]
   observaciones: Observacion[]
+  salas?: Sala[]
+  miembros?: MiembroSala[]
 }
 
 const id = () => crypto.randomUUID()
@@ -172,6 +176,16 @@ export const repositorioDemo: Repositorio = {
     return guardado!
   },
 
+  async eliminarEstudiante(estudianteId) {
+    mutar((e) => {
+      e.estudiantes = e.estudiantes.filter((x) => x.id !== estudianteId)
+      e.emociones = e.emociones.filter((x) => x.estudianteId !== estudianteId)
+      e.resultados = e.resultados.filter((x) => x.estudianteId !== estudianteId)
+      e.observaciones = e.observaciones.filter((x) => x.estudianteId !== estudianteId)
+      e.miembros = (e.miembros ?? []).filter((m) => m.estudianteId !== estudianteId)
+    })
+  },
+
   async registrarEmocion(estudianteId, emocion) {
     mutar((e) => e.emociones.push({ id: id(), estudianteId, emocion, fecha: new Date().toISOString() }))
   },
@@ -200,6 +214,96 @@ export const repositorioDemo: Repositorio = {
   },
   async listarObservaciones(estudianteId) {
     return porFecha(leer().observaciones.filter((x) => x.estudianteId === estudianteId))
+  },
+
+  async actualizarObservacion(obsId, texto) {
+    mutar((e) => (e.observaciones = e.observaciones.map((o) => (o.id === obsId ? { ...o, texto } : o))))
+  },
+  async eliminarObservacion(obsId) {
+    mutar((e) => (e.observaciones = e.observaciones.filter((o) => o.id !== obsId)))
+  },
+
+  async listarSalas(cursoId) {
+    return (leer().salas ?? []).filter((s) => s.cursoId === cursoId)
+  },
+  async crearSala(cursoId, nombre, cupos) {
+    const sala: Sala = { id: id(), cursoId, nombre, abierta: true, cupos }
+    mutar((e) => (e.salas = [...(e.salas ?? []), sala]))
+    return sala
+  },
+  async actualizarSala(salaId, cambios) {
+    mutar((e) => (e.salas = (e.salas ?? []).map((s) => (s.id === salaId ? { ...s, ...cambios } : s))))
+  },
+  async eliminarSala(salaId) {
+    mutar((e) => {
+      e.salas = (e.salas ?? []).filter((s) => s.id !== salaId)
+      e.miembros = (e.miembros ?? []).filter((m) => m.salaId !== salaId)
+    })
+  },
+  async listarMiembros(cursoId) {
+    const e = leer()
+    const salas = new Set((e.salas ?? []).filter((s) => s.cursoId === cursoId).map((s) => s.id))
+    return (e.miembros ?? []).filter((m) => salas.has(m.salaId))
+  },
+  async conectarEstudiante(salaId, estudianteId) {
+    mutar((e) => (e.miembros = [...(e.miembros ?? []).filter((m) => m.estudianteId !== estudianteId), { estudianteId, salaId }]))
+  },
+  async desconectarEstudiante(estudianteId) {
+    mutar((e) => (e.miembros = (e.miembros ?? []).filter((m) => m.estudianteId !== estudianteId)))
+  },
+
+  async vaciarSala(salaId, cerrar) {
+    mutar((e) => {
+      if (cerrar) e.salas = (e.salas ?? []).map((s) => (s.id === salaId ? { ...s, abierta: false } : s))
+      e.miembros = (e.miembros ?? []).filter((m) => m.salaId !== salaId)
+    })
+  },
+
+  // La demo guarda todo en un solo navegador, así que no distingue dispositivos.
+  async salasAbiertas() {
+    const e = leer()
+    return (e.salas ?? [])
+      .filter((s) => s.abierta)
+      .map((s) => ({
+        id: s.id,
+        nombre: s.nombre,
+        curso: e.cursos.find((c) => c.id === s.cursoId)?.nombre ?? '',
+        cupos: s.cupos,
+        ocupados: (e.miembros ?? []).filter((m) => m.salaId === s.id).length,
+      }))
+  },
+  async perfilesDeSala(salaId) {
+    const e = leer()
+    const sala = (e.salas ?? []).find((s) => s.id === salaId)
+    if (!sala) return []
+    return e.estudiantes
+      .filter((x) => x.cursoId === sala.cursoId && x.activo)
+      .map((x) => ({
+        id: x.id,
+        nombre: x.nombre,
+        avatar: x.avatar,
+        color: x.color,
+        salaId: (e.miembros ?? []).find((m) => m.estudianteId === x.id)?.salaId ?? null,
+      }))
+  },
+  async unirseASala(salaId, estudianteId) {
+    const e = leer()
+    const sala = (e.salas ?? []).find((s) => s.id === salaId)
+    if (!sala) throw new Error('sala_inexistente')
+    const yaEsta = (e.miembros ?? []).some((m) => m.estudianteId === estudianteId && m.salaId === salaId)
+    if (yaEsta) return
+    if (!sala.abierta) throw new Error('sala_cerrada')
+    if ((e.miembros ?? []).filter((m) => m.salaId === salaId).length >= sala.cupos) throw new Error('sala_llena')
+    await repositorioDemo.conectarEstudiante(salaId, estudianteId)
+  },
+  async salirDeSala(estudianteId) {
+    await repositorioDemo.desconectarEstudiante(estudianteId)
+  },
+  async salaDeEstudiante(estudianteId) {
+    const e = leer()
+    const m = (e.miembros ?? []).find((x) => x.estudianteId === estudianteId)
+    const sala = m && (e.salas ?? []).find((s) => s.id === m.salaId)
+    return sala ? { id: sala.id, nombre: sala.nombre } : null
   },
 }
 

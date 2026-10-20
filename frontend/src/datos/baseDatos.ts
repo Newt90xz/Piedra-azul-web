@@ -152,6 +152,41 @@ export type Database = {
           },
         ]
       }
+      sala_miembros: {
+        Row: { estudiante_id: string; sala_id: string; unido_en: string }
+        Insert: { estudiante_id: string; sala_id: string; unido_en?: string }
+        Update: { estudiante_id?: string; sala_id?: string; unido_en?: string }
+        Relationships: [
+          {
+            foreignKeyName: 'sala_miembros_estudiante_id_fkey'
+            columns: ['estudiante_id']
+            isOneToOne: true
+            referencedRelation: 'estudiantes'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'sala_miembros_sala_id_fkey'
+            columns: ['sala_id']
+            isOneToOne: false
+            referencedRelation: 'salas'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      salas: {
+        Row: { abierta: boolean; creado_en: string; cupos: number; curso_id: string; id: string; nombre: string }
+        Insert: { abierta?: boolean; creado_en?: string; cupos?: number; curso_id: string; id?: string; nombre: string }
+        Update: { abierta?: boolean; creado_en?: string; cupos?: number; curso_id?: string; id?: string; nombre?: string }
+        Relationships: [
+          {
+            foreignKeyName: 'salas_curso_id_fkey'
+            columns: ['curso_id']
+            isOneToOne: false
+            referencedRelation: 'cursos'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       rondas_resultado: {
         Row: { acertada: boolean; intentos: number; item: string; orden: number; resultado_id: string }
         Insert: { acertada: boolean; intentos: number; item: string; orden: number; resultado_id: string }
@@ -171,6 +206,49 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      estudiante_en_sala: {
+        Args: { p_estudiante: string }
+        Returns: {
+          activo: boolean
+          ajustes: Json
+          avatar: string
+          color: string
+          curso_id: string
+          id: string
+          monedas: number
+          nivel_habilitado: number
+          nombre: string
+          sala_id: string
+          sala_nombre: string
+        }[]
+      }
+      guardar_resultado_sala: {
+        Args: {
+          p_actividad_id: string
+          p_duracion_ms: number
+          p_estrellas: number
+          p_estudiante_id: string
+          p_fecha: string
+          p_id: string
+          p_monedas: number
+          p_rondas: Json
+        }
+        Returns: undefined
+      }
+      perfiles_de_sala: {
+        Args: { p_sala: string }
+        Returns: { avatar: string; color: string; id: string; nombre: string; sala_id: string | null }[]
+      }
+      registrar_emocion_sala: {
+        Args: { p_emocion: Database['public']['Enums']['emocion']; p_estudiante: string }
+        Returns: undefined
+      }
+      salas_abiertas: {
+        Args: Record<PropertyKey, never>
+        Returns: { cupos: number; curso: string; id: string; nombre: string; ocupados: number }[]
+      }
+      salir_sala: { Args: { p_estudiante: string }; Returns: undefined }
+      unirse_sala: { Args: { p_estudiante: string; p_sala: string }; Returns: undefined }
       guardar_resultado: {
         Args: {
           p_actividad_id: string

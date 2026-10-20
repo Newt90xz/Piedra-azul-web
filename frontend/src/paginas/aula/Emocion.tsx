@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { repo } from '../../datos/index.ts'
 import type { Emocion as TipoEmocion } from '../../dominio/tipos.ts'
 import { EMOCIONES } from '../../lib/avance.ts'
 import { hablar } from '../../lib/audio.ts'
@@ -8,14 +7,13 @@ import { BotonNino, useNino } from '../../ui/nino.tsx'
 
 // RF-14: chequeo emocional con 1 clic al iniciar la sesión.
 export default function Emocion() {
-  const { estudiante } = useNino()
+  const { estudiante, cambiarEmocion } = useNino()
   const navegar = useNavigate()
 
   useEffect(() => hablar(`Hola ${estudiante.nombre}. ¿Cómo te sientes hoy?`), [estudiante.nombre])
 
   const elegir = async (e: TipoEmocion) => {
-    // Si falla, el niño sigue a sus actividades igual; solo se pierde este registro.
-    await repo.registrarEmocion(estudiante.id, e).catch((err: unknown) => console.warn('[emocion] No se pudo registrar.', err))
+    await cambiarEmocion(e)
     navegar(`/aula/${estudiante.id}`, { replace: true })
   }
 

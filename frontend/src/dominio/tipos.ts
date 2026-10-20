@@ -98,3 +98,40 @@ export interface Observacion {
   texto: string
   fecha: string
 }
+
+// Salas de trabajo: la docente las crea; el alumno elige una abierta y luego su perfil.
+export interface Sala {
+  id: string
+  cursoId: string
+  nombre: string
+  abierta: boolean
+  cupos: number
+}
+
+export interface MiembroSala {
+  estudianteId: string
+  salaId: string
+}
+
+// Lo que ve un dispositivo de alumno antes de entrar: sin datos de niños.
+export interface SalaAbierta {
+  id: string
+  nombre: string
+  curso: string
+  cupos: number
+  ocupados: number
+}
+
+export interface PerfilSala {
+  id: string
+  nombre: string
+  avatar: string
+  color: string
+  // Sala en la que ya está conectado, si alguna.
+  salaId: string | null
+}
+
+export interface SalaActual {
+  id: string
+  nombre: string
+}

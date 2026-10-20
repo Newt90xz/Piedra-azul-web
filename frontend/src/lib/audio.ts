@@ -14,8 +14,32 @@ export interface OpcionesVoz {
   alTerminar?: () => void
 }
 
+// Silencio global: lo fija el botón de silencio del niño y calla también la voz.
+let mudo = false
+let pendiente: number | undefined
+let temporizadorApuntar: number | undefined
+
+export function fijarMudo(valor: boolean) {
+  mudo = valor
+  if (valor) detener()
+}
+
+// Un solo temporizador para toda la página: apuntar otra caja reemplaza a la anterior, no se encola.
+export function hablarAlApuntar(texto: string) {
+  window.clearTimeout(temporizadorApuntar)
+  temporizadorApuntar = window.setTimeout(() => hablar(texto), 350)
+}
+
+export function cancelarApuntar() {
+  window.clearTimeout(temporizadorApuntar)
+}
+
 export function hablar(texto: string, { src, alTerminar }: OpcionesVoz = {}) {
   detener()
+  if (mudo) {
+    alTerminar?.()
+    return
+  }
   if (src) {
     reproduciendo = new Audio(src)
     reproduciendo.onended = () => alTerminar?.()
@@ -34,10 +58,12 @@ export function hablar(texto: string, { src, alTerminar }: OpcionesVoz = {}) {
   u.lang = 'es-CL'
   u.rate = 0.8
   u.onend = u.onerror = () => alTerminar?.()
-  speechSynthesis.speak(u)
+  // Chrome pierde un speak() pegado a un cancel(); se da un respiro.
+  pendiente = window.setTimeout(() => speechSynthesis.speak(u), 60)
 }
 
 export function detener() {
+  window.clearTimeout(pendiente)
   reproduciendo?.pause()
   reproduciendo = null
   if ('speechSynthesis' in window) speechSynthesis.cancel()
@@ -47,11 +73,11 @@ export function detener() {
 // silenciarlos dejando solo la voz.
 let contexto: AudioContext | null = null
 
-export function efecto(tipo: 'acierto' | 'intento' | 'premio', silenciado: boolean) {
-  if (silenciado) return
+export function efecto(tipo: 'acierto' | 'intento' | 'premio' | 'toque', silenciado: boolean) {
+  if (silenciado || mudo) return
   try {
     contexto ??= new AudioContext()
-    const notas = { acierto: [523, 659, 784], intento: [392], premio: [523, 659, 784, 1047] }[tipo]
+    const notas = { acierto: [523, 659, 784], intento: [392], premio: [523, 659, 784, 1047], toque: [880] }[tipo]
     notas.forEach((f, i) => {
       const osc = contexto!.createOscillator()
       const vol = contexto!.createGain()
@@ -59,7 +85,7 @@ export function efecto(tipo: 'acierto' | 'intento' | 'premio', silenciado: boole
       osc.type = 'sine'
       osc.frequency.value = f
       vol.gain.setValueAtTime(0.0001, t)
-      vol.gain.exponentialRampToValueAtTime(tipo === 'intento' ? 0.05 : 0.12, t + 0.02)
+      vol.gain.exponentialRampToValueAtTime(tipo === 'intento' || tipo === 'toque' ? 0.05 : 0.12, t + 0.02)
       vol.gain.exponentialRampToValueAtTime(0.0001, t + 0.35)
       osc.connect(vol).connect(contexto!.destination)
       osc.start(t)

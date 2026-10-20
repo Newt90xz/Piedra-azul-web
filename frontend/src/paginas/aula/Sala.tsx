@@ -41,7 +41,7 @@ function Grilla({ cursoId }: { cursoId: string }) {
         <ul className="grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-6">
           {datos?.estudiantes.map((e) => (
             <li key={e.id}>
-              <TarjetaNino nombre={e.nombre} alTocar={() => navegar(`/aula/${e.id}/emocion`)}>
+              <TarjetaNino nombre={e.nombre} alTocar={() => navegar(`/aula/${e.id}`)}>
                 <Avatar estudiante={e} className="size-28 text-7xl" />
               </TarjetaNino>
             </li>
@@ -77,7 +77,7 @@ function SalaCerrada() {
           <p className="mt-2 text-tinta-suave">
             Pide ayuda a tu educadora: ella inicia sesión y abre la sala del curso. Luego cada niño entra tocando su foto.
           </p>
-          <BotonEnlace to="/docente/entrar" className="mt-6">Abrir sala como docente</BotonEnlace>
+          <BotonEnlace to="/alumno" className="mt-6">Ir a elegir mi sala</BotonEnlace>
         </Tarjeta>
       </main>
     </FondoAula>

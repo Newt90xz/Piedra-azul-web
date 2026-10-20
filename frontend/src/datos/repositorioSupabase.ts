@@ -6,9 +6,14 @@ import type {
   Estudiante,
   IntentoRonda,
   Nivel,
+  MiembroSala,
   Observacion,
+  PerfilSala,
   RegistroEmocion,
   ResultadoActividad,
+  Sala,
+  SalaAbierta,
+  SalaActual,
 } from '../dominio/tipos.ts'
 import type { Database } from './baseDatos.ts'
 import { AJUSTES_POR_DEFECTO, type Repositorio } from './repositorio.ts'
@@ -57,6 +62,13 @@ const aFila = (e: Omit<Estudiante, 'id' | 'monedas'>) => ({
   nivel_habilitado: e.nivelHabilitado,
   ajustes: { ...e.ajustes },
 })
+
+type FilaSala = Database['public']['Tables']['salas']['Row']
+const aSala = (f: FilaSala): Sala => ({ id: f.id, cursoId: f.curso_id, nombre: f.nombre, abierta: f.abierta, cupos: f.cupos })
+
+// Dispositivo del alumno: ajustes y datos llegan por la función de sala (sin foto).
+const aEstudianteDeSala = (f: Database['public']['Functions']['estudiante_en_sala']['Returns'][number]): Estudiante =>
+  aEstudiante({ ...f, foto_url: null, creado_en: '' })
 
 const aCurso = (f: { id: string; nombre: string; docente_id: string }): Curso => ({ id: f.id, nombre: f.nombre, docenteId: f.docente_id })
 
@@ -110,6 +122,11 @@ export const repositorioSupabase: Repositorio = {
     return filas.map(aEstudiante)
   },
   async obtenerEstudiante(id) {
+    // Sin sesión de docente solo se ve a un alumno que está conectado a una sala.
+    if (!actual) {
+      const filas = sinError(await supabase.rpc('estudiante_en_sala', { p_estudiante: id }))
+      return filas[0] ? aEstudianteDeSala(filas[0]) : null
+    }
     const { data, error } = await supabase.from('estudiantes').select().eq('id', id).maybeSingle()
     if (error) throw new Error(error.message)
     return data ? aEstudiante(data) : null
@@ -122,7 +139,15 @@ export const repositorioSupabase: Repositorio = {
     return aEstudiante(sinError(await consulta.select().single()))
   },
 
+  async eliminarEstudiante(id) {
+    sinError(await supabase.from('estudiantes').delete().eq('id', id))
+  },
+
   async registrarEmocion(estudianteId, emocion) {
+    if (!actual) {
+      sinError(await supabase.rpc('registrar_emocion_sala', { p_estudiante: estudianteId, p_emocion: emocion }))
+      return
+    }
     sinError(await supabase.from('registros_emocion').insert({ estudiante_id: estudianteId, emocion }))
   },
   async listarEmociones(estudianteId) {
@@ -137,7 +162,7 @@ export const repositorioSupabase: Repositorio = {
   async guardarResultado(r) {
     // Con el mismo id, la función hace `on conflict do nothing`.
     sinError(
-      await supabase.rpc('guardar_resultado', {
+      await supabase.rpc(actual ? 'guardar_resultado' : 'guardar_resultado_sala', {
         p_id: r.id,
         p_estudiante_id: r.estudianteId,
         p_actividad_id: r.actividadId,
@@ -184,5 +209,62 @@ export const repositorioSupabase: Repositorio = {
     return filas.map(
       (f): Observacion => ({ id: f.id, estudianteId: f.estudiante_id, texto: f.texto, fecha: f.fecha }),
     )
+  },
+  async actualizarObservacion(id, texto) {
+    sinError(await supabase.from('observaciones').update({ texto }).eq('id', id))
+  },
+  async eliminarObservacion(id) {
+    sinError(await supabase.from('observaciones').delete().eq('id', id))
+  },
+
+  async listarSalas(cursoId) {
+    const filas = sinError(await supabase.from('salas').select().eq('curso_id', cursoId).order('creado_en'))
+    return filas.map(aSala)
+  },
+  async crearSala(cursoId, nombre, cupos) {
+    return aSala(sinError(await supabase.from('salas').insert({ curso_id: cursoId, nombre: nombre.trim(), cupos }).select().single()))
+  },
+  async actualizarSala(id, cambios) {
+    sinError(await supabase.from('salas').update(cambios).eq('id', id))
+  },
+  async eliminarSala(id) {
+    sinError(await supabase.from('salas').delete().eq('id', id))
+  },
+  async listarMiembros(cursoId) {
+    const filas = sinError(
+      await supabase.from('sala_miembros').select('estudiante_id, sala_id, salas!inner(curso_id)').eq('salas.curso_id', cursoId),
+    )
+    return filas.map((f): MiembroSala => ({ estudianteId: f.estudiante_id, salaId: f.sala_id }))
+  },
+  async conectarEstudiante(salaId, estudianteId) {
+    // Un alumno está en una sola sala: conectarlo a otra lo mueve.
+    sinError(await supabase.from('sala_miembros').upsert({ estudiante_id: estudianteId, sala_id: salaId, unido_en: new Date().toISOString() }))
+  },
+  async desconectarEstudiante(estudianteId) {
+    sinError(await supabase.from('sala_miembros').delete().eq('estudiante_id', estudianteId))
+  },
+
+  async vaciarSala(salaId, cerrar) {
+    if (cerrar) sinError(await supabase.from('salas').update({ abierta: false }).eq('id', salaId))
+    sinError(await supabase.from('sala_miembros').delete().eq('sala_id', salaId))
+  },
+
+  async salasAbiertas() {
+    const filas = sinError(await supabase.rpc('salas_abiertas'))
+    return filas.map((f): SalaAbierta => ({ id: f.id, nombre: f.nombre, curso: f.curso, cupos: f.cupos, ocupados: f.ocupados }))
+  },
+  async perfilesDeSala(salaId) {
+    const filas = sinError(await supabase.rpc('perfiles_de_sala', { p_sala: salaId }))
+    return filas.map((f): PerfilSala => ({ id: f.id, nombre: f.nombre, avatar: f.avatar, color: f.color, salaId: f.sala_id }))
+  },
+  async unirseASala(salaId, estudianteId) {
+    sinError(await supabase.rpc('unirse_sala', { p_sala: salaId, p_estudiante: estudianteId }))
+  },
+  async salirDeSala(estudianteId) {
+    sinError(await supabase.rpc('salir_sala', { p_estudiante: estudianteId }))
+  },
+  async salaDeEstudiante(estudianteId) {
+    const filas = sinError(await supabase.rpc('estudiante_en_sala', { p_estudiante: estudianteId }))
+    return filas[0] ? ({ id: filas[0].sala_id, nombre: filas[0].sala_nombre } satisfies SalaActual) : null
   },
 }

@@ -20,7 +20,7 @@ export default function Inicio() {
 
         <nav aria-label="Elegir recorrido" className="grid gap-5">
           <Entrada to="/docente" icono="nota" texto="Entrar como docente" />
-          <Entrada to="/aula" icono="asterisco" texto="Entrar como alumno" alumno />
+          <Entrada to="/alumno" icono="asterisco" texto="Entrar como alumno" alumno />
         </nav>
       </main>
     </FondoAula>

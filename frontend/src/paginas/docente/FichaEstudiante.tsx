@@ -38,7 +38,13 @@ export default function FichaEstudiante() {
   const [params, setParams] = useSearchParams()
   const pestana = params.get('pestana') ?? 'avance'
   const { cursoId } = useSesion()
+  const navegar = useNavigate()
   const { datos: estudiante, error, recargar } = useConsulta(() => repo.obtenerEstudiante(id), [id])
+  const { datos: sala, recargar: recargarSala } = useConsulta(async () => {
+    const miembro = (await repo.listarMiembros(cursoId)).find((m) => m.estudianteId === id)
+    if (!miembro) return null
+    return (await repo.listarSalas(cursoId)).find((x) => x.id === miembro.salaId) ?? null
+  }, [id, cursoId])
 
   if (error && !estudiante) return <AvisoError alReintentar={recargar} />
   if (estudiante === undefined) return null
@@ -55,6 +61,21 @@ export default function FichaEstudiante() {
           <p className="text-tinta-suave">
             Nivel {estudiante.nivelHabilitado} habilitado · {estudiante.monedas} monedas{!estudiante.activo && ' · Desactivado'}
           </p>
+          {sala && (
+            <p className="mt-2 flex flex-wrap items-center gap-2 text-sm font-semibold text-menta-oscuro">
+              <span className="size-2.5 rounded-full bg-menta" aria-hidden="true" />
+              Conectado a «{sala.nombre}»
+              <Boton
+                variante="suave"
+                onClick={async () => {
+                  await repo.desconectarEstudiante(id)
+                  recargarSala()
+                }}
+              >
+                Sacar de la sala
+              </Boton>
+            </p>
+          )}
         </div>
       </div>
 
@@ -74,14 +95,20 @@ export default function FichaEstudiante() {
 
       {pestana === 'avance' && <Avance estudianteId={id} />}
       {pestana === 'perfil' && (
-        <FormEstudiante
-          inicial={estudiante}
-          cursoId={cursoId}
-          alGuardar={async (e) => {
-            await repo.guardarEstudiante(e)
-            recargar()
-          }}
-        />
+        <>
+          <FormEstudiante
+            inicial={estudiante}
+            cursoId={cursoId}
+            alGuardar={async (e) => {
+              await repo.guardarEstudiante(e)
+              recargar()
+            }}
+          />
+          <ZonaEliminar nombre={estudiante.nombre} alEliminar={async () => {
+            await repo.eliminarEstudiante(id)
+            navegar('/docente/estudiantes', { replace: true })
+          }} />
+        </>
       )}
       {pestana === 'observaciones' && <Observaciones estudianteId={id} />}
     </>
@@ -163,15 +190,60 @@ function Avance({ estudianteId }: { estudianteId: string }) {
   )
 }
 
+function ZonaEliminar({ nombre, alEliminar }: { nombre: string; alEliminar: () => Promise<void> }) {
+  const [confirmar, setConfirmar] = useState(false)
+  const [error, setError] = useState(false)
+  return (
+    <Tarjeta className="mt-6 border-[#f0c9c4]">
+      <h2 className="text-lg font-bold text-[#b42318]">Eliminar perfil</h2>
+      <p className="mt-1 text-tinta-suave">
+        Borra a {nombre} y todo su historial: partidas, emociones y observaciones. No se puede deshacer. Si solo quieres que no aparezca en las salas, desactívalo arriba.
+      </p>
+      {error && <p role="alert" className="mt-2 text-sm font-semibold text-[#b42318]">No se pudo eliminar. Intenta otra vez.</p>}
+      {confirmar ? (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="font-semibold">¿Seguro que quieres eliminar a {nombre}?</span>
+          <Boton
+            variante="secundario"
+            onClick={() => {
+              setError(false)
+              alEliminar().catch(() => setError(true))
+            }}
+          >
+            Sí, eliminar
+          </Boton>
+          <Boton variante="suave" onClick={() => setConfirmar(false)}>Cancelar</Boton>
+        </div>
+      ) : (
+        <Boton variante="suave" className="mt-4" onClick={() => setConfirmar(true)}>Eliminar perfil</Boton>
+      )}
+    </Tarjeta>
+  )
+}
+
 function Observaciones({ estudianteId }: { estudianteId: string }) {
   const [texto, setTexto] = useState('')
+  const [editando, setEditando] = useState<{ id: string; texto: string } | null>(null)
+  const [borrando, setBorrando] = useState<string | null>(null)
+  const [fallo, setFallo] = useState(false)
   const { datos, error, recargar } = useConsulta(() => repo.listarObservaciones(estudianteId), [estudianteId])
 
-  const agregar = async () => {
-    if (!texto.trim()) return
-    await repo.agregarObservacion(estudianteId, texto.trim())
-    setTexto('')
+  const ejecutar = async (accion: () => Promise<void>) => {
+    setFallo(false)
+    try {
+      await accion()
+    } catch {
+      setFallo(true)
+    }
     recargar()
+  }
+
+  const agregar = () => {
+    if (!texto.trim()) return
+    void ejecutar(async () => {
+      await repo.agregarObservacion(estudianteId, texto.trim())
+      setTexto('')
+    })
   }
 
   return (
@@ -192,12 +264,68 @@ function Observaciones({ estudianteId }: { estudianteId: string }) {
             <button onClick={recargar} className="font-semibold underline">Reintentar</button>
           </p>
         )}
+        {fallo && <p role="alert" className="mt-2 text-sm font-semibold text-[#b42318]">No se pudo completar la acción. Intenta otra vez.</p>}
         {datos?.length === 0 && <p className="mt-2 text-tinta-suave">Sin observaciones todavía.</p>}
         <ul className="mt-3 grid gap-3">
           {datos?.map((o) => (
             <li key={o.id} className="rounded-xl bg-fondo px-4 py-3">
-              <p>{o.texto}</p>
-              <p className="mt-1 text-xs text-tinta-suave">{fechaCorta(o.fecha)}</p>
+              {editando?.id === o.id ? (
+                <>
+                  <label>
+                    <span className="sr-only">Editar observación</span>
+                    <textarea
+                      value={editando.texto}
+                      onChange={(e) => setEditando({ id: o.id, texto: e.target.value })}
+                      rows={3}
+                      className={claseEntrada}
+                      autoFocus
+                    />
+                  </label>
+                  <div className="mt-2 flex gap-2">
+                    <Boton
+                      disabled={!editando.texto.trim()}
+                      onClick={() =>
+                        void ejecutar(async () => {
+                          await repo.actualizarObservacion(o.id, editando.texto.trim())
+                          setEditando(null)
+                        })
+                      }
+                    >
+                      Guardar cambios
+                    </Boton>
+                    <Boton variante="suave" onClick={() => setEditando(null)}>Cancelar</Boton>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p>{o.texto}</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className="mr-auto text-xs text-tinta-suave">{fechaCorta(o.fecha)}</span>
+                    {borrando === o.id ? (
+                      <>
+                        <span className="text-sm font-semibold">¿Borrar?</span>
+                        <Boton
+                          variante="secundario"
+                          onClick={() =>
+                            void ejecutar(async () => {
+                              await repo.eliminarObservacion(o.id)
+                              setBorrando(null)
+                            })
+                          }
+                        >
+                          Sí, borrar
+                        </Boton>
+                        <Boton variante="suave" onClick={() => setBorrando(null)}>No</Boton>
+                      </>
+                    ) : (
+                      <>
+                        <Boton variante="suave" onClick={() => setEditando({ id: o.id, texto: o.texto })}>Editar</Boton>
+                        <Boton variante="suave" onClick={() => setBorrando(o.id)}>Borrar</Boton>
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
             </li>
           ))}
         </ul>

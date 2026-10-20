@@ -5,8 +5,13 @@ import type {
   Emocion,
   Estudiante,
   Observacion,
+  MiembroSala,
+  PerfilSala,
   RegistroEmocion,
   ResultadoActividad,
+  Sala,
+  SalaAbierta,
+  SalaActual,
 } from '../dominio/tipos.ts'
 
 // Contrato único de acceso a datos. Hoy lo implementa `repositorioDemo`
@@ -25,6 +30,8 @@ export interface Repositorio {
   listarEstudiantes(cursoId: string): Promise<Estudiante[]>
   obtenerEstudiante(id: string): Promise<Estudiante | null>
   guardarEstudiante(datos: NuevoEstudiante | Estudiante): Promise<Estudiante>
+  // Borra el perfil y todo su historial (resultados, emociones, observaciones).
+  eliminarEstudiante(id: string): Promise<void>
 
   registrarEmocion(estudianteId: string, emocion: Emocion): Promise<void>
   listarEmociones(estudianteId: string): Promise<RegistroEmocion[]>
@@ -36,6 +43,29 @@ export interface Repositorio {
 
   agregarObservacion(estudianteId: string, texto: string): Promise<void>
   listarObservaciones(estudianteId: string): Promise<Observacion[]>
+  actualizarObservacion(id: string, texto: string): Promise<void>
+  eliminarObservacion(id: string): Promise<void>
+
+  // Salas: gestión de la docente (requiere sesión).
+  listarSalas(cursoId: string): Promise<Sala[]>
+  crearSala(cursoId: string, nombre: string, cupos: number): Promise<Sala>
+  actualizarSala(id: string, cambios: Partial<Pick<Sala, 'nombre' | 'abierta' | 'cupos'>>): Promise<void>
+  eliminarSala(id: string): Promise<void>
+  // Miembros de todas las salas del curso.
+  listarMiembros(cursoId: string): Promise<MiembroSala[]>
+  conectarEstudiante(salaId: string, estudianteId: string): Promise<void>
+  desconectarEstudiante(estudianteId: string): Promise<void>
+  // Saca a todos los alumnos de la sala; con `cerrar` además la cierra.
+  vaciarSala(salaId: string, cerrar: boolean): Promise<void>
+
+  // Salas: dispositivo del alumno (sin sesión de docente).
+  salasAbiertas(): Promise<SalaAbierta[]>
+  perfilesDeSala(salaId: string): Promise<PerfilSala[]>
+  // Rechaza con Error('sala_cerrada' | 'sala_llena' | 'perfil_invalido' | 'sala_inexistente').
+  unirseASala(salaId: string, estudianteId: string): Promise<void>
+  salirDeSala(estudianteId: string): Promise<void>
+  // null si el alumno ya no está en ninguna sala (p. ej. la docente lo desconectó).
+  salaDeEstudiante(estudianteId: string): Promise<SalaActual | null>
 }
 
 export type NuevoEstudiante = Omit<Estudiante, 'id' | 'monedas'>

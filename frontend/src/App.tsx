@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { ProveedorSesion } from './app/Sesion.tsx'
 import Inicio from './paginas/Inicio.tsx'
+import Entrada from './paginas/alumno/Entrada.tsx'
 import Emocion from './paginas/aula/Emocion.tsx'
 import Grupo from './paginas/aula/Grupo.tsx'
 import Jugar from './paginas/aula/Jugar.tsx'
@@ -12,6 +13,7 @@ import Estudiantes from './paginas/docente/Estudiantes.tsx'
 import FichaEstudiante, { NuevoEstudiante } from './paginas/docente/FichaEstudiante.tsx'
 import LayoutDocente from './paginas/docente/LayoutDocente.tsx'
 import Panel from './paginas/docente/Panel.tsx'
+import Salas from './paginas/docente/Salas.tsx'
 import { NinoShell } from './ui/nino.tsx'
 
 export default function App() {
@@ -28,8 +30,10 @@ export default function App() {
             <Route path="estudiantes/nuevo" element={<NuevoEstudiante />} />
             <Route path="estudiantes/:id" element={<FichaEstudiante />} />
             <Route path="avance" element={<AvanceCurso />} />
+            <Route path="salas" element={<Salas />} />
           </Route>
 
+          <Route path="/alumno" element={<Entrada />} />
           <Route path="/aula" element={<Sala />} />
           <Route path="/aula/:id" element={<NinoShell />}>
             <Route index element={<MiInicio />} />

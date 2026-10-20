@@ -71,11 +71,90 @@ body {
 
 /* Ajustes por estudiante (RF-21), aplicados por <NinoShell>. */
 .nino {
+  --color-contorno: #2b4a6b;
   font-family: var(--font-escolar);
   font-size: 28px;
-  background: var(--color-nino-fondo);
+  background:
+    radial-gradient(120% 22% at 15% 100%, #c9ecd6 0 60%, transparent 61%),
+    radial-gradient(110% 18% at 90% 100%, #b7e2c8 0 60%, transparent 61%),
+    linear-gradient(180deg, #d8efff 0%, var(--color-nino-fondo) 55%, #fff8dd 100%);
+  background-attachment: fixed;
   color: var(--color-nino-tinta);
 }
+
+/* Estilo caricatura: contorno grueso, sombra «de pegatina» y botones que se hunden al tocar. */
+.nino .tarjeta-nino {
+  box-shadow: 0 0 0 3px var(--color-contorno), 0 8px 0 3px var(--color-contorno);
+  margin-bottom: 11px;
+  transition: transform 0.12s ease-out, box-shadow 0.12s ease-out;
+}
+.nino .tarjeta-nino:hover:not(:disabled) { transform: translateY(-3px) rotate(-0.6deg); }
+.nino .tarjeta-nino:active:not(:disabled) {
+  transform: translateY(6px);
+  box-shadow: 0 0 0 3px var(--color-contorno), 0 2px 0 3px var(--color-contorno);
+}
+.nino .encabezado-nino {
+  background: linear-gradient(90deg, var(--color-nino-azul), #fff 45%, var(--color-nino-menta));
+  border-bottom: 4px solid var(--color-contorno);
+  box-shadow: 0 5px 0 rgb(43 74 107 / 0.18);
+}
+.nino h1 { text-shadow: 0 3px 0 rgb(255 255 255 / 0.9); letter-spacing: 0.01em; }
+.nino .ruleta { box-shadow: 0 0 0 4px var(--color-contorno), 0 12px 0 4px var(--color-contorno); }
+
+/* Fondos vivos y protector de pantalla (ver ui/fondoNino.tsx). */
+@keyframes subir {
+  from { transform: translateY(0); }
+  to { transform: translateY(-125vh); }
+}
+@keyframes balanceo {
+  0%, 100% { transform: rotate(-7deg); }
+  50% { transform: rotate(7deg); }
+}
+@keyframes cruzar {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(100vw + 20rem)); }
+}
+@keyframes rebotar {
+  0%, 100% { transform: translate(0, 0) rotate(-8deg) scale(1); }
+  25% { transform: translate(7vw, -9vh) rotate(8deg) scale(1.15); }
+  50% { transform: translate(-5vw, 6vh) rotate(-4deg) scale(0.9); }
+  75% { transform: translate(-8vw, -5vh) rotate(10deg) scale(1.1); }
+}
+.flota { animation: subir linear infinite; cursor: pointer; opacity: 0.85; }
+.balanceo { animation: balanceo 4s ease-in-out infinite; }
+.nube {
+  position: absolute;
+  width: 9rem;
+  height: 3rem;
+  background: #fff;
+  border-radius: 999px;
+  opacity: 0.8;
+  animation: cruzar linear infinite;
+  box-shadow: 2.5rem -1.4rem 0 0.4rem #fff, 5rem 0 0 0 #fff;
+}
+/* Minijuego de espera (paginas/alumno/MiniJuego.tsx). */
+@keyframes elevar {
+  from { transform: translateY(0); }
+  to { transform: translateY(calc(-62dvh - 160%)); }
+}
+.globo {
+  box-shadow: 0 0 0 3px var(--color-contorno), inset -10px -12px 0 rgb(0 0 0 / 0.07);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.globo:disabled { box-shadow: none; background: transparent !important; }
+.elevando { animation: elevar linear forwards; }
+.hilo {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  width: 2px;
+  height: 2.2rem;
+  background: var(--color-contorno);
+  opacity: 0.5;
+}
+.protector { background: radial-gradient(circle at 50% 40%, #35588a, #14213d 75%); border: 0; }
+.rebote { animation: rebotar ease-in-out infinite; }
 .nino[data-tamano='grande'] { font-size: 32px; }
 .nino[data-tamano='muy-grande'] { font-size: 38px; }
 .nino[data-contraste='alto'] {

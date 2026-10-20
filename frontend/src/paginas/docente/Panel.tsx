@@ -24,7 +24,8 @@ export default function Panel() {
   const cuestan = avancePorItem(datos?.resultados ?? []).filter((a) => a.tasa < UMBRAL_LE_CUESTA).slice(0, 5)
 
   return (
-    <>
+    <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_19rem]">
+    <div>
       <section className="relative overflow-hidden rounded-[2rem] bg-[linear-gradient(120deg,#173a5e,#235a86)] px-9 py-8 text-white">
         <p className="text-xs font-bold tracking-[0.14em] text-[#9ee6c2] uppercase">Curso actual</p>
         <h1 className="mt-2 text-4xl font-bold tracking-tight">Panel docente</h1>
@@ -48,24 +49,31 @@ export default function Panel() {
         <Acceso icono="grafico" titulo="Avance del curso" texto="Participación semanal, emociones y letras difíciles." to="/docente/avance" boton="Ver avance →" />
       </div>
 
-      <h2 className="mt-9 text-lg font-bold text-tinta">Sonidos que más cuestan al curso</h2>
+    </div>
+
+    <aside aria-labelledby="titulo-cuestan" className="xl:sticky xl:top-6">
+      <h2 id="titulo-cuestan" className="text-lg font-bold text-tinta">Sonidos que más cuestan al curso</h2>
       <Tarjeta className="mt-4">
         {cuestan.length === 0 ? (
           <p className="text-tinta-suave">Aún no hay suficientes partidas para detectar dificultades.</p>
         ) : (
-          <ul className="flex flex-wrap gap-3">
+          <ol className="grid gap-3">
             {cuestan.map((a) => (
               <li key={a.item} className="flex items-center gap-3 rounded-2xl bg-[#fdf1e4] px-4 py-3">
-                <span className="font-escolar text-3xl font-bold text-tinta">{a.item}</span>
-                <span className="text-sm text-tinta-suave">
-                  {Math.round(a.tasa * 100)}% al primer intento
+                <span className="w-12 text-center font-escolar text-3xl font-bold text-tinta">{a.item}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block h-2.5 overflow-hidden rounded-full bg-white" aria-hidden="true">
+                    <span className="block h-full rounded-full bg-[#e8a35c]" style={{ width: `${Math.max(4, a.tasa * 100)}%` }} />
+                  </span>
+                  <span className="mt-1 block text-sm text-tinta-suave">{Math.round(a.tasa * 100)}% al primer intento</span>
                 </span>
               </li>
             ))}
-          </ul>
+          </ol>
         )}
       </Tarjeta>
-    </>
+    </aside>
+    </div>
   )
 }
 
