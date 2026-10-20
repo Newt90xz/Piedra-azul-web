@@ -39,6 +39,7 @@ export default function FichaEstudiante() {
   const pestana = params.get('pestana') ?? 'avance'
   const { cursoId } = useSesion()
   const navegar = useNavigate()
+  const [falloSala, setFalloSala] = useState(false)
   const { datos: estudiante, error, recargar } = useConsulta(() => repo.obtenerEstudiante(id), [id])
   const { datos: sala, recargar: recargarSala } = useConsulta(async () => {
     const miembro = (await repo.listarMiembros(cursoId)).find((m) => m.estudianteId === id)
@@ -68,12 +69,14 @@ export default function FichaEstudiante() {
               <Boton
                 variante="suave"
                 onClick={async () => {
-                  await repo.desconectarEstudiante(id)
+                  setFalloSala(false)
+                  await repo.desconectarEstudiante(id).catch(() => setFalloSala(true))
                   recargarSala()
                 }}
               >
                 Sacar de la sala
               </Boton>
+              {falloSala && <span role="alert" className="text-[#b42318]">No se pudo sacar. Intenta otra vez.</span>}
             </p>
           )}
         </div>

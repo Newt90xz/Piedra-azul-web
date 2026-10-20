@@ -17,6 +17,7 @@ export default function LayoutDocente() {
   const ubicacion = useLocation()
   const navegar = useNavigate()
 
+  if (docente === undefined) return null
   if (!docente) return <Navigate to="/docente/entrar" state={{ desde: ubicacion.pathname }} replace />
 
   const cerrar = async () => {

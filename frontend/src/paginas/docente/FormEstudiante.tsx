@@ -30,7 +30,7 @@ type Entrada = z.input<typeof esquema>
 type Salida = z.output<typeof esquema>
 
 export function FormEstudiante({ inicial, cursoId, alGuardar }: { inicial?: Estudiante; cursoId: string; alGuardar: (e: NuevoEstudiante | Estudiante) => Promise<void> }) {
-  const { register, handleSubmit, watch, setValue, formState } = useForm<Entrada, unknown, Salida>({
+  const { register, handleSubmit, watch, setValue, setError, formState } = useForm<Entrada, unknown, Salida>({
     resolver: zodResolver(esquema),
     defaultValues: inicial
       ? { ...inicial, nivelHabilitado: String(inicial.nivelHabilitado) }
@@ -39,7 +39,14 @@ export function FormEstudiante({ inicial, cursoId, alGuardar }: { inicial?: Estu
   const avatar = watch('avatar')
   const color = watch('color')
 
-  const enviar = handleSubmit((v) => alGuardar(inicial ? { ...inicial, ...v } : { ...v, cursoId }))
+  const enviar = handleSubmit(async (v) => {
+    try {
+      await alGuardar(inicial ? { ...inicial, ...v } : { ...v, cursoId })
+    } catch (e) {
+      console.warn('[estudiante] No se pudo guardar.', e)
+      setError('root', { message: 'No se pudieron guardar los cambios. Intenta otra vez.' })
+    }
+  })
 
   return (
     <form onSubmit={enviar} noValidate className="grid gap-6 lg:grid-cols-2">
@@ -132,6 +139,11 @@ export function FormEstudiante({ inicial, cursoId, alGuardar }: { inicial?: Estu
           {inicial ? 'Guardar cambios' : 'Crear estudiante'}
         </Boton>
         {formState.isSubmitSuccessful && inicial && <span role="status" className="font-semibold text-menta-oscuro">Cambios guardados.</span>}
+        {formState.errors.root && (
+          <p role="alert" className="text-sm font-semibold text-[#b42318]">
+            {formState.errors.root.message}
+          </p>
+        )}
       </div>
     </form>
   )

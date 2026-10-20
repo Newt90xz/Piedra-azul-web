@@ -203,11 +203,22 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      ultimas_emociones: {
+        Row: { emocion: Database['public']['Enums']['emocion'] | null; estudiante_id: string | null; fecha: string | null }
+        Relationships: [
+          {
+            foreignKeyName: 'registros_emocion_estudiante_id_fkey'
+            columns: ['estudiante_id']
+            isOneToOne: false
+            referencedRelation: 'estudiantes'
+            referencedColumns: ['id']
+          },
+        ]
+      }
     }
     Functions: {
       estudiante_en_sala: {
-        Args: { p_estudiante: string }
+        Args: { p_estudiante: string; p_token: string }
         Returns: {
           activo: boolean
           ajustes: Json
@@ -232,23 +243,24 @@ export type Database = {
           p_id: string
           p_monedas: number
           p_rondas: Json
+          p_token: string
         }
         Returns: undefined
       }
       perfiles_de_sala: {
         Args: { p_sala: string }
-        Returns: { avatar: string; color: string; id: string; nombre: string; sala_id: string | null }[]
+        Returns: { avatar: string; color: string; id: string; nombre: string; ocupado: boolean }[]
       }
       registrar_emocion_sala: {
-        Args: { p_emocion: Database['public']['Enums']['emocion']; p_estudiante: string }
+        Args: { p_emocion: Database['public']['Enums']['emocion']; p_estudiante: string; p_token: string }
         Returns: undefined
       }
       salas_abiertas: {
         Args: Record<PropertyKey, never>
         Returns: { cupos: number; curso: string; id: string; nombre: string; ocupados: number }[]
       }
-      salir_sala: { Args: { p_estudiante: string }; Returns: undefined }
-      unirse_sala: { Args: { p_estudiante: string; p_sala: string }; Returns: undefined }
+      salir_sala: { Args: { p_estudiante: string; p_token: string }; Returns: undefined }
+      unirse_sala: { Args: { p_estudiante: string; p_sala: string }; Returns: string }
       guardar_resultado: {
         Args: {
           p_actividad_id: string

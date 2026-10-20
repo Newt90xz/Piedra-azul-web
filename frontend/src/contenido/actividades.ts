@@ -48,6 +48,8 @@ export interface Actividad {
   titulo: string
   icono: string
   generar: () => Ronda[]
+  // Sin respuesta incorrecta posible (explorar, choque): no mide avance ni da racha.
+  practica?: boolean
 }
 
 export const GRUPOS: { id: GrupoActividad; titulo: string; icono: string; color: string; audio: string }[] = [
@@ -57,7 +59,16 @@ export const GRUPOS: { id: GrupoActividad; titulo: string; icono: string; color:
   { id: 'cuentos', titulo: 'Cuentos', icono: '📖', color: 'var(--color-nino-amarillo)', audio: 'Cuentos y canciones' },
 ]
 
-const mezclar = <T,>(a: readonly T[]) => [...a].sort(() => Math.random() - 0.5)
+// Fisher-Yates: `sort(() => Math.random() - 0.5)` no reparte las posiciones por
+// igual y la respuesta correcta tendería a quedar en el mismo lugar.
+function mezclar<T>(a: readonly T[]) {
+  const r = [...a]
+  for (let i = r.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[r[i], r[j]] = [r[j], r[i]]
+  }
+  return r
+}
 const tomar = <T,>(a: readonly T[], n: number) => mezclar(a).slice(0, n)
 const MAYUS = (s: string) => s.toUpperCase()
 const opcionPalabra = (w: Palabra): Opcion => ({ id: w.id, imagen: w.imagen, audio: w.texto })
@@ -234,7 +245,8 @@ export const CUENTO_TITO: Cuento = {
   ],
   preguntas: [
     pregunta('¿Quién es Tito?', 'tortuga', ['coneja', 'pollito']),
-    pregunta('¿A dónde fueron Tito y la coneja?', 'parque', ['casa', 'playa']),
+    // Sin «casa» como distractor: el cuento termina con ellos volviendo a casa.
+    pregunta('¿A dónde fueron Tito y la coneja?', 'parque', ['isla', 'playa']),
     pregunta('¿Qué recogieron juntos?', 'flor', ['pelota', 'helado']),
     pregunta('¿Qué comieron al final del día?', 'zanahoria', ['queso', 'chocolate']),
   ],
@@ -267,10 +279,10 @@ export const CANCION_RATON: { id: string; titulo: string; versos: Trozo[][] } = 
 // ---------- Catálogo ----------
 
 export const ACTIVIDADES: Actividad[] = [
-  { id: 'explorar-sonido', grupo: 1, titulo: 'Explorar el sonido', icono: '👄', generar: explorarSonido },
+  { id: 'explorar-sonido', grupo: 1, titulo: 'Explorar el sonido', icono: '👄', generar: explorarSonido, practica: true },
   { id: 'sonido-inicial', grupo: 1, titulo: '¿Qué empieza con este sonido?', icono: '🔎', generar: sonidoInicial },
   { id: 'caza-letras', grupo: 1, titulo: 'Caza de letras', icono: '🫧', generar: cazaDeLetras },
-  { id: 'choque-sonidos', grupo: 2, titulo: 'El choque de sonidos', icono: '💥', generar: choqueDeSonidos },
+  { id: 'choque-sonidos', grupo: 2, titulo: 'El choque de sonidos', icono: '💥', generar: choqueDeSonidos, practica: true },
   { id: 'aplausos', grupo: 2, titulo: 'Aplausos silábicos', icono: '👏', generar: aplausosSilabicos },
   { id: 'silaba-inicial', grupo: 2, titulo: '¿Con qué sílaba empieza?', icono: '🔤', generar: silabaInicial },
   { id: 'constructor', grupo: 3, titulo: 'Constructor de palabras', icono: '🧱', generar: constructorDePalabras },

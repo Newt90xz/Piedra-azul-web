@@ -16,6 +16,7 @@ import type {
   SalaActual,
 } from '../dominio/tipos.ts'
 import type { Database } from './baseDatos.ts'
+import { guardarCredencial, leerCredencial, olvidarCredencial } from './dispositivo.ts'
 import { AJUSTES_POR_DEFECTO, type Repositorio } from './repositorio.ts'
 
 // Implementación conectada: Supabase Auth (RF-03) + PostgreSQL con RLS.
@@ -32,9 +33,13 @@ const supabase = createClient<Database>(url, clavePublica)
 
 type FilaEstudiante = Database['public']['Tables']['estudiantes']['Row']
 
+// Igual al max-rows por defecto de Supabase (API > Settings).
+const POR_PAGINA = 1000
+
 // Sin error, PostgREST siempre trae `data` (salvo `maybeSingle`, que se trata aparte).
-function sinError<T>({ data, error }: { data: T; error: { message: string } | null }): NonNullable<T> {
-  if (error) throw new Error(error.message)
+// El código SQL se conserva para distinguir un rechazo del servidor de un fallo de red.
+function sinError<T>({ data, error }: { data: T; error: { message: string; code?: string } | null }): NonNullable<T> {
+  if (error) throw Object.assign(new Error(error.message), { code: error.code })
   return data as NonNullable<T>
 }
 
@@ -72,18 +77,32 @@ const aEstudianteDeSala = (f: Database['public']['Functions']['estudiante_en_sal
 
 const aCurso = (f: { id: string; nombre: string; docente_id: string }): Curso => ({ id: f.id, nombre: f.nombre, docenteId: f.docente_id })
 
+// Token del dispositivo para ese alumno. Si la credencial es de otro niño (p. ej.
+// un resultado pendiente de quien usó antes la tableta), falla igual que el servidor.
+function tokenDe(estudianteId: string) {
+  const c = leerCredencial()
+  if (c?.estudianteId !== estudianteId) throw new Error('sin_sala')
+  return c.token
+}
+
 async function cargarDocente(id: string): Promise<Docente> {
   const f = sinError(await supabase.from('docentes').select('id, nombre, email').eq('id', id).single())
   return { id: f.id, nombre: f.nombre, email: f.email }
 }
 
 // `docenteActual()` es síncrono: la sesión guardada se resuelve una vez al
-// cargar el módulo y luego se mantiene en memoria.
+// cargar el módulo, en segundo plano (sin red no debe dejar la app en blanco),
+// y luego se mantiene en memoria. Lo que depende de `actual` espera a `sesionLista`.
 let actual: Docente | null = null
-{
-  const { data } = await supabase.auth.getSession()
-  if (data.session) actual = await cargarDocente(data.session.user.id).catch(() => null)
-}
+const sesionLista: Promise<void> = supabase.auth.getSession().then(
+  async ({ data }) => {
+    if (!data.session) return
+    const docente = await cargarDocente(data.session.user.id).catch(() => null)
+    // Si entretanto inició sesión a mano, manda esa.
+    actual ??= docente
+  },
+  () => {},
+)
 supabase.auth.onAuthStateChange((evento) => {
   if (evento === 'SIGNED_OUT') actual = null
 })
@@ -98,6 +117,9 @@ export const repositorioSupabase: Repositorio = {
   async cerrarSesion() {
     await supabase.auth.signOut()
     actual = null
+  },
+  esperarSesion() {
+    return sesionLista
   },
   docenteActual() {
     return actual
@@ -122,9 +144,12 @@ export const repositorioSupabase: Repositorio = {
     return filas.map(aEstudiante)
   },
   async obtenerEstudiante(id) {
-    // Sin sesión de docente solo se ve a un alumno que está conectado a una sala.
+    await sesionLista
+    // Sin sesión de docente solo se ve al alumno conectado desde este dispositivo.
     if (!actual) {
-      const filas = sinError(await supabase.rpc('estudiante_en_sala', { p_estudiante: id }))
+      const c = leerCredencial()
+      if (c?.estudianteId !== id) return null
+      const filas = sinError(await supabase.rpc('estudiante_en_sala', { p_estudiante: id, p_token: c.token }))
       return filas[0] ? aEstudianteDeSala(filas[0]) : null
     }
     const { data, error } = await supabase.from('estudiantes').select().eq('id', id).maybeSingle()
@@ -144,8 +169,11 @@ export const repositorioSupabase: Repositorio = {
   },
 
   async registrarEmocion(estudianteId, emocion) {
+    await sesionLista
     if (!actual) {
-      sinError(await supabase.rpc('registrar_emocion_sala', { p_estudiante: estudianteId, p_emocion: emocion }))
+      sinError(
+        await supabase.rpc('registrar_emocion_sala', { p_estudiante: estudianteId, p_token: tokenDe(estudianteId), p_emocion: emocion }),
+      )
       return
     }
     sinError(await supabase.from('registros_emocion').insert({ estudiante_id: estudianteId, emocion }))
@@ -158,45 +186,70 @@ export const repositorioSupabase: Repositorio = {
       (f): RegistroEmocion => ({ id: f.id, estudianteId: f.estudiante_id, emocion: f.emocion, fecha: f.fecha }),
     )
   },
+  async ultimasEmociones(cursoId) {
+    const filas = sinError(
+      await supabase
+        .from('ultimas_emociones')
+        .select('estudiante_id, emocion, fecha, estudiantes!inner(curso_id)')
+        .eq('estudiantes.curso_id', cursoId),
+    )
+    // Las columnas de una vista se generan como anulables; estas nunca lo son.
+    return filas.map((f) => ({ estudianteId: f.estudiante_id!, emocion: f.emocion!, fecha: f.fecha! }))
+  },
 
   async guardarResultado(r) {
+    await sesionLista
     // Con el mismo id, la función hace `on conflict do nothing`.
+    const datos = {
+      p_id: r.id,
+      p_estudiante_id: r.estudianteId,
+      p_actividad_id: r.actividadId,
+      p_fecha: r.fecha,
+      p_duracion_ms: Math.round(r.duracionMs),
+      p_estrellas: r.estrellas,
+      p_monedas: r.monedas,
+      p_rondas: r.rondas.map(({ item, intentos, acertada }) => ({ item, intentos, acertada })),
+    }
     sinError(
-      await supabase.rpc(actual ? 'guardar_resultado' : 'guardar_resultado_sala', {
-        p_id: r.id,
-        p_estudiante_id: r.estudianteId,
-        p_actividad_id: r.actividadId,
-        p_fecha: r.fecha,
-        p_duracion_ms: Math.round(r.duracionMs),
-        p_estrellas: r.estrellas,
-        p_monedas: r.monedas,
-        p_rondas: r.rondas.map(({ item, intentos, acertada }) => ({ item, intentos, acertada })),
-      }),
+      actual
+        ? await supabase.rpc('guardar_resultado', datos)
+        : await supabase.rpc('guardar_resultado_sala', { ...datos, p_token: tokenDe(r.estudianteId) }),
     )
   },
-  async listarResultados({ estudianteId, cursoId }) {
-    let consulta = supabase
-      .from('resultados_actividad')
-      .select('*, rondas_resultado(orden, item, intentos, acertada), estudiantes!inner(curso_id)')
-      .order('fecha', { ascending: false })
-      .order('orden', { referencedTable: 'rondas_resultado' })
-    if (estudianteId) consulta = consulta.eq('estudiante_id', estudianteId)
-    if (cursoId) consulta = consulta.eq('estudiantes.curso_id', cursoId)
-    const filas = sinError(await consulta)
-    return filas.map(
-      (f): ResultadoActividad => ({
-        id: f.id,
-        estudianteId: f.estudiante_id,
-        actividadId: f.actividad_id,
-        fecha: f.fecha,
-        duracionMs: f.duracion_ms,
-        rondas: f.rondas_resultado.map(
-          ({ item, intentos, acertada }): IntentoRonda => ({ item, intentos, acertada }),
+  async listarResultados({ estudianteId, cursoId, desde }) {
+    // PostgREST corta cada respuesta en POR_PAGINA filas (max-rows del
+    // proyecto): sin paginar, el historial quedaría truncado en silencio.
+    const resultados: ResultadoActividad[] = []
+    for (let pagina = 0; ; pagina++) {
+      let consulta = supabase
+        .from('resultados_actividad')
+        .select('*, rondas_resultado(orden, item, intentos, acertada), estudiantes!inner(curso_id)')
+        .order('fecha', { ascending: false })
+        .order('id')
+        .order('orden', { referencedTable: 'rondas_resultado' })
+        .range(pagina * POR_PAGINA, (pagina + 1) * POR_PAGINA - 1)
+      if (estudianteId) consulta = consulta.eq('estudiante_id', estudianteId)
+      if (cursoId) consulta = consulta.eq('estudiantes.curso_id', cursoId)
+      if (desde) consulta = consulta.gte('fecha', desde.toISOString())
+      const filas = sinError(await consulta)
+      resultados.push(
+        ...filas.map(
+          (f): ResultadoActividad => ({
+            id: f.id,
+            estudianteId: f.estudiante_id,
+            actividadId: f.actividad_id,
+            fecha: f.fecha,
+            duracionMs: f.duracion_ms,
+            rondas: f.rondas_resultado.map(
+              ({ item, intentos, acertada }): IntentoRonda => ({ item, intentos, acertada }),
+            ),
+            estrellas: f.estrellas,
+            monedas: f.monedas,
+          }),
         ),
-        estrellas: f.estrellas,
-        monedas: f.monedas,
-      }),
-    )
+      )
+      if (filas.length < POR_PAGINA) return resultados
+    }
   },
 
   async agregarObservacion(estudianteId, texto) {
@@ -255,16 +308,27 @@ export const repositorioSupabase: Repositorio = {
   },
   async perfilesDeSala(salaId) {
     const filas = sinError(await supabase.rpc('perfiles_de_sala', { p_sala: salaId }))
-    return filas.map((f): PerfilSala => ({ id: f.id, nombre: f.nombre, avatar: f.avatar, color: f.color, salaId: f.sala_id }))
+    return filas.map((f): PerfilSala => ({ id: f.id, nombre: f.nombre, avatar: f.avatar, color: f.color, ocupado: f.ocupado }))
   },
   async unirseASala(salaId, estudianteId) {
-    sinError(await supabase.rpc('unirse_sala', { p_sala: salaId, p_estudiante: estudianteId }))
+    const token = sinError(await supabase.rpc('unirse_sala', { p_sala: salaId, p_estudiante: estudianteId }))
+    guardarCredencial({ estudianteId, token })
   },
-  async salirDeSala(estudianteId) {
-    sinError(await supabase.rpc('salir_sala', { p_estudiante: estudianteId }))
+  alumnoDelDispositivo() {
+    return leerCredencial()?.estudianteId ?? null
   },
-  async salaDeEstudiante(estudianteId) {
-    const filas = sinError(await supabase.rpc('estudiante_en_sala', { p_estudiante: estudianteId }))
+  async salirDeSala() {
+    const c = leerCredencial()
+    olvidarCredencial()
+    if (c) sinError(await supabase.rpc('salir_sala', { p_estudiante: c.estudianteId, p_token: c.token }))
+  },
+  olvidarAlumno() {
+    olvidarCredencial()
+  },
+  async salaDelAlumno() {
+    const c = leerCredencial()
+    if (!c) return null
+    const filas = sinError(await supabase.rpc('estudiante_en_sala', { p_estudiante: c.estudianteId, p_token: c.token }))
     return filas[0] ? ({ id: filas[0].sala_id, nombre: filas[0].sala_nombre } satisfies SalaActual) : null
   },
 }

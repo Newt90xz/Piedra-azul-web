@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { Ronda } from '../contenido/actividades.ts'
+import { actividad, type Ronda } from '../contenido/actividades.ts'
 import { guardarResultadoConRespaldo } from '../datos/pendientes.ts'
 import { efecto, hablar } from '../lib/audio.ts'
 import { Icono } from '../ui/Icono.tsx'
@@ -16,6 +16,8 @@ const PUNTAJE = [
   { estrellas: 1, monedas: 2 },
 ]
 const BONO_RACHA = 2
+// Práctica (no se puede fallar): solo la recompensa base por completar, sin racha.
+const PRACTICA = { estrellas: 3, monedas: 2 }
 
 interface Registro {
   item: string
@@ -32,6 +34,7 @@ export function Partida({ actividadId, rondas, alReiniciar }: { actividadId: str
   const [registro, setRegistro] = useState<Registro[]>([])
   const [racha, setRacha] = useState(0)
   const [inicio] = useState(() => Date.now())
+  const practica = actividad(actividadId)?.practica ?? false
 
   const ronda = rondas[estado.indice]
 
@@ -52,8 +55,8 @@ export function Partida({ actividadId, rondas, alReiniciar }: { actividadId: str
       if ('pista' in ronda) hablar(intentos === 1 ? ronda.pista : '¡Mira! Es esta. ¡Tócala!')
       return
     }
-    const p = PUNTAJE[Math.min(intentos, 3) - 1]
-    const nuevaRacha = intentos === 1 ? racha + 1 : 0
+    const p = practica ? PRACTICA : PUNTAJE[Math.min(intentos, 3) - 1]
+    const nuevaRacha = !practica && intentos === 1 ? racha + 1 : 0
     setRacha(nuevaRacha)
     const bono = nuevaRacha >= 3 ? BONO_RACHA : 0
     setRegistro((r) => [...r, { item: ronda.item, intentos, estrellas: p.estrellas, monedas: p.monedas + bono, bono }])

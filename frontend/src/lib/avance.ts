@@ -1,3 +1,4 @@
+import { actividad } from '../contenido/actividades.ts'
 import type { Emocion, ResultadoActividad } from '../dominio/tipos.ts'
 
 export interface AvanceItem {
@@ -11,6 +12,8 @@ export interface AvanceItem {
 export function avancePorItem(resultados: ResultadoActividad[]): AvanceItem[] {
   const mapa = new Map<string, { rondas: number; primerIntento: number }>()
   for (const r of resultados) {
+    // En la práctica siempre se acierta al primer intento: inflaría la tasa.
+    if (actividad(r.actividadId)?.practica) continue
     for (const ronda of r.rondas) {
       if (ronda.item === 'comprension') continue
       const a = mapa.get(ronda.item) ?? { rondas: 0, primerIntento: 0 }
@@ -26,17 +29,23 @@ export function avancePorItem(resultados: ResultadoActividad[]): AvanceItem[] {
 
 export const UMBRAL_LE_CUESTA = 0.6
 
-export function inicioSemana(d = new Date()) {
+export function inicioDia(d = new Date()) {
   const f = new Date(d)
-  const dia = (f.getDay() + 6) % 7
-  f.setDate(f.getDate() - dia)
   f.setHours(0, 0, 0, 0)
   return f
 }
 
-export function deEstaSemana<T extends { fecha: string }>(filas: T[]) {
-  const desde = inicioSemana().toISOString()
-  return filas.filter((f) => f.fecha >= desde)
+export function inicioSemana(d = new Date()) {
+  const f = inicioDia(d)
+  f.setDate(f.getDate() - ((f.getDay() + 6) % 7))
+  return f
+}
+
+// Se compara como fecha y no como texto: el servidor puede devolver otro huso
+// u otro formato ("+00:00" en vez de "Z").
+export function deEstaSemana<T extends { fecha: string }>(filas: T[], hoy = new Date()) {
+  const desde = inicioSemana(hoy)
+  return filas.filter((f) => new Date(f.fecha) >= desde)
 }
 
 export const EMOCIONES: Record<Emocion, { cara: string; texto: string; color: string }> = {

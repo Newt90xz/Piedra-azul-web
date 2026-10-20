@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useSesion } from '../../app/Sesion.tsx'
 import { repo } from '../../datos/index.ts'
-import { EMOCIONES, deEstaSemana, minutos } from '../../lib/avance.ts'
+import { EMOCIONES, inicioSemana, minutos } from '../../lib/avance.ts'
 import { useConsulta } from '../../lib/useConsulta.ts'
 import { Avatar } from '../../ui/Avatar.tsx'
 import { AvisoError, Encabezado, Tarjeta } from '../../ui/aula.tsx'
@@ -10,13 +10,15 @@ import { AvisoError, Encabezado, Tarjeta } from '../../ui/aula.tsx'
 export default function AvanceCurso() {
   const { cursoId } = useSesion()
   const { datos, error, recargar } = useConsulta(async () => {
-    const estudiantes = await repo.listarEstudiantes(cursoId)
-    const resultados = await repo.listarResultados({ cursoId })
-    const emociones = await Promise.all(estudiantes.map((e) => repo.listarEmociones(e.id)))
-    return { estudiantes, resultados, emociones }
+    const [estudiantes, semana, emociones] = await Promise.all([
+      repo.listarEstudiantes(cursoId),
+      repo.listarResultados({ cursoId, desde: inicioSemana() }),
+      repo.ultimasEmociones(cursoId),
+    ])
+    return { estudiantes, semana, emocionDe: new Map(emociones.map((e) => [e.estudianteId, e.emocion])) }
   }, [cursoId])
 
-  const semana = deEstaSemana(datos?.resultados ?? [])
+  const semana = datos?.semana ?? []
 
   return (
     <>
@@ -34,10 +36,10 @@ export default function AvanceCurso() {
             </tr>
           </thead>
           <tbody>
-            {datos?.estudiantes.map((e, i) => {
+            {datos?.estudiantes.map((e) => {
               const propias = semana.filter((r) => r.estudianteId === e.id)
               const prom = propias.length ? propias.reduce((s, r) => s + r.estrellas, 0) / propias.length : 0
-              const emocion = datos.emociones[i][0]
+              const emocion = datos.emocionDe.get(e.id)
               return (
                 <tr key={e.id} className="border-b border-borde last:border-0">
                   <th scope="row" className="px-6 py-3">
@@ -51,9 +53,9 @@ export default function AvanceCurso() {
                   <td className="px-4 py-3">{propias.length ? `${prom.toFixed(1)} ★` : '—'}</td>
                   <td className="px-4 py-3">
                     {emocion ? (
-                      <span className="inline-flex items-center gap-2 rounded-lg px-2.5 py-1 text-sm" style={{ background: EMOCIONES[emocion.emocion].color }}>
-                        <span aria-hidden="true">{EMOCIONES[emocion.emocion].cara}</span>
-                        {EMOCIONES[emocion.emocion].texto}
+                      <span className="inline-flex items-center gap-2 rounded-lg px-2.5 py-1 text-sm" style={{ background: EMOCIONES[emocion].color }}>
+                        <span aria-hidden="true">{EMOCIONES[emocion].cara}</span>
+                        {EMOCIONES[emocion].texto}
                       </span>
                     ) : (
                       '—'

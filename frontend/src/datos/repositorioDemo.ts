@@ -8,6 +8,7 @@ import type {
   ResultadoActividad,
   Sala,
 } from '../dominio/tipos.ts'
+import { guardarCredencial, leerCredencial, olvidarCredencial } from './dispositivo.ts'
 import { AJUSTES_POR_DEFECTO, type Repositorio } from './repositorio.ts'
 
 // Implementación de demostración: guarda todo en localStorage del navegador.
@@ -134,6 +135,9 @@ export const repositorioDemo: Repositorio = {
   async cerrarSesion() {
     sessionStorage.removeItem(CLAVE_SESION)
   },
+  async esperarSesion() {
+    // La sesión de la demo se lee al instante.
+  },
   docenteActual() {
     try {
       const crudo = sessionStorage.getItem(CLAVE_SESION)
@@ -192,6 +196,13 @@ export const repositorioDemo: Repositorio = {
   async listarEmociones(estudianteId) {
     return porFecha(leer().emociones.filter((x) => x.estudianteId === estudianteId))
   },
+  async ultimasEmociones(cursoId) {
+    const e = leer()
+    const ids = new Set(e.estudiantes.filter((x) => x.cursoId === cursoId).map((x) => x.id))
+    const ultimas = new Map<string, RegistroEmocion>()
+    for (const r of porFecha(e.emociones)) if (ids.has(r.estudianteId) && !ultimas.has(r.estudianteId)) ultimas.set(r.estudianteId, r)
+    return [...ultimas.values()].map(({ estudianteId, emocion, fecha }) => ({ estudianteId, emocion, fecha }))
+  },
 
   async guardarResultado(r) {
     mutar((e) => {
@@ -201,11 +212,16 @@ export const repositorioDemo: Repositorio = {
       if (est) est.monedas += r.monedas
     })
   },
-  async listarResultados({ estudianteId, cursoId }) {
+  async listarResultados({ estudianteId, cursoId, desde }) {
     const e = leer()
     const ids = cursoId ? new Set(e.estudiantes.filter((x) => x.cursoId === cursoId).map((x) => x.id)) : null
     return porFecha(
-      e.resultados.filter((r) => (!estudianteId || r.estudianteId === estudianteId) && (!ids || ids.has(r.estudianteId))),
+      e.resultados.filter(
+        (r) =>
+          (!estudianteId || r.estudianteId === estudianteId) &&
+          (!ids || ids.has(r.estudianteId)) &&
+          (!desde || new Date(r.fecha) >= desde),
+      ),
     )
   },
 
@@ -283,7 +299,7 @@ export const repositorioDemo: Repositorio = {
         nombre: x.nombre,
         avatar: x.avatar,
         color: x.color,
-        salaId: (e.miembros ?? []).find((m) => m.estudianteId === x.id)?.salaId ?? null,
+        ocupado: false,
       }))
   },
   async unirseASala(salaId, estudianteId) {
@@ -291,17 +307,28 @@ export const repositorioDemo: Repositorio = {
     const sala = (e.salas ?? []).find((s) => s.id === salaId)
     if (!sala) throw new Error('sala_inexistente')
     const yaEsta = (e.miembros ?? []).some((m) => m.estudianteId === estudianteId && m.salaId === salaId)
-    if (yaEsta) return
-    if (!sala.abierta) throw new Error('sala_cerrada')
-    if ((e.miembros ?? []).filter((m) => m.salaId === salaId).length >= sala.cupos) throw new Error('sala_llena')
-    await repositorioDemo.conectarEstudiante(salaId, estudianteId)
+    if (!yaEsta) {
+      if (!sala.abierta) throw new Error('sala_cerrada')
+      if ((e.miembros ?? []).filter((m) => m.salaId === salaId).length >= sala.cupos) throw new Error('sala_llena')
+      await repositorioDemo.conectarEstudiante(salaId, estudianteId)
+    }
+    guardarCredencial({ estudianteId, token: 'demo' })
   },
-  async salirDeSala(estudianteId) {
-    await repositorioDemo.desconectarEstudiante(estudianteId)
+  alumnoDelDispositivo() {
+    return leerCredencial()?.estudianteId ?? null
   },
-  async salaDeEstudiante(estudianteId) {
+  async salirDeSala() {
+    const c = leerCredencial()
+    olvidarCredencial()
+    if (c) await repositorioDemo.desconectarEstudiante(c.estudianteId)
+  },
+  olvidarAlumno() {
+    olvidarCredencial()
+  },
+  async salaDelAlumno() {
     const e = leer()
-    const m = (e.miembros ?? []).find((x) => x.estudianteId === estudianteId)
+    const c = leerCredencial()
+    const m = c && (e.miembros ?? []).find((x) => x.estudianteId === c.estudianteId)
     const sala = m && (e.salas ?? []).find((s) => s.id === m.salaId)
     return sala ? { id: sala.id, nombre: sala.nombre } : null
   },

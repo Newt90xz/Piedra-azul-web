@@ -13,7 +13,7 @@ export default function Jugar() {
 function JugarActividad({ actividadId }: { actividadId: string }) {
   const { estudiante } = useNino()
   const a = actividad(actividadId)
-  const [partida, setPartida] = useState({ numero: 0, rondas: a?.generar() ?? [] })
+  const [partida, setPartida] = useState(() => ({ numero: 0, rondas: a?.generar() ?? [] }))
   const [leyendo, setLeyendo] = useState(actividadId === CUENTO_TITO.id)
 
   if (!a || (typeof a.grupo === 'number' && a.grupo > estudiante.nivelHabilitado)) return <Navigate to={`/aula/${estudiante.id}`} replace />

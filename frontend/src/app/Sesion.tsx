@@ -5,7 +5,8 @@ import type { Curso, Docente } from '../dominio/tipos.ts'
 import { useConsulta } from '../lib/useConsulta.ts'
 
 interface ValorSesion {
-  docente: Docente | null
+  // undefined mientras se resuelve la sesión guardada; null si no hay sesión.
+  docente: Docente | null | undefined
   // undefined mientras cargan; [] si la docente aún no tiene cursos.
   cursos: Curso[] | undefined
   errorCursos: Error | null
@@ -22,7 +23,7 @@ const SesionContexto = createContext<ValorSesion | null>(null)
 const CLAVE_CURSO = 'leer-para-todos/curso'
 
 export function ProveedorSesion({ children }: { children: ReactNode }) {
-  const [docente, setDocente] = useState(() => repo.docenteActual())
+  const [docente, setDocente] = useState<Docente | null | undefined>(undefined)
   const [cursoElegido, setCursoElegido] = useState(() => sessionStorage.getItem(CLAVE_CURSO) ?? '')
   const {
     datos: cursos,
@@ -33,14 +34,25 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
   // Si el curso guardado no es de esta docente, se toma el primero suyo.
   const cursoId = cursos?.some((c) => c.id === cursoElegido) ? cursoElegido : (cursos?.[0]?.id ?? '')
 
+  // Sesión guardada de una visita anterior. Si entretanto ya entró a mano, manda esa.
+  useEffect(() => {
+    let vigente = true
+    void repo.esperarSesion().then(() => {
+      if (vigente) setDocente((d) => (d === undefined ? repo.docenteActual() : d))
+    })
+    return () => {
+      vigente = false
+    }
+  }, [])
+
   // Sesión vencida o cerrada en otra pestaña: la UI vuelve a la entrada.
   useEffect(() => repo.alCambiarSesion(setDocente), [])
 
   // Resultados que no se pudieron guardar (RNF-12).
   useEffect(() => {
     if (!docente) return
-    void reenviarPendientes()
-    const alVolver = () => void reenviarPendientes()
+    void reenviarPendientes(true)
+    const alVolver = () => void reenviarPendientes(true)
     window.addEventListener('online', alVolver)
     return () => window.removeEventListener('online', alVolver)
   }, [docente])

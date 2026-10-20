@@ -11,6 +11,7 @@ import { ErrorNino, useVozAlApuntar } from '../../ui/nino.tsx'
 // Modo aula: la educadora ya inició sesión; el niño toca su foto (RF-02).
 export default function Sala() {
   const { docente, cursos, cursoId } = useSesion()
+  if (docente === undefined) return null
   if (!docente) return <SalaCerrada />
   // Sin cursos todavía: el panel ofrece crear el primero.
   if (!cursoId) return cursos ? <Navigate to="/docente" replace /> : null

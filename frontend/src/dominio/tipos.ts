@@ -127,8 +127,8 @@ export interface PerfilSala {
   nombre: string
   avatar: string
   color: string
-  // Sala en la que ya está conectado, si alguna.
-  salaId: string | null
+  // Ya entró desde otro dispositivo: no se puede tomar hasta que la docente lo libere.
+  ocupado: boolean
 }
 
 export interface SalaActual {

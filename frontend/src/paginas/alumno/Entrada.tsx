@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { alumnoGuardado, guardarAlumno } from '../../app/alumno.ts'
 import { repo } from '../../datos/index.ts'
 import type { SalaAbierta } from '../../dominio/tipos.ts'
 import { hablar } from '../../lib/audio.ts'
@@ -25,7 +24,7 @@ function useRefresco(recargar: () => void) {
 
 export default function Entrada() {
   const [sala, setSala] = useState<SalaAbierta | null>(null)
-  const guardado = alumnoGuardado()
+  const guardado = repo.alumnoDelDispositivo()
   if (guardado) return <Navigate to={`/aula/${guardado}`} replace />
 
   return (
@@ -97,6 +96,7 @@ function Espera() {
 const MENSAJES: Record<string, string> = {
   sala_cerrada: 'La sala se cerró.',
   sala_llena: 'La sala se llenó.',
+  perfil_ocupado: 'Ese perfil ya entró desde otro dispositivo.',
   perfil_invalido: 'Ese perfil no está disponible.',
   sala_inexistente: 'La sala ya no existe.',
 }
@@ -116,7 +116,6 @@ function ElegirPerfil({ sala, volver }: { sala: SalaAbierta; volver: () => void 
       recargar()
       return
     }
-    guardarAlumno(id)
     // La emoción se elige en la ruleta de la barra: se entra directo a su inicio.
     navegar(`/aula/${id}`)
   }
@@ -138,14 +137,29 @@ function ElegirPerfil({ sala, volver }: { sala: SalaAbierta; volver: () => void 
         </p>
       )}
       <ul className="grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-6">
-        {perfiles?.map((p) => (
-          <li key={p.id}>
-            <BotonNino voz={p.nombre} onClick={() => void unirse(p.id)} className="flex w-full flex-col items-center gap-3 p-5">
-              <Avatar estudiante={p} className="size-28 text-7xl" />
-              <span className="text-[0.85em] font-bold">{p.nombre}</span>
-            </BotonNino>
-          </li>
-        ))}
+        {perfiles?.map((p) => {
+          // Evita que dos niños usen el mismo perfil (el servidor también lo
+          // rechaza). Si quedó tomado por error, la docente lo libera.
+          const { ocupado } = p
+          return (
+            <li key={p.id}>
+              <BotonNino
+                voz={ocupado ? `${p.nombre} ya entró` : p.nombre}
+                disabled={ocupado}
+                onClick={() => void unirse(p.id)}
+                className="flex w-full flex-col items-center gap-3 p-5 disabled:opacity-50"
+              >
+                <Avatar estudiante={p} className="size-28 text-7xl" />
+                <span className="text-[0.85em] font-bold">{p.nombre}</span>
+                {ocupado && (
+                  <span aria-hidden="true" className="font-sans text-sm font-semibold text-tinta-suave">
+                    ✔ ya entró
+                  </span>
+                )}
+              </BotonNino>
+            </li>
+          )
+        })}
       </ul>
     </main>
   )

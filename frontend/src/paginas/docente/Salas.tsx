@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useSesion } from '../../app/Sesion.tsx'
 import { repo } from '../../datos/index.ts'
 import type { Emocion, Estudiante, MiembroSala, ResultadoActividad, Sala } from '../../dominio/tipos.ts'
-import { EMOCIONES } from '../../lib/avance.ts'
+import { EMOCIONES, inicioDia } from '../../lib/avance.ts'
 import { useConsulta } from '../../lib/useConsulta.ts'
 import { Avatar } from '../../ui/Avatar.tsx'
 import { Icono } from '../../ui/Icono.tsx'
@@ -14,25 +14,21 @@ export default function Salas() {
   const { cursoId } = useSesion()
   const [accionError, setAccionError] = useState<string | null>(null)
   const { datos, error, recargar } = useConsulta(async () => {
-    const [salas, miembros, estudiantes] = await Promise.all([
+    // Vista en vivo: se repite cada pocos segundos, así que solo trae lo de hoy
+    // y la última emoción de cada niño (no el historial completo).
+    const [salas, miembros, estudiantes, resultadosHoy, emociones] = await Promise.all([
       repo.listarSalas(cursoId),
       repo.listarMiembros(cursoId),
       repo.listarEstudiantes(cursoId),
+      repo.listarResultados({ cursoId, desde: inicioDia() }),
+      repo.ultimasEmociones(cursoId),
     ])
-    // Vista en vivo: solo de quienes están conectados.
-    const hoy = new Date().toDateString()
-    const [resultados, emociones] = miembros.length
-      ? await Promise.all([
-          repo.listarResultados({ cursoId }),
-          Promise.all(miembros.map(async (m) => [m.estudianteId, (await repo.listarEmociones(m.estudianteId))[0]?.emocion] as const)),
-        ])
-      : [[] as ResultadoActividad[], [] as (readonly [string, Emocion | undefined])[]]
     return {
       salas,
       miembros,
       estudiantes: estudiantes.filter((e) => e.activo),
-      resultadosHoy: resultados.filter((r) => new Date(r.fecha).toDateString() === hoy),
-      emocionDe: new Map(emociones),
+      resultadosHoy,
+      emocionDe: new Map(emociones.map((e) => [e.estudianteId, e.emocion])),
     }
   }, [cursoId])
 
@@ -73,6 +69,11 @@ export default function Salas() {
         </p>
       )}
       {error && !datos && <AvisoError alReintentar={recargar} />}
+      {error && datos && (
+        <p role="status" className="mb-4 rounded-xl bg-[#fdf1e4] px-4 py-3 text-sm font-semibold text-[#9a4d00]">
+          No se pudo actualizar: se muestran los últimos datos. Se reintenta solo.
+        </p>
+      )}
       <div className="grid gap-5 lg:grid-cols-2">
         {datos?.salas.map((s) => (
           <TarjetaSala
@@ -132,7 +133,7 @@ function TarjetaSala({
   miembros: MiembroSala[]
   estudiantes: Estudiante[]
   resultadosHoy: ResultadoActividad[]
-  emocionDe: Map<string, Emocion | undefined>
+  emocionDe: Map<string, Emocion>
   ejecutar: (accion: () => Promise<unknown>) => Promise<void>
 }) {
   const [confirmar, setConfirmar] = useState(false)

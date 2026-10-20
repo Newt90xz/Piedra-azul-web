@@ -1,6 +1,5 @@
 import { createContext, use, useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
 import { Link, Navigate, Outlet, useNavigate, useParams } from 'react-router-dom'
-import { alumnoGuardado, olvidarAlumno } from '../app/alumno.ts'
 import { useSesion } from '../app/Sesion.tsx'
 import { repo } from '../datos/index.ts'
 import { reenviarPendientes } from '../datos/pendientes.ts'
@@ -101,27 +100,27 @@ export function NinoShell() {
   const { docente } = useSesion()
   const navegar = useNavigate()
   const { datos: estudiante, error, recargar } = useConsulta(() => repo.obtenerEstudiante(id), [id])
-  const [silenciadoManual, setSilenciado] = useState<boolean | null>(null)
+  const [mudo, setMudo] = useState(false)
   const [emocion, setEmocion] = useState<Emocion | null>(() => emocionGuardada(id))
   // Es un alumno conectado a una sala si entró por /alumno, aunque comparta navegador con la docente.
-  const modoAlumno = alumnoGuardado() === id
+  const modoAlumno = repo.alumnoDelDispositivo() === id
 
   // El silencio que pulsa el niño apaga voz y efectos; al salir de la vista se restablece.
   useEffect(() => {
-    fijarMudo(silenciadoManual === true)
+    fijarMudo(mudo)
     return () => fijarMudo(false)
-  }, [silenciadoManual])
+  }, [mudo])
 
   // Si la docente lo desconecta (o cierra la sala), el niño vuelve a la espera.
   useEffect(() => {
     if (!modoAlumno) return
     const volverALaEspera = () => {
-      olvidarAlumno()
+      repo.olvidarAlumno()
       navegar('/alumno', { replace: true })
     }
     const revisar = () => {
       void reenviarPendientes()
-      repo.salaDeEstudiante(id).then((sala) => sala || volverALaEspera(), () => {})
+      repo.salaDelAlumno().then((sala) => sala || volverALaEspera(), () => {})
     }
     revisar()
     const t = window.setInterval(revisar, 4000)
@@ -129,8 +128,7 @@ export function NinoShell() {
   }, [modoAlumno, id, navegar])
 
   const salirDeLaSala = async () => {
-    await repo.salirDeSala(id).catch(() => {})
-    olvidarAlumno()
+    await repo.salirDeSala().catch(() => {})
     navegar('/alumno', { replace: true })
   }
 
@@ -145,7 +143,8 @@ export function NinoShell() {
     await repo.registrarEmocion(id, e).catch((err: unknown) => console.warn('[emocion] No se pudo registrar.', err))
   }
 
-  if (!docente && !modoAlumno) return <Navigate to="/alumno" replace />
+  if (!modoAlumno && docente === undefined) return <div className="nino min-h-dvh" />
+  if (!modoAlumno && !docente) return <Navigate to="/alumno" replace />
   if (error && !estudiante)
     return (
       <div className="nino min-h-dvh">
@@ -154,12 +153,13 @@ export function NinoShell() {
     )
   if (estudiante === undefined) return <div className="nino min-h-dvh" />
   if (estudiante === null) {
-    if (modoAlumno) olvidarAlumno()
+    if (modoAlumno) repo.olvidarAlumno()
     return <Navigate to={modoAlumno ? '/alumno' : '/aula'} replace />
   }
 
   const a = estudiante.ajustes
-  const silenciado = silenciadoManual ?? a.silenciarEfectos
+  // Efectos: los calla el ajuste de la docente o el silencio del niño (que además calla la voz).
+  const silenciado = mudo || a.silenciarEfectos
 
   return (
     <NinoContexto value={{ estudiante, silenciado, recargar, emocion, cambiarEmocion }}>
@@ -188,12 +188,12 @@ export function NinoShell() {
             </span>
             <RuletaEmociones actual={emocion} alElegir={(e) => void cambiarEmocion(e)} />
             <BotonNino
-              voz={silenciado ? 'Activar sonidos' : 'Silenciar sonidos'}
-              aria-pressed={silenciado}
-              onClick={() => setSilenciado(!silenciado)}
+              voz={mudo ? 'Activar sonidos' : 'Silenciar sonidos'}
+              aria-pressed={mudo}
+              onClick={() => setMudo(!mudo)}
               className="grid size-16 place-items-center rounded-2xl border-nino-azul"
             >
-              <Icono nombre={silenciado ? 'silencio' : 'altavoz'} className="size-8" />
+              <Icono nombre={mudo ? 'silencio' : 'altavoz'} className="size-8" />
             </BotonNino>
             {modoAlumno && (
               <BotonNino voz="Salir de la sala" onClick={() => void salirDeLaSala()} className="grid size-16 place-items-center rounded-2xl border-nino-azul bg-[#f6d1d1]">
