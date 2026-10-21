@@ -48,6 +48,13 @@ describe('práctica', () => {
   })
 })
 
+describe('categorías', () => {
+  it('toda actividad con rondas que miden avance tiene categoría (solo los cuentos no)', () => {
+    const sin = ACTIVIDADES.filter((a) => !a.categoria).map((a) => a.id)
+    expect(sin).toEqual(['cuento-tito', CANCION_RATON.id])
+  })
+})
+
 describe('juegos', () => {
   it('por ahora solo se asignan el choque de sonidos y los aplausos silábicos', () => {
     expect(JUEGOS.map((a) => a.id)).toEqual(['choque-sonidos', 'aplausos'])

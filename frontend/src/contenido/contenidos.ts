@@ -1,5 +1,5 @@
 import type { IntentoRonda, Palabra } from '../dominio/tipos.ts'
-import { actividad, mezclar, tomar, type Opcion, type Ronda } from './actividades.ts'
+import { actividad, mezclar, tomar, type Categoria, type Opcion, type Ronda } from './actividades.ts'
 import { CONSONANTES_SILABAS, LETRAS, PALABRAS, VOCALES, fonemaDe, quitarTildes } from './banco.ts'
 
 // Contenidos de las Bases Curriculares de la Educación Parvularia (MINEDUC,
@@ -28,6 +28,7 @@ export interface Contenido {
   oa: CodigoOA[]
   titulo: string
   descripcion: string
+  categoria: Categoria
   // Lo que ve el niño en su camino: sin texto.
   icono: string
   color: string
@@ -188,6 +189,7 @@ function contenidoSilabas(c: (typeof CONSONANTES_SILABAS)[number]): Contenido {
     oa: ['OA 7', 'OA 3'],
     titulo: `Sílabas con ${MAYUS(c)}`,
     descripcion: `Sílabas directas ${silabas}: escucharlas, reconocerlas al inicio de palabras e identificarlas frente a otras parecidas.`,
+    categoria: 'silabas',
     ...NOMBRE_SILABAS[c],
     pasos: [
       { titulo: 'Escucha y toca la sílaba', generar: () => escucharSilaba(c) },
@@ -270,6 +272,7 @@ export const CONTENIDOS: Contenido[] = [
     oa: ['OA 7', 'OA 3'],
     titulo: 'Las vocales',
     descripcion: 'Sonido de las vocales A, E, I, O, U, su letra imprenta y palabras que empiezan con cada una.',
+    categoria: 'letras',
     icono: '🐝',
     color: 'var(--color-nino-amarillo)',
     pasos: [
@@ -284,6 +287,7 @@ export const CONTENIDOS: Contenido[] = [
     oa: ['OA 3'],
     titulo: 'Palabras largas y cortas',
     descripcion: 'Comparar palabras por su cantidad de sílabas, de diferencias evidentes (SOL / MARIPOSA) a más finas.',
+    categoria: 'conteo',
     icono: '🐘',
     color: 'var(--color-nino-azul)',
     pasos: [
@@ -297,6 +301,7 @@ export const CONTENIDOS: Contenido[] = [
     oa: ['OA 3'],
     titulo: 'Rimas: ¿cuál termina igual?',
     descripcion: 'Identificar la sílaba final de palabras conocidas (GATO / PATO), con cada vez más opciones.',
+    categoria: 'rimas',
     icono: '🐱',
     color: 'var(--color-nino-menta)',
     pasos: [
@@ -334,10 +339,21 @@ export function aprobo(rondas: Pick<IntentoRonda, 'acertada'>[]) {
   return rondas.length > 0 && rondas.filter((r) => r.acertada).length / rondas.length >= UMBRAL_APROBAR
 }
 
-// Nombre legible para los reportes de la docente: actividades de contenido y juegos.
-export function nombreActividad(actividadId: string) {
+// Una actividad de contenido se guarda como «silabas-m-2»: contenido y número.
+function pasoDe(actividadId: string) {
   const paso = /^(.+)-([123])$/.exec(actividadId)
   const c = paso && contenido(paso[1])
-  if (c) return `${c.titulo} · Actividad ${paso[2]}`
+  return c ? { contenido: c, numero: paso[2] } : null
+}
+
+// Nombre legible para los reportes de la docente: actividades de contenido y juegos.
+export function nombreActividad(actividadId: string) {
+  const paso = pasoDe(actividadId)
+  if (paso) return `${paso.contenido.titulo} · Actividad ${paso.numero}`
   return actividad(actividadId)?.titulo ?? actividadId
+}
+
+// Categoría de lo que mide la actividad; undefined si no mide avance (cuentos) o no se conoce.
+export function categoriaDe(actividadId: string): Categoria | undefined {
+  return pasoDe(actividadId)?.contenido.categoria ?? actividad(actividadId)?.categoria
 }

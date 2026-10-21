@@ -1,10 +1,13 @@
 import { Link } from 'react-router-dom'
 import { useSesion } from '../../app/Sesion.tsx'
 import { repo } from '../../datos/index.ts'
-import { UMBRAL_LE_CUESTA, avancePorItem, deEstaSemana } from '../../lib/avance.ts'
+import { UMBRAL_LE_CUESTA, avancePorItem, deEstaSemana, porCategoria } from '../../lib/avance.ts'
 import { useConsulta } from '../../lib/useConsulta.ts'
 import { AvisoError, BotonEnlace, IconoCaja, Tarjeta } from '../../ui/aula.tsx'
 import { Icono, type NombreIcono } from '../../ui/Icono.tsx'
+
+// Cuántos ítems difíciles se muestran por categoría en el resumen.
+const POR_CATEGORIA = 3
 
 export default function Panel() {
   const { docente, cursoId } = useSesion()
@@ -21,7 +24,11 @@ export default function Panel() {
 
   const semana = deEstaSemana(datos?.resultados ?? [])
   const activos = new Set(semana.map((r) => r.estudianteId))
-  const cuestan = avancePorItem(datos?.resultados ?? []).filter((a) => a.tasa < UMBRAL_LE_CUESTA).slice(0, 5)
+  // Por categoría: una letra no se compara con una rima o una palabra.
+  const cuestan = porCategoria(avancePorItem(datos?.resultados ?? []).filter((a) => a.tasa < UMBRAL_LE_CUESTA)).map((g) => ({
+    ...g,
+    items: g.items.slice(0, POR_CATEGORIA),
+  }))
 
   return (
     <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_19rem]">
@@ -52,28 +59,37 @@ export default function Panel() {
     </div>
 
     <aside aria-labelledby="titulo-cuestan" className="xl:sticky xl:top-6">
-      <h2 id="titulo-cuestan" className="text-lg font-bold text-tinta">Sonidos que más cuestan al curso</h2>
+      <h2 id="titulo-cuestan" className="text-lg font-bold text-tinta">Lo que más le cuesta al curso</h2>
       <Tarjeta className="mt-4">
         {cuestan.length === 0 ? (
           <p className="text-tinta-suave">Aún no hay suficientes partidas para detectar dificultades.</p>
         ) : (
-          <ol className="grid gap-3">
-            {cuestan.map((a) => (
-              <li key={a.item} className="flex items-center gap-3 rounded-2xl bg-[#fdf1e4] px-4 py-3">
-                <span
-                  className={`w-24 shrink-0 text-center font-escolar font-bold break-words text-tinta ${a.item.length > 3 ? 'text-base leading-tight' : 'text-3xl'}`}
-                >
-                  {a.item}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block h-2.5 overflow-hidden rounded-full bg-white" aria-hidden="true">
-                    <span className="block h-full rounded-full bg-[#e8a35c]" style={{ width: `${Math.max(4, a.tasa * 100)}%` }} />
-                  </span>
-                  <span className="mt-1 block text-sm text-tinta-suave">{Math.round(a.tasa * 100)}% al primer intento</span>
-                </span>
-              </li>
+          <div className="grid gap-5">
+            {cuestan.map((g) => (
+              <section key={g.categoria} aria-labelledby={`cuesta-${g.categoria}`}>
+                <h3 id={`cuesta-${g.categoria}`} className="mb-2 text-sm font-bold text-tinta-suave">
+                  {g.titulo}
+                </h3>
+                <ol className="grid gap-3">
+                  {g.items.map((a) => (
+                    <li key={a.item} className="flex items-center gap-3 rounded-2xl bg-[#fdf1e4] px-4 py-3">
+                      <span
+                        className={`w-24 shrink-0 text-center font-escolar font-bold break-words text-tinta ${a.item.length > 3 ? 'text-base leading-tight' : 'text-3xl'}`}
+                      >
+                        {a.item}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block h-2.5 overflow-hidden rounded-full bg-white" aria-hidden="true">
+                          <span className="block h-full rounded-full bg-[#e8a35c]" style={{ width: `${Math.max(4, a.tasa * 100)}%` }} />
+                        </span>
+                        <span className="mt-1 block text-sm text-tinta-suave">{Math.round(a.tasa * 100)}% al primer intento</span>
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </section>
             ))}
-          </ol>
+          </div>
         )}
       </Tarjeta>
     </aside>

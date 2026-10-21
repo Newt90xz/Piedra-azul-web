@@ -43,11 +43,25 @@ export type Ronda =
 
 export type GrupoActividad = Nivel | 'cuentos'
 
+// Qué mide una actividad, para los reportes de la docente: así una letra no se
+// compara con una sílaba, una rima o una palabra. Orden = orden en pantalla.
+export const CATEGORIAS = {
+  letras: 'Vocales y letras',
+  silabas: 'Sílabas',
+  conteo: 'Conteo de sílabas',
+  rimas: 'Rimas',
+  palabras: 'Palabras',
+} as const
+
+export type Categoria = keyof typeof CATEGORIAS
+
 export interface Actividad {
   id: string
   grupo: GrupoActividad
   titulo: string
   icono: string
+  // Sin categoría no entra al avance (cuentos y canciones: no miden una letra o sílaba).
+  categoria?: Categoria
   generar: () => Ronda[]
   // Sin respuesta incorrecta posible (explorar, choque): no mide avance ni da racha.
   practica?: boolean
@@ -283,15 +297,15 @@ export const CANCION_RATON: { id: string; titulo: string; versos: Trozo[][] } = 
 // ---------- Catálogo ----------
 
 export const ACTIVIDADES: Actividad[] = [
-  { id: 'explorar-sonido', grupo: 1, titulo: 'Explorar el sonido', icono: '👄', generar: explorarSonido, practica: true },
-  { id: 'sonido-inicial', grupo: 1, titulo: '¿Qué empieza con este sonido?', icono: '🔎', generar: sonidoInicial },
-  { id: 'caza-letras', grupo: 1, titulo: 'Caza de letras', icono: '🫧', generar: cazaDeLetras },
-  { id: 'choque-sonidos', grupo: 2, titulo: 'El choque de sonidos', icono: '💥', generar: choqueDeSonidos, practica: true, juego: true },
-  { id: 'aplausos', grupo: 2, titulo: 'Aplausos silábicos', icono: '👏', generar: aplausosSilabicos, juego: true },
-  { id: 'silaba-inicial', grupo: 2, titulo: '¿Con qué sílaba empieza?', icono: '🔤', generar: silabaInicial },
-  { id: 'constructor', grupo: 3, titulo: 'Constructor de palabras', icono: '🧱', generar: constructorDePalabras },
-  { id: 'que-dice', grupo: 3, titulo: '¿Qué dice aquí?', icono: '🖼️', generar: queDiceAqui },
-  { id: 'falta-silaba', grupo: 3, titulo: 'Completa la sílaba', icono: '🧩', generar: completaLaSilaba },
+  { id: 'explorar-sonido', grupo: 1, titulo: 'Explorar el sonido', icono: '👄', categoria: 'letras', generar: explorarSonido, practica: true },
+  { id: 'sonido-inicial', grupo: 1, titulo: '¿Qué empieza con este sonido?', icono: '🔎', categoria: 'letras', generar: sonidoInicial },
+  { id: 'caza-letras', grupo: 1, titulo: 'Caza de letras', icono: '🫧', categoria: 'letras', generar: cazaDeLetras },
+  { id: 'choque-sonidos', grupo: 2, titulo: 'El choque de sonidos', icono: '💥', categoria: 'silabas', generar: choqueDeSonidos, practica: true, juego: true },
+  { id: 'aplausos', grupo: 2, titulo: 'Aplausos silábicos', icono: '👏', categoria: 'conteo', generar: aplausosSilabicos, juego: true },
+  { id: 'silaba-inicial', grupo: 2, titulo: '¿Con qué sílaba empieza?', icono: '🔤', categoria: 'silabas', generar: silabaInicial },
+  { id: 'constructor', grupo: 3, titulo: 'Constructor de palabras', icono: '🧱', categoria: 'palabras', generar: constructorDePalabras },
+  { id: 'que-dice', grupo: 3, titulo: '¿Qué dice aquí?', icono: '🖼️', categoria: 'palabras', generar: queDiceAqui },
+  { id: 'falta-silaba', grupo: 3, titulo: 'Completa la sílaba', icono: '🧩', categoria: 'palabras', generar: completaLaSilaba },
   { id: CUENTO_TITO.id, grupo: 'cuentos', titulo: CUENTO_TITO.titulo, icono: '🐢', generar: () => CUENTO_TITO.preguntas },
   { id: CANCION_RATON.id, grupo: 'cuentos', titulo: CANCION_RATON.titulo, icono: '🎵', generar: () => [] },
 ]
