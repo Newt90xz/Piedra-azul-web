@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import type { Opcion, Ronda } from '../contenido/actividades.ts'
 import { fonemaDe } from '../contenido/banco.ts'
 import { hablar } from '../lib/audio.ts'
@@ -47,13 +47,16 @@ function RondaElegir({ ronda, resuelta, revelar, alIntentar }: PropsRonda<'elegi
     alIntentar(false)
   }
 
+  const conImagen = ronda.opciones.some((o) => o.imagen)
+
   return (
     <div className="grid justify-items-center gap-10">
-      {(estimulo.texto || estimulo.imagen || estimulo.silabas) && (
+      {!estimulo.silabas && (estimulo.audio || estimulo.texto || estimulo.imagen) && <Estimulo ronda={ronda} resuelta={resuelta} />}
+      {estimulo.silabas && (
         <div className="flex flex-wrap items-center justify-center gap-6">
           {estimulo.imagen && <ImagenNino imagen={estimulo.imagen} className="text-[4em]" />}
           {estimulo.texto && <span className={`${tile} ${normal} min-w-[2.6em] px-6 py-2 text-[3em]`}>{estimulo.texto}</span>}
-          {estimulo.silabas?.map((s, i) =>
+          {estimulo.silabas.map((s, i) =>
             i === estimulo.hueco ? (
               <span key={i} className={`${tile} min-h-[2.4em] min-w-[3em] px-4 text-[1.6em] ${resuelta ? 'animate-pop border-nino-ok bg-nino-menta' : 'border-dashed border-nino-borde bg-white'}`}>
                 {resuelta ? s : ''}
@@ -64,26 +67,63 @@ function RondaElegir({ ronda, resuelta, revelar, alIntentar }: PropsRonda<'elegi
           )}
         </div>
       )}
-      <div className="grid w-full max-w-4xl gap-6" style={{ gridTemplateColumns: `repeat(${ronda.opciones.length}, minmax(0, 1fr))` }}>
-        {ronda.opciones.map((o) => {
+      <div
+        className={`grid w-full gap-6 ${ronda.opciones.length === 2 ? 'max-w-2xl' : 'max-w-4xl'}`}
+        style={{ gridTemplateColumns: `repeat(${ronda.opciones.length}, minmax(0, 1fr))` }}
+      >
+        {ronda.opciones.map((o, i) => {
           const correcta = o.id === ronda.correctaId
           const descartada = descartadas.includes(o.id)
           return (
-            <BotonNino
-              key={o.id}
-              voz={o.audio}
-              disabled={descartada || resuelta}
-              onClick={() => tocar(o)}
-              className={`grid min-h-[4.5em] place-items-center p-4 ${descartada ? 'opacity-35' : ''} ${sacudir === o.id ? 'animate-sacudir' : ''} ${
-                resuelta && correcta ? 'animate-pop border-nino-ok bg-nino-menta' : ''
-              } ${revelar && correcta ? 'border-[#e6c84d] bg-nino-amarillo' : ''}`}
-            >
-              {o.imagen ? <ImagenNino imagen={o.imagen} className="text-[3em]" /> : <span className="text-[1.8em] font-bold">{o.texto}</span>}
-            </BotonNino>
+            <span key={o.id} className="animate-aparecer relative" style={{ animationDelay: `${i * 90}ms`, animationFillMode: 'backwards' }}>
+              <BotonNino
+                voz={o.audio}
+                disabled={descartada || resuelta}
+                onClick={() => tocar(o)}
+                className={`grid w-full place-items-center p-4 ${conImagen ? 'min-h-[5.2em]' : 'min-h-[3.6em]'} ${descartada ? 'opacity-35 grayscale' : ''} ${
+                  sacudir === o.id ? 'animate-sacudir' : ''
+                } ${resuelta && correcta ? 'animate-pop border-nino-ok bg-nino-menta' : ''} ${revelar && correcta ? 'revelada border-[#e6c84d] bg-nino-amarillo' : ''}`}
+              >
+                {o.imagen ? <ImagenNino imagen={o.imagen} className="text-[3.4em]" /> : <span className="text-[2em] font-bold">{o.texto}</span>}
+              </BotonNino>
+              {resuelta && correcta && (
+                <span aria-hidden="true" className="chispas pointer-events-none absolute inset-0">
+                  {['✨', '⭐', '✨', '⭐'].map((c, k) => (
+                    <span key={k} style={{ '--k': k } as CSSProperties}>
+                      {c}
+                    </span>
+                  ))}
+                </span>
+              )}
+            </span>
           )
         })}
       </div>
     </div>
+  )
+}
+
+// Lo que se pregunta: una imagen, una letra o sílaba, o solo un sonido. Se toca
+// para escucharlo otra vez (sin depender de la lectura).
+function Estimulo({ ronda, resuelta }: { ronda: Extract<Ronda, { tipo: 'elegir' }>; resuelta: boolean }) {
+  const { estimulo } = ronda
+  const voz = useVozAlApuntar(estimulo.audio ?? '')
+  const contenido = estimulo.imagen ? (
+    <ImagenNino imagen={estimulo.imagen} className="text-[4.2em]" />
+  ) : estimulo.texto ? (
+    <span className="text-[3em] font-bold">{estimulo.texto}</span>
+  ) : (
+    <span aria-hidden="true" className="estimulo-oreja text-[3.4em] leading-none">👂</span>
+  )
+  const clase = `${tile} relative min-h-[3.4em] min-w-[3.4em] px-8 py-4 ${resuelta ? 'animate-pop border-nino-ok bg-nino-menta' : 'border-nino-azul bg-white'}`
+  if (!estimulo.audio) return <span className={clase}>{contenido}</span>
+  return (
+    <button {...voz} onClick={() => hablar(estimulo.audio!)} aria-label={`Escuchar: ${estimulo.audio}`} className={`${clase} hover:-translate-y-1`}>
+      {contenido}
+      <span aria-hidden="true" className="absolute -right-3 -bottom-3 grid size-12 place-items-center rounded-full border-3 border-nino-ok bg-nino-menta text-[0.6em]">
+        🔊
+      </span>
+    </button>
   )
 }
 

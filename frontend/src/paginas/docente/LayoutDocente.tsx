@@ -9,7 +9,6 @@ const MENU: { to: string; texto: string; icono: NombreIcono; fin?: boolean }[] =
   { to: '/docente/estudiantes', texto: 'Estudiantes', icono: 'personas' },
   { to: '/docente/avance', texto: 'Avance del curso', icono: 'grafico' },
   { to: '/docente/salas', texto: 'Salas', icono: 'aula' },
-  { to: '/aula', texto: 'Modo aula', icono: 'asterisco' },
 ]
 
 export default function LayoutDocente() {

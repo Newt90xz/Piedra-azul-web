@@ -30,7 +30,8 @@ interface RondaBase {
 export type Ronda =
   | (RondaBase & {
       tipo: 'elegir'
-      estimulo: { texto?: string; imagen?: Imagen; silabas?: string[]; hueco?: number }
+      // `audio`: lo que suena al tocar el estímulo (fonema, sílaba o palabra).
+      estimulo: { texto?: string; imagen?: Imagen; silabas?: string[]; hueco?: number; audio?: string }
       opciones: Opcion[]
       correctaId: string
       pista: string
@@ -50,6 +51,9 @@ export interface Actividad {
   generar: () => Ronda[]
   // Sin respuesta incorrecta posible (explorar, choque): no mide avance ni da racha.
   practica?: boolean
+  // Juego que la docente puede asignar a una sala. Las demás mecánicas quedan
+  // deshabilitadas hasta que estén terminadas.
+  juego?: boolean
 }
 
 export const GRUPOS: { id: GrupoActividad; titulo: string; icono: string; color: string; audio: string }[] = [
@@ -61,7 +65,7 @@ export const GRUPOS: { id: GrupoActividad; titulo: string; icono: string; color:
 
 // Fisher-Yates: `sort(() => Math.random() - 0.5)` no reparte las posiciones por
 // igual y la respuesta correcta tendería a quedar en el mismo lugar.
-function mezclar<T>(a: readonly T[]) {
+export function mezclar<T>(a: readonly T[]) {
   const r = [...a]
   for (let i = r.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
@@ -69,7 +73,7 @@ function mezclar<T>(a: readonly T[]) {
   }
   return r
 }
-const tomar = <T,>(a: readonly T[], n: number) => mezclar(a).slice(0, n)
+export const tomar = <T,>(a: readonly T[], n: number) => mezclar(a).slice(0, n)
 const MAYUS = (s: string) => s.toUpperCase()
 const opcionPalabra = (w: Palabra): Opcion => ({ id: w.id, imagen: w.imagen, audio: w.texto })
 
@@ -282,8 +286,8 @@ export const ACTIVIDADES: Actividad[] = [
   { id: 'explorar-sonido', grupo: 1, titulo: 'Explorar el sonido', icono: '👄', generar: explorarSonido, practica: true },
   { id: 'sonido-inicial', grupo: 1, titulo: '¿Qué empieza con este sonido?', icono: '🔎', generar: sonidoInicial },
   { id: 'caza-letras', grupo: 1, titulo: 'Caza de letras', icono: '🫧', generar: cazaDeLetras },
-  { id: 'choque-sonidos', grupo: 2, titulo: 'El choque de sonidos', icono: '💥', generar: choqueDeSonidos, practica: true },
-  { id: 'aplausos', grupo: 2, titulo: 'Aplausos silábicos', icono: '👏', generar: aplausosSilabicos },
+  { id: 'choque-sonidos', grupo: 2, titulo: 'El choque de sonidos', icono: '💥', generar: choqueDeSonidos, practica: true, juego: true },
+  { id: 'aplausos', grupo: 2, titulo: 'Aplausos silábicos', icono: '👏', generar: aplausosSilabicos, juego: true },
   { id: 'silaba-inicial', grupo: 2, titulo: '¿Con qué sílaba empieza?', icono: '🔤', generar: silabaInicial },
   { id: 'constructor', grupo: 3, titulo: 'Constructor de palabras', icono: '🧱', generar: constructorDePalabras },
   { id: 'que-dice', grupo: 3, titulo: '¿Qué dice aquí?', icono: '🖼️', generar: queDiceAqui },
@@ -295,3 +299,6 @@ export const ACTIVIDADES: Actividad[] = [
 export function actividad(id: string) {
   return ACTIVIDADES.find((a) => a.id === id)
 }
+
+// Lo que la docente puede elegir como juego de una sala (punto de llegada tras los contenidos).
+export const JUEGOS = ACTIVIDADES.filter((a) => a.juego)

@@ -1,9 +1,8 @@
 import { createContext, use, useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
 import { Link, Navigate, Outlet, useNavigate, useParams } from 'react-router-dom'
-import { useSesion } from '../app/Sesion.tsx'
 import { repo } from '../datos/index.ts'
 import { reenviarPendientes } from '../datos/pendientes.ts'
-import type { Emocion, Estudiante, Imagen } from '../dominio/tipos.ts'
+import type { Emocion, EstadoAlumno, Estudiante, Imagen } from '../dominio/tipos.ts'
 import { fijarMudo } from '../lib/audio.ts'
 import { useConsulta } from '../lib/useConsulta.ts'
 import { Avatar } from './Avatar.tsx'
@@ -18,7 +17,10 @@ export { useVozAlApuntar }
 
 interface ValorNino {
   estudiante: Estudiante
+  // Sala, plan y avance: la vista se arma según lo que asignó la docente.
+  estado: EstadoAlumno
   silenciado: boolean
+  // Vuelve a consultar el estado (monedas, sala, avance) sin esperar al próximo refresco.
   recargar: () => void
   // Cómo dice sentirse ahora; la ruleta de la barra y la pantalla de inicio lo cambian.
   emocion: Emocion | null
@@ -95,15 +97,18 @@ function emocionGuardada(id: string): Emocion | null {
   }
 }
 
+const REFRESCO_MS = 4000
+
+// Vista del alumno conectado desde su dispositivo (entró por /alumno). Cada
+// pocos segundos consulta su estado: así ve la sala que le asigna la docente y,
+// si ella cierra su dispositivo, vuelve a la elección de perfil.
 export function NinoShell() {
   const { id = '' } = useParams()
-  const { docente } = useSesion()
   const navegar = useNavigate()
-  const { datos: estudiante, error, recargar } = useConsulta(() => repo.obtenerEstudiante(id), [id])
+  const conectado = repo.alumnoDelDispositivo() === id
+  const { datos: estado, error, recargar } = useConsulta(async () => (conectado ? repo.estadoAlumno() : null), [id, conectado])
   const [mudo, setMudo] = useState(false)
   const [emocion, setEmocion] = useState<Emocion | null>(() => emocionGuardada(id))
-  // Es un alumno conectado a una sala si entró por /alumno, aunque comparta navegador con la docente.
-  const modoAlumno = repo.alumnoDelDispositivo() === id
 
   // El silencio que pulsa el niño apaga voz y efectos; al salir de la vista se restablece.
   useEffect(() => {
@@ -111,24 +116,17 @@ export function NinoShell() {
     return () => fijarMudo(false)
   }, [mudo])
 
-  // Si la docente lo desconecta (o cierra la sala), el niño vuelve a la espera.
   useEffect(() => {
-    if (!modoAlumno) return
-    const volverALaEspera = () => {
-      repo.olvidarAlumno()
-      navegar('/alumno', { replace: true })
-    }
-    const revisar = () => {
+    if (!conectado) return
+    const t = window.setInterval(() => {
       void reenviarPendientes()
-      repo.salaDelAlumno().then((sala) => sala || volverALaEspera(), () => {})
-    }
-    revisar()
-    const t = window.setInterval(revisar, 4000)
+      recargar()
+    }, REFRESCO_MS)
     return () => window.clearInterval(t)
-  }, [modoAlumno, id, navegar])
+  })
 
-  const salirDeLaSala = async () => {
-    await repo.salirDeSala().catch(() => {})
+  const salir = async () => {
+    await repo.salirComoAlumno().catch(() => {})
     navegar('/alumno', { replace: true })
   }
 
@@ -143,26 +141,27 @@ export function NinoShell() {
     await repo.registrarEmocion(id, e).catch((err: unknown) => console.warn('[emocion] No se pudo registrar.', err))
   }
 
-  if (!modoAlumno && docente === undefined) return <div className="nino min-h-dvh" />
-  if (!modoAlumno && !docente) return <Navigate to="/alumno" replace />
-  if (error && !estudiante)
+  if (!conectado) return <Navigate to="/alumno" replace />
+  if (estado === null) {
+    // La docente cerró este dispositivo u otro tomó el perfil.
+    repo.olvidarAlumno()
+    return <Navigate to="/alumno" replace />
+  }
+  if (error && !estado)
     return (
       <div className="nino min-h-dvh">
         <ErrorNino alReintentar={recargar} />
       </div>
     )
-  if (estudiante === undefined) return <div className="nino min-h-dvh" />
-  if (estudiante === null) {
-    if (modoAlumno) repo.olvidarAlumno()
-    return <Navigate to={modoAlumno ? '/alumno' : '/aula'} replace />
-  }
+  if (estado === undefined) return <div className="nino min-h-dvh" />
 
+  const { estudiante } = estado
   const a = estudiante.ajustes
   // Efectos: los calla el ajuste de la docente o el silencio del niño (que además calla la voz).
   const silenciado = mudo || a.silenciarEfectos
 
   return (
-    <NinoContexto value={{ estudiante, silenciado, recargar, emocion, cambiarEmocion }}>
+    <NinoContexto value={{ estudiante, estado, silenciado, recargar, emocion, cambiarEmocion }}>
       <div
         className="nino relative min-h-dvh"
         data-tamano={a.tamanoLetra}
@@ -195,11 +194,9 @@ export function NinoShell() {
             >
               <Icono nombre={mudo ? 'silencio' : 'altavoz'} className="size-8" />
             </BotonNino>
-            {modoAlumno && (
-              <BotonNino voz="Salir de la sala" onClick={() => void salirDeLaSala()} className="grid size-16 place-items-center rounded-2xl border-nino-azul bg-[#f6d1d1]">
-                <Icono nombre="salir" className="size-8" />
-              </BotonNino>
-            )}
+            <BotonNino voz="Salir" onClick={() => void salir()} className="grid size-16 place-items-center rounded-2xl border-nino-azul bg-[#f6d1d1]">
+              <Icono nombre="salir" className="size-8" />
+            </BotonNino>
           </header>
           <Outlet />
         </div>

@@ -75,9 +75,9 @@ export function MiniJuego() {
   return (
     <main className="mx-auto max-w-5xl px-6 pt-6 pb-4">
       <div className="mb-3 flex flex-wrap items-center justify-center gap-4 text-center">
-        <p className="flex items-center gap-2 font-sans text-base font-semibold text-tinta-suave">
-          <span aria-hidden="true" className="animate-bounce text-2xl">⏳</span>
-          Esperando a tu profe…
+        <p className="flex items-center gap-2 text-[1.4em] leading-none" aria-label="Esperando a tu profe">
+          <span aria-hidden="true" className="animate-bounce">⏳</span>
+          <span aria-hidden="true">🧑‍🏫</span>
         </p>
         <p
           aria-live="polite"

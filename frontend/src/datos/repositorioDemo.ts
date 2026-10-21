@@ -1,9 +1,13 @@
+import { AVATARES_TIENDA } from '../contenido/tienda.ts'
 import type {
+  Conectado,
   Curso,
   Docente,
   Estudiante,
+  MensajeSala,
   MiembroSala,
   Observacion,
+  ProgresoSala,
   RegistroEmocion,
   ResultadoActividad,
   Sala,
@@ -14,7 +18,8 @@ import { AJUSTES_POR_DEFECTO, type Repositorio } from './repositorio.ts'
 // Implementación de demostración: guarda todo en localStorage del navegador.
 // Sirve para diseñar y probar las pantallas antes de conectar Supabase.
 
-const CLAVE = 'leer-para-todos/demo-v1'
+// v2: salas con plan, sesiones de dispositivo, tienda y playground.
+const CLAVE = 'leer-para-todos/demo-v2'
 const CLAVE_SESION = 'leer-para-todos/sesion'
 
 interface Estado {
@@ -24,9 +29,17 @@ interface Estado {
   emociones: RegistroEmocion[]
   resultados: ResultadoActividad[]
   observaciones: Observacion[]
-  salas?: Sala[]
-  miembros?: MiembroSala[]
+  salas: Sala[]
+  miembros: MiembroSala[]
+  conectados: Conectado[]
+  progreso: ProgresoSala[]
+  compras: { estudianteId: string; avatarId: string }[]
+  mensajes: (Omit<MensajeSala, 'nombre' | 'avatar' | 'avatarTienda' | 'color'> & { salaId: string })[]
 }
+
+// Igual que la base: un dispositivo sin señales por 10 minutos libera el perfil.
+const SESION_VIGENTE_MS = 10 * 60_000
+const vigente = (c: Conectado) => Date.now() - new Date(c.vistoEn).getTime() < SESION_VIGENTE_MS
 
 const id = () => crypto.randomUUID()
 const haceDias = (d: number, h = 10) => {
@@ -93,7 +106,32 @@ function semilla(): Estado {
   const observaciones: Observacion[] = [
     { id: id(), estudianteId: 'est-2', texto: 'Practicar la L y la S con canciones y rimas.', fecha: haceDias(3) },
   ]
-  return { docentes: [docente], cursos, estudiantes, emociones, resultados, observaciones }
+  const salas: Sala[] = [
+    {
+      id: 'sala-silabas',
+      cursoId: 'kinder-a',
+      nombre: 'Grupo Sílabas',
+      tipo: 'trabajo',
+      contenidos: ['vocales', 'silabas-m'],
+      juegos: ['aplausos', 'choque-sonidos'],
+      asignacion: id(),
+    },
+    { id: 'sala-patio', cursoId: 'kinder-a', nombre: 'Patio', tipo: 'playground', contenidos: [], juegos: [], asignacion: id() },
+  ]
+  return {
+    docentes: [docente],
+    cursos,
+    estudiantes,
+    emociones,
+    resultados,
+    observaciones,
+    salas,
+    miembros: [],
+    conectados: [],
+    progreso: [],
+    compras: [],
+    mensajes: [],
+  }
 }
 
 function leer(): Estado {
@@ -186,7 +224,11 @@ export const repositorioDemo: Repositorio = {
       e.emociones = e.emociones.filter((x) => x.estudianteId !== estudianteId)
       e.resultados = e.resultados.filter((x) => x.estudianteId !== estudianteId)
       e.observaciones = e.observaciones.filter((x) => x.estudianteId !== estudianteId)
-      e.miembros = (e.miembros ?? []).filter((m) => m.estudianteId !== estudianteId)
+      e.miembros = e.miembros.filter((m) => m.estudianteId !== estudianteId)
+      e.conectados = e.conectados.filter((c) => c.estudianteId !== estudianteId)
+      e.progreso = e.progreso.filter((x) => x.estudianteId !== estudianteId)
+      e.compras = e.compras.filter((x) => x.estudianteId !== estudianteId)
+      e.mensajes = e.mensajes.filter((x) => x.estudianteId !== estudianteId)
     })
   },
 
@@ -240,98 +282,192 @@ export const repositorioDemo: Repositorio = {
   },
 
   async listarSalas(cursoId) {
-    return (leer().salas ?? []).filter((s) => s.cursoId === cursoId)
+    return leer().salas.filter((s) => s.cursoId === cursoId)
   },
-  async crearSala(cursoId, nombre, cupos) {
-    const sala: Sala = { id: id(), cursoId, nombre, abierta: true, cupos }
-    mutar((e) => (e.salas = [...(e.salas ?? []), sala]))
+  async crearSala(cursoId, nombre, tipo) {
+    const e = leer()
+    if (e.salas.some((s) => s.cursoId === cursoId && s.nombre === nombre)) throw new Error('duplicate key value')
+    const sala: Sala = { id: id(), cursoId, nombre, tipo, contenidos: [], juegos: [], asignacion: id() }
+    mutar((x) => x.salas.push(sala))
     return sala
   },
-  async actualizarSala(salaId, cambios) {
-    mutar((e) => (e.salas = (e.salas ?? []).map((s) => (s.id === salaId ? { ...s, ...cambios } : s))))
+  async renombrarSala(salaId, nombre) {
+    mutar((e) => (e.salas = e.salas.map((s) => (s.id === salaId ? { ...s, nombre } : s))))
+  },
+  async asignarPlan(salaId, contenidos, juegos) {
+    mutar((e) => (e.salas = e.salas.map((s) => (s.id === salaId ? { ...s, contenidos, juegos, asignacion: id() } : s))))
   },
   async eliminarSala(salaId) {
     mutar((e) => {
-      e.salas = (e.salas ?? []).filter((s) => s.id !== salaId)
-      e.miembros = (e.miembros ?? []).filter((m) => m.salaId !== salaId)
+      e.salas = e.salas.filter((s) => s.id !== salaId)
+      e.miembros = e.miembros.filter((m) => m.salaId !== salaId)
+      e.progreso = e.progreso.filter((x) => x.salaId !== salaId)
+      e.mensajes = e.mensajes.filter((x) => x.salaId !== salaId)
     })
   },
   async listarMiembros(cursoId) {
     const e = leer()
-    const salas = new Set((e.salas ?? []).filter((s) => s.cursoId === cursoId).map((s) => s.id))
-    return (e.miembros ?? []).filter((m) => salas.has(m.salaId))
+    const salas = new Set(e.salas.filter((s) => s.cursoId === cursoId).map((s) => s.id))
+    return e.miembros.filter((m) => salas.has(m.salaId))
   },
   async conectarEstudiante(salaId, estudianteId) {
-    mutar((e) => (e.miembros = [...(e.miembros ?? []).filter((m) => m.estudianteId !== estudianteId), { estudianteId, salaId }]))
+    mutar((e) => (e.miembros = [...e.miembros.filter((m) => m.estudianteId !== estudianteId), { estudianteId, salaId }]))
   },
   async desconectarEstudiante(estudianteId) {
-    mutar((e) => (e.miembros = (e.miembros ?? []).filter((m) => m.estudianteId !== estudianteId)))
+    mutar((e) => (e.miembros = e.miembros.filter((m) => m.estudianteId !== estudianteId)))
+  },
+  async vaciarSala(salaId) {
+    mutar((e) => (e.miembros = e.miembros.filter((m) => m.salaId !== salaId)))
+  },
+  async listarConectados(cursoId) {
+    const e = leer()
+    const ids = new Set(e.estudiantes.filter((x) => x.cursoId === cursoId).map((x) => x.id))
+    return e.conectados.filter((c) => ids.has(c.estudianteId))
+  },
+  async cerrarDispositivo(estudianteId) {
+    mutar((e) => (e.conectados = e.conectados.filter((c) => c.estudianteId !== estudianteId)))
+  },
+  async listarProgreso(cursoId) {
+    const e = leer()
+    const salas = new Set(e.salas.filter((s) => s.cursoId === cursoId).map((s) => s.id))
+    return e.progreso.filter((x) => salas.has(x.salaId))
+  },
+  async marcarApoyado(estudianteId) {
+    mutar((e) => (e.progreso = e.progreso.map((x) => (x.estudianteId === estudianteId ? { ...x, necesitaAyuda: false } : x))))
+  },
+  async mensajesSala(salaId) {
+    return mensajesDe(leer(), salaId)
   },
 
-  async vaciarSala(salaId, cerrar) {
-    mutar((e) => {
-      if (cerrar) e.salas = (e.salas ?? []).map((s) => (s.id === salaId ? { ...s, abierta: false } : s))
-      e.miembros = (e.miembros ?? []).filter((m) => m.salaId !== salaId)
-    })
-  },
-
-  // La demo guarda todo en un solo navegador, así que no distingue dispositivos.
-  async salasAbiertas() {
+  // La demo guarda todo en un solo navegador: la sesión del «dispositivo» es la
+  // credencial local más una fila en `conectados` que la docente puede cerrar.
+  async perfilesAlumnos() {
     const e = leer()
-    return (e.salas ?? [])
-      .filter((s) => s.abierta)
-      .map((s) => ({
-        id: s.id,
-        nombre: s.nombre,
-        curso: e.cursos.find((c) => c.id === s.cursoId)?.nombre ?? '',
-        cupos: s.cupos,
-        ocupados: (e.miembros ?? []).filter((m) => m.salaId === s.id).length,
-      }))
-  },
-  async perfilesDeSala(salaId) {
-    const e = leer()
-    const sala = (e.salas ?? []).find((s) => s.id === salaId)
-    if (!sala) return []
     return e.estudiantes
-      .filter((x) => x.cursoId === sala.cursoId && x.activo)
-      .map((x) => ({
-        id: x.id,
-        nombre: x.nombre,
-        avatar: x.avatar,
-        color: x.color,
-        ocupado: false,
-      }))
+      .filter((x) => x.activo)
+      .sort((a, b) => a.nombre.localeCompare(b.nombre))
+      .map((x) => {
+        const c = e.conectados.find((c) => c.estudianteId === x.id)
+        return { id: x.id, nombre: x.nombre, avatar: x.avatar, avatarTienda: x.avatarTienda, color: x.color, ocupado: !!c && vigente(c) }
+      })
   },
-  async unirseASala(salaId, estudianteId) {
+  async entrarComoAlumno(estudianteId) {
     const e = leer()
-    const sala = (e.salas ?? []).find((s) => s.id === salaId)
-    if (!sala) throw new Error('sala_inexistente')
-    const yaEsta = (e.miembros ?? []).some((m) => m.estudianteId === estudianteId && m.salaId === salaId)
-    if (!yaEsta) {
-      if (!sala.abierta) throw new Error('sala_cerrada')
-      if ((e.miembros ?? []).filter((m) => m.salaId === salaId).length >= sala.cupos) throw new Error('sala_llena')
-      await repositorioDemo.conectarEstudiante(salaId, estudianteId)
-    }
+    if (!e.estudiantes.some((x) => x.id === estudianteId && x.activo)) throw new Error('perfil_invalido')
+    const c = e.conectados.find((x) => x.estudianteId === estudianteId)
+    if (c && vigente(c)) throw new Error('perfil_ocupado')
+    const ahora = new Date().toISOString()
+    mutar((x) => (x.conectados = [...x.conectados.filter((y) => y.estudianteId !== estudianteId), { estudianteId, desde: ahora, vistoEn: ahora }]))
     guardarCredencial({ estudianteId, token: 'demo' })
   },
   alumnoDelDispositivo() {
     return leerCredencial()?.estudianteId ?? null
   },
-  async salirDeSala() {
+  async salirComoAlumno() {
     const c = leerCredencial()
     olvidarCredencial()
-    if (c) await repositorioDemo.desconectarEstudiante(c.estudianteId)
+    if (c) await repositorioDemo.cerrarDispositivo(c.estudianteId)
   },
   olvidarAlumno() {
     olvidarCredencial()
   },
-  async salaDelAlumno() {
-    const e = leer()
+  async estadoAlumno() {
     const c = leerCredencial()
-    const m = c && (e.miembros ?? []).find((x) => x.estudianteId === c.estudianteId)
-    const sala = m && (e.salas ?? []).find((s) => s.id === m.salaId)
-    return sala ? { id: sala.id, nombre: sala.nombre } : null
+    if (!c) return null
+    const e = leer()
+    if (!e.conectados.some((x) => x.estudianteId === c.estudianteId)) return null
+    mutar((x) => (x.conectados = x.conectados.map((y) => (y.estudianteId === c.estudianteId ? { ...y, vistoEn: new Date().toISOString() } : y))))
+    const m = e.miembros.find((x) => x.estudianteId === c.estudianteId)
+    const sala = m ? e.salas.find((s) => s.id === m.salaId) : undefined
+    const p = e.progreso.find((x) => x.estudianteId === c.estudianteId)
+    const vale = sala && p && p.salaId === sala.id && p.asignacion === sala.asignacion
+    const estudiante = e.estudiantes.find((x) => x.id === c.estudianteId)
+    if (!estudiante?.activo) return null
+    return {
+      estudiante,
+      sala: sala ? { id: sala.id, nombre: sala.nombre, tipo: sala.tipo, contenidos: sala.contenidos, juegos: sala.juegos, asignacion: sala.asignacion } : null,
+      progreso: vale ? { paso: p.paso, repeticiones: p.repeticiones } : { paso: 0, repeticiones: 0 },
+      avataresComprados: e.compras.filter((x) => x.estudianteId === c.estudianteId).map((x) => x.avatarId),
+    }
   },
+  async registrarProgreso(asignacion, paso, aprobado) {
+    const estudianteId = alumnoConectado()
+    const e = leer()
+    const m = e.miembros.find((x) => x.estudianteId === estudianteId)
+    const sala = m && e.salas.find((s) => s.id === m.salaId && s.tipo === 'trabajo')
+    if (!sala) throw new Error('sin_sala')
+    if (sala.asignacion !== asignacion) throw new Error('plan_cambiado')
+    const previo = e.progreso.find((x) => x.estudianteId === estudianteId)
+    const p: ProgresoSala =
+      previo && previo.salaId === sala.id && previo.asignacion === sala.asignacion
+        ? { ...previo }
+        : { estudianteId, salaId: sala.id, asignacion, paso: 0, repeticiones: 0, necesitaAyuda: false, actualizado: '' }
+    if (p.paso === paso && p.paso < sala.contenidos.length * 3) {
+      if (aprobado) Object.assign(p, { paso: p.paso + 1, repeticiones: 0, necesitaAyuda: false })
+      else Object.assign(p, { repeticiones: p.repeticiones + 1, necesitaAyuda: p.repeticiones + 1 >= 2 })
+    }
+    p.actualizado = new Date().toISOString()
+    mutar((x) => (x.progreso = [...x.progreso.filter((y) => y.estudianteId !== estudianteId), p]))
+    return { paso: p.paso, repeticiones: p.repeticiones }
+  },
+  async comprarAvatar(avatarId) {
+    const estudianteId = alumnoConectado()
+    const precio = AVATARES_TIENDA.find((a) => a.id === avatarId)?.precio
+    if (precio === undefined) throw new Error('avatar_invalido')
+    mutar((e) => {
+      const est = e.estudiantes.find((x) => x.id === estudianteId)
+      if (!est) throw new Error('sin_sesion')
+      if (!e.compras.some((x) => x.estudianteId === estudianteId && x.avatarId === avatarId)) {
+        if (est.monedas < precio) throw new Error('monedas_insuficientes')
+        est.monedas -= precio
+        e.compras.push({ estudianteId, avatarId })
+      }
+      est.avatarTienda = avatarId
+    })
+  },
+  async usarAvatar(avatarId) {
+    const estudianteId = alumnoConectado()
+    mutar((e) => {
+      if (avatarId && !e.compras.some((x) => x.estudianteId === estudianteId && x.avatarId === avatarId)) throw new Error('avatar_invalido')
+      const est = e.estudiantes.find((x) => x.id === estudianteId)
+      if (est) est.avatarTienda = avatarId ?? undefined
+    })
+  },
+  async mensajesPlayground() {
+    const estudianteId = alumnoConectado()
+    const e = leer()
+    const m = e.miembros.find((x) => x.estudianteId === estudianteId)
+    const sala = m && e.salas.find((s) => s.id === m.salaId && s.tipo === 'playground')
+    return sala ? mensajesDe(e, sala.id) : []
+  },
+  async enviarMensaje(picto) {
+    const estudianteId = alumnoConectado()
+    const e = leer()
+    const m = e.miembros.find((x) => x.estudianteId === estudianteId)
+    const sala = m && e.salas.find((s) => s.id === m.salaId && s.tipo === 'playground')
+    if (!sala) throw new Error('sin_playground')
+    const ultimo = e.mensajes.filter((x) => x.estudianteId === estudianteId).at(-1)
+    if (ultimo && Date.now() - new Date(ultimo.enviadoEn).getTime() < 2000) return
+    mutar((x) => x.mensajes.push({ id: x.mensajes.length + 1, salaId: sala.id, estudianteId, picto, enviadoEn: new Date().toISOString() }))
+  },
+}
+
+function alumnoConectado() {
+  const c = leerCredencial()
+  if (!c) throw new Error('sin_sesion')
+  return c.estudianteId
+}
+
+// Más recientes primero, como la base (máximo 40).
+function mensajesDe(e: Estado, salaId: string): MensajeSala[] {
+  return e.mensajes
+    .filter((m) => m.salaId === salaId)
+    .slice(-40)
+    .reverse()
+    .flatMap((m) => {
+      const est = e.estudiantes.find((x) => x.id === m.estudianteId)
+      return est ? [{ ...m, nombre: est.nombre, avatar: est.avatar, avatarTienda: est.avatarTienda, color: est.color }] : []
+    })
 }
 
 export function reiniciarDemo() {

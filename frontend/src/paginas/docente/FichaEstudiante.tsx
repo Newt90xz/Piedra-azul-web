@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useSesion } from '../../app/Sesion.tsx'
-import { actividad } from '../../contenido/actividades.ts'
+import { nombreActividad } from '../../contenido/contenidos.ts'
 import { repo } from '../../datos/index.ts'
 import { EMOCIONES, UMBRAL_LE_CUESTA, avancePorItem, deEstaSemana, fechaCorta, minutos } from '../../lib/avance.ts'
 import { useConsulta } from '../../lib/useConsulta.ts'
@@ -166,7 +166,7 @@ function Avance({ estudianteId }: { estudianteId: string }) {
             {datos.resultados.slice(0, 6).map((r) => (
               <li key={r.id} className="flex items-center justify-between gap-2 rounded-xl bg-fondo px-3 py-2 text-sm">
                 <span className="truncate">
-                  <b>{actividad(r.actividadId)?.titulo ?? r.actividadId}</b>
+                  <b>{nombreActividad(r.actividadId)}</b>
                   <span className="block text-tinta-suave">{fechaCorta(r.fecha)} · {minutos(r.duracionMs)} min</span>
                 </span>
                 <span aria-label={`${r.estrellas} de 3 estrellas`} className="shrink-0 tracking-tight">

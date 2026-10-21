@@ -40,6 +40,8 @@ export interface Estudiante {
   // RF-09 / RF-15: nivel más alto habilitado por avance o por la docente.
   nivelHabilitado: Nivel
   monedas: number
+  // Avatar comprado en la tienda que el niño lleva puesto; si no hay, se ve `avatar`.
+  avatarTienda?: string
   ajustes: Ajustes
 }
 
@@ -99,13 +101,21 @@ export interface Observacion {
   fecha: string
 }
 
-// Salas de trabajo: la docente las crea; el alumno elige una abierta y luego su perfil.
+// Salas: la docente las crea y asigna a cada niño (el niño no elige sala).
+// Una sala de trabajo tiene un plan: contenidos MINEDUC en orden (cada uno con 3
+// actividades) y los juegos a los que se llega al terminarlos. El playground es
+// un espacio común con mensajes de pictogramas, mientras esperan otra sala.
+export type TipoSala = 'trabajo' | 'playground'
+
 export interface Sala {
   id: string
   cursoId: string
   nombre: string
-  abierta: boolean
-  cupos: number
+  tipo: TipoSala
+  contenidos: string[]
+  juegos: string[]
+  // Cambia cada vez que la docente asigna un plan nuevo: el avance vuelve a cero.
+  asignacion: string
 }
 
 export interface MiembroSala {
@@ -113,25 +123,56 @@ export interface MiembroSala {
   salaId: string
 }
 
-// Lo que ve un dispositivo de alumno antes de entrar: sin datos de niños.
-export interface SalaAbierta {
-  id: string
-  nombre: string
-  curso: string
-  cupos: number
-  ocupados: number
-}
-
-export interface PerfilSala {
+// Lo que ve el dispositivo del alumno antes de entrar: solo nombre de pila y avatar.
+export interface PerfilAlumno {
   id: string
   nombre: string
   avatar: string
+  avatarTienda?: string
   color: string
-  // Ya entró desde otro dispositivo: no se puede tomar hasta que la docente lo libere.
+  // Ya entró desde otro dispositivo: no se puede tomar hasta que salga o la docente lo libere.
   ocupado: boolean
 }
 
-export interface SalaActual {
-  id: string
+// Dispositivo de alumno con sesión abierta (en espera o en una sala).
+export interface Conectado {
+  estudianteId: string
+  desde: string
+  // Última vez que el dispositivo dio señales.
+  vistoEn: string
+}
+
+// Avance de un niño en el plan de su sala. `paso` cuenta actividades ya logradas
+// (paso === 3 × contenidos: terminó y pasa a los juegos).
+export interface Progreso {
+  paso: number
+  // Veces que repitió la actividad actual sin lograr el 60 %.
+  repeticiones: number
+}
+
+export interface ProgresoSala extends Progreso {
+  estudianteId: string
+  salaId: string
+  asignacion: string
+  necesitaAyuda: boolean
+  actualizado: string
+}
+
+// Estado del alumno conectado: dónde está y cómo va.
+export interface EstadoAlumno {
+  estudiante: Estudiante
+  sala: Pick<Sala, 'id' | 'nombre' | 'tipo' | 'contenidos' | 'juegos' | 'asignacion'> | null
+  progreso: Progreso
+  avataresComprados: string[]
+}
+
+export interface MensajeSala {
+  id: number
+  estudianteId: string
   nombre: string
+  avatar: string
+  avatarTienda?: string
+  color: string
+  picto: string
+  enviadoEn: string
 }

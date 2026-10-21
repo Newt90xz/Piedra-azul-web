@@ -1,17 +1,21 @@
 import type {
   Ajustes,
+  Conectado,
   Curso,
   Docente,
   Emocion,
+  EstadoAlumno,
   Estudiante,
-  Observacion,
+  MensajeSala,
   MiembroSala,
-  PerfilSala,
+  Observacion,
+  PerfilAlumno,
+  Progreso,
+  ProgresoSala,
   RegistroEmocion,
   ResultadoActividad,
   Sala,
-  SalaAbierta,
-  SalaActual,
+  TipoSala,
 } from '../dominio/tipos.ts'
 
 // Contrato único de acceso a datos. Lo implementan `repositorioSupabase`
@@ -53,31 +57,52 @@ export interface Repositorio {
 
   // Salas: gestión de la docente (requiere sesión).
   listarSalas(cursoId: string): Promise<Sala[]>
-  crearSala(cursoId: string, nombre: string, cupos: number): Promise<Sala>
-  actualizarSala(id: string, cambios: Partial<Pick<Sala, 'nombre' | 'abierta' | 'cupos'>>): Promise<void>
+  crearSala(cursoId: string, nombre: string, tipo: TipoSala): Promise<Sala>
+  renombrarSala(id: string, nombre: string): Promise<void>
+  // Plan de una sala de trabajo. Genera una asignación nueva: el avance de
+  // quienes están en ella vuelve a la primera actividad.
+  asignarPlan(salaId: string, contenidos: string[], juegos: string[]): Promise<void>
   eliminarSala(id: string): Promise<void>
   // Miembros de todas las salas del curso.
   listarMiembros(cursoId: string): Promise<MiembroSala[]>
+  // Pone al alumno en la sala (si estaba en otra, lo mueve).
   conectarEstudiante(salaId: string, estudianteId: string): Promise<void>
+  // Lo saca de su sala: vuelve a la espera.
   desconectarEstudiante(estudianteId: string): Promise<void>
-  // Saca a todos los alumnos de la sala; con `cerrar` además la cierra.
-  vaciarSala(salaId: string, cerrar: boolean): Promise<void>
+  vaciarSala(salaId: string): Promise<void>
+  // Dispositivos de alumnos del curso con sesión abierta.
+  listarConectados(cursoId: string): Promise<Conectado[]>
+  // Cierra la sesión del dispositivo del alumno: vuelve a elegir su perfil.
+  cerrarDispositivo(estudianteId: string): Promise<void>
+  listarProgreso(cursoId: string): Promise<ProgresoSala[]>
+  // La docente ya fue a ayudarlo: se apaga el aviso.
+  marcarApoyado(estudianteId: string): Promise<void>
+  mensajesSala(salaId: string): Promise<MensajeSala[]>
 
-  // Salas: dispositivo del alumno (sin sesión de docente). Al unirse, la sala
+  // Dispositivo del alumno (sin sesión de docente). Al entrar, el perfil
   // entrega una credencial que guarda el repositorio (como la sesión de la
   // docente) y que exigen las demás llamadas del alumno.
-  salasAbiertas(): Promise<SalaAbierta[]>
-  perfilesDeSala(salaId: string): Promise<PerfilSala[]>
-  // Rechaza con Error('sala_cerrada' | 'sala_llena' | 'perfil_ocupado' | 'perfil_invalido' | 'sala_inexistente').
-  unirseASala(salaId: string, estudianteId: string): Promise<void>
+  perfilesAlumnos(): Promise<PerfilAlumno[]>
+  // Rechaza con Error('perfil_ocupado' | 'perfil_invalido').
+  entrarComoAlumno(estudianteId: string): Promise<void>
   // Alumno conectado desde este dispositivo, o null.
   alumnoDelDispositivo(): string | null
-  // Sale de la sala y olvida la credencial (aunque falle el aviso al servidor).
-  salirDeSala(): Promise<void>
-  // Olvida la credencial sin avisar al servidor (p. ej. la docente ya lo desconectó).
+  // Cierra la sesión del dispositivo y olvida la credencial (aunque falle el aviso al servidor).
+  salirComoAlumno(): Promise<void>
+  // Olvida la credencial sin avisar al servidor (p. ej. la docente ya la cerró).
   olvidarAlumno(): void
-  // null si el alumno del dispositivo ya no está en ninguna sala.
-  salaDelAlumno(): Promise<SalaActual | null>
+  // null si la credencial ya no vale (la docente cerró el dispositivo o otro tomó el perfil).
+  estadoAlumno(): Promise<EstadoAlumno | null>
+  // Termina la actividad `paso` del plan `asignacion` con el resultado `resultadoId`
+  // (reenviar el mismo no cuenta dos veces). Si el plan cambió entretanto rechaza
+  // con Error('plan_cambiado'). Devuelve el avance actualizado.
+  registrarProgreso(asignacion: string, paso: number, aprobado: boolean, resultadoId: string): Promise<Progreso>
+  // Compra (y se pone) un avatar de la tienda. Rechaza con Error('monedas_insuficientes').
+  comprarAvatar(avatarId: string): Promise<void>
+  // Se pone un avatar ya comprado; null vuelve al que eligió la docente.
+  usarAvatar(avatarId: string | null): Promise<void>
+  mensajesPlayground(): Promise<MensajeSala[]>
+  enviarMensaje(picto: string): Promise<void>
 }
 
 export type NuevoEstudiante = Omit<Estudiante, 'id' | 'monedas'>

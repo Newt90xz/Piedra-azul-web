@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ACTIVIDADES, CANCION_RATON, MAX_OPCIONES, actividad } from './actividades.ts'
+import { ACTIVIDADES, CANCION_RATON, JUEGOS, MAX_OPCIONES, actividad } from './actividades.ts'
 import { quitarTildes } from './banco.ts'
 
 // Las rondas se arman al azar: se generan varias veces para cubrir combinaciones.
@@ -45,5 +45,11 @@ describe('sonido-inicial', () => {
 describe('práctica', () => {
   it('solo explorar y choque son práctica: el resto mide avance', () => {
     expect(ACTIVIDADES.filter((a) => a.practica).map((a) => a.id)).toEqual(['explorar-sonido', 'choque-sonidos'])
+  })
+})
+
+describe('juegos', () => {
+  it('por ahora solo se asignan el choque de sonidos y los aplausos silábicos', () => {
+    expect(JUEGOS.map((a) => a.id)).toEqual(['choque-sonidos', 'aplausos'])
   })
 })

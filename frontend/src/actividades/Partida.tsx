@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { actividad, type Ronda } from '../contenido/actividades.ts'
 import { guardarResultadoConRespaldo } from '../datos/pendientes.ts'
+import type { IntentoRonda } from '../dominio/tipos.ts'
 import { efecto, hablar } from '../lib/audio.ts'
 import { Icono } from '../ui/Icono.tsx'
 import { BotonNino, useNino } from '../ui/nino.tsx'
@@ -24,16 +24,35 @@ interface Registro {
   intentos: number
   estrellas: number
   monedas: number
-  // Parte de `monedas` que viene del bono de racha.
-  bono: number
 }
 
-export function Partida({ actividadId, rondas, alReiniciar }: { actividadId: string; rondas: Ronda[]; alReiniciar: () => void }) {
-  const { silenciado } = useNino()
+// Lo que deja una partida terminada. El detalle (intentos por ronda, tiempo)
+// queda guardado para los reportes de la docente; el niño solo ve sus monedas.
+export interface FinPartida {
+  resultadoId: string
+  rondas: IntentoRonda[]
+  estrellas: number
+  monedas: number
+}
+
+export function Partida({
+  actividadId,
+  rondas,
+  alTerminar,
+  alSalir,
+}: {
+  actividadId: string
+  rondas: Ronda[]
+  alTerminar: (fin: FinPartida) => void
+  // Solo en los juegos: en los contenidos el niño sigue el camino que armó la docente.
+  alSalir?: () => void
+}) {
+  const { estudiante, silenciado, recargar } = useNino()
   const [estado, setEstado] = useState({ indice: 0, intentos: 0, resuelta: false })
   const [registro, setRegistro] = useState<Registro[]>([])
   const [racha, setRacha] = useState(0)
   const [inicio] = useState(() => Date.now())
+  const terminada = useRef(false)
   const practica = actividad(actividadId)?.practica ?? false
 
   const ronda = rondas[estado.indice]
@@ -41,6 +60,31 @@ export function Partida({ actividadId, rondas, alReiniciar }: { actividadId: str
   useEffect(() => {
     if (ronda) hablar(ronda.instruccion)
   }, [ronda])
+
+  // Fin: RF-12, se guarda fecha, intentos por ronda y tiempo empleado. El id se
+  // genera una sola vez para que los reintentos no dupliquen el resultado.
+  useEffect(() => {
+    if (ronda || terminada.current) return
+    terminada.current = true
+    const promedio = registro.reduce((s, r) => s + r.estrellas, 0) / Math.max(1, registro.length)
+    const fin: FinPartida = {
+      resultadoId: crypto.randomUUID(),
+      rondas: registro.map((r) => ({ item: r.item, intentos: r.intentos, acertada: r.intentos < 3 })),
+      estrellas: promedio >= 2.5 ? 3 : promedio >= 1.75 ? 2 : 1,
+      monedas: registro.reduce((s, r) => s + r.monedas, 0),
+    }
+    void guardarResultadoConRespaldo({
+      id: fin.resultadoId,
+      estudianteId: estudiante.id,
+      actividadId,
+      fecha: new Date().toISOString(),
+      duracionMs: Date.now() - inicio,
+      rondas: fin.rondas,
+      estrellas: fin.estrellas,
+      monedas: fin.monedas,
+    }).then(recargar)
+    alTerminar(fin)
+  }, [ronda, registro, actividadId, estudiante.id, inicio, recargar, alTerminar])
 
   const avanzar = (desde: number) =>
     setEstado((e) => (e.indice === desde ? { indice: desde + 1, intentos: 0, resuelta: false } : e))
@@ -59,7 +103,7 @@ export function Partida({ actividadId, rondas, alReiniciar }: { actividadId: str
     const nuevaRacha = !practica && intentos === 1 ? racha + 1 : 0
     setRacha(nuevaRacha)
     const bono = nuevaRacha >= 3 ? BONO_RACHA : 0
-    setRegistro((r) => [...r, { item: ronda.item, intentos, estrellas: p.estrellas, monedas: p.monedas + bono, bono }])
+    setRegistro((r) => [...r, { item: ronda.item, intentos, estrellas: p.estrellas, monedas: p.monedas + bono }])
     setEstado({ ...estado, intentos, resuelta: true })
     efecto('acierto', silenciado)
     const desde = estado.indice
@@ -68,15 +112,16 @@ export function Partida({ actividadId, rondas, alReiniciar }: { actividadId: str
     window.setTimeout(() => avanzar(desde), 6000)
   }
 
-  if (!ronda) {
-    return <Podio actividadId={actividadId} registro={registro} inicio={inicio} alReiniciar={alReiniciar} />
-  }
+  if (!ronda) return null
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-6">
       <div className="mb-6 flex items-center gap-4">
-        <VolverPartida />
-        <SalirPartida />
+        {alSalir && (
+          <BotonNino voz="Volver a los juegos" onClick={alSalir} className="grid size-20 place-items-center bg-nino-lila">
+            <Icono nombre="izquierda" className="size-9" />
+          </BotonNino>
+        )}
         <BotonNino voz="Escuchar otra vez" onClick={() => hablar(ronda.instruccion)} className="grid size-20 place-items-center border-nino-ok bg-nino-menta">
           <Icono nombre="altavoz" className="size-10" />
         </BotonNino>
@@ -106,144 +151,55 @@ export function Partida({ actividadId, rondas, alReiniciar }: { actividadId: str
   )
 }
 
-// Retroceder a la pantalla anterior (la lista de actividades del grupo).
-function VolverPartida() {
-  const navegar = useNavigate()
-  return (
-    <BotonNino voz="Volver atrás" onClick={() => navegar(-1)} className="grid size-20 place-items-center bg-nino-lila">
-      <Icono nombre="izquierda" className="size-9" />
-    </BotonNino>
-  )
-}
-
-function SalirPartida() {
-  const { estudiante } = useNino()
-  const navegar = useNavigate()
-  return (
-    <BotonNino voz="Salir" onClick={() => navegar(`/aula/${estudiante.id}`)} className="grid size-20 place-items-center">
-      <Icono nombre="casa" className="size-9" />
-    </BotonNino>
-  )
-}
-
-const AYUDA = [
-  { icono: '🌟', texto: 'Sin ayuda' },
-  { icono: '💡', texto: 'Con pista' },
-  { icono: '👀', texto: 'Con ayuda' },
-]
-
-const minutosYSegundos = (ms: number) => {
-  const total = Math.round(ms / 1000)
-  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`
-}
-
-function Podio({ actividadId, registro, inicio, alReiniciar }: { actividadId: string; registro: Registro[]; inicio: number; alReiniciar: () => void }) {
-  const { estudiante, silenciado, recargar } = useNino()
-  const navegar = useNavigate()
-  const guardado = useRef(false)
-  const [duracionMs] = useState(() => Date.now() - inicio)
-  const promedio = registro.reduce((s, r) => s + r.estrellas, 0) / Math.max(1, registro.length)
-  const estrellas = promedio >= 2.5 ? 3 : promedio >= 1.75 ? 2 : 1
-  const monedas = registro.reduce((s, r) => s + r.monedas, 0)
-  const bono = registro.reduce((s, r) => s + r.bono, 0)
-  const alPrimero = registro.filter((r) => r.intentos === 1).length
-  const mejorRacha = registro.reduce(
-    (m, r) => {
-      const actual = r.intentos === 1 ? m.actual + 1 : 0
-      return { actual, mejor: Math.max(m.mejor, actual) }
-    },
-    { actual: 0, mejor: 0 },
-  ).mejor
+// Pantalla de premio para el niño: solo las monedas que ganó, sin texto (las
+// estadísticas son para la docente). `logrado` celebra que pasa a la siguiente
+// actividad y `repetir` anima a intentarlo de nuevo, sin mensajes punitivos (RF-11).
+export function Premio({
+  monedas,
+  variante,
+  children,
+}: {
+  monedas: number
+  variante: 'logrado' | 'repetir' | 'juego'
+  children: ReactNode
+}) {
+  const { silenciado } = useNino()
 
   useEffect(() => {
-    if (guardado.current) return
-    guardado.current = true
     efecto('premio', silenciado)
     hablar(
-      estrellas === 3
-        ? `¡Increíble! Ganaste tres estrellas y ${monedas} monedas.`
-        : `¡Muy bien! Acertaste ${alPrimero} sin ayuda y ganaste ${monedas} monedas. ¿Juegas otra vez para ganar más?`,
+      variante === 'logrado'
+        ? `¡Lo lograste! Ganaste ${monedas} monedas.`
+        : variante === 'repetir'
+          ? `¡Ganaste ${monedas} monedas! Vamos a intentarlo otra vez.`
+          : `¡Muy bien! Ganaste ${monedas} monedas.`,
     )
-    // RF-12: se guarda fecha, intentos por ronda y tiempo empleado. El id se
-    // genera una sola vez para que los reintentos no dupliquen el resultado.
-    void guardarResultadoConRespaldo({
-      id: crypto.randomUUID(),
-      estudianteId: estudiante.id,
-      actividadId,
-      fecha: new Date().toISOString(),
-      duracionMs,
-      rondas: registro.map((r) => ({ item: r.item, intentos: r.intentos, acertada: r.intentos < 3 })),
-      estrellas,
-      monedas,
-    }).then(recargar)
-  }, [actividadId, duracionMs, estrellas, estudiante.id, monedas, alPrimero, recargar, registro, silenciado])
+    // Solo al aparecer.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-8 text-center">
-      <p className="mb-4 flex justify-center gap-3 text-[3em] leading-none" aria-label={`${estrellas} de 3 estrellas`}>
-        {[1, 2, 3].map((n) => (
-          <span key={n} className={n <= estrellas ? 'animate-pop' : 'opacity-25 grayscale'} style={{ animationDelay: `${n * 120}ms` }} aria-hidden="true">⭐</span>
-        ))}
-      </p>
-      <p className="mx-auto mb-6 inline-flex items-center gap-3 rounded-full border-3 border-[#e6c84d] bg-nino-amarillo px-8 py-3 text-[1.3em] font-bold" aria-label={`Ganaste ${monedas} monedas`}>
-        <span aria-hidden="true">🪙</span> +{monedas}
-      </p>
-
-      <ul className="mb-6 grid grid-cols-3 gap-4 font-sans text-base" aria-label="Resumen">
-        <Dato icono="🌟" valor={`${alPrimero}/${registro.length}`} texto="sin ayuda" />
-        <Dato icono="🔥" valor={String(mejorRacha)} texto="mejor racha" />
-        <Dato icono="⏱️" valor={minutosYSegundos(duracionMs)} texto="tiempo" />
-      </ul>
-
-      <ol className="mb-8 grid gap-3" aria-label="Cómo te fue en cada ronda">
-        {registro.map((r, i) => {
-          const ayuda = AYUDA[Math.min(r.intentos, 3) - 1]
-          return (
-            <li key={i} className="flex items-center gap-4 rounded-2xl border-3 border-nino-azul bg-white px-5 py-2 text-left">
-              <span className="min-w-[2.5em] text-[1.3em] font-bold">{r.item}</span>
-              <span className="flex-1 font-sans text-base text-tinta-suave">
-                <span aria-hidden="true">{ayuda.icono}</span> {ayuda.texto}
-              </span>
-              <span aria-label={`${r.estrellas} de 3 estrellas`} className="text-[0.8em]">
-                {'⭐'.repeat(r.estrellas)}
-                <span className="opacity-25 grayscale">{'⭐'.repeat(3 - r.estrellas)}</span>
-              </span>
-              <span className="min-w-[3.2em] rounded-full bg-nino-amarillo px-3 py-0.5 text-center font-sans text-base font-bold">+{r.monedas}</span>
-            </li>
-          )
-        })}
-      </ol>
-      {bono > 0 && (
-        <p className="-mt-4 mb-8 font-sans text-base text-tinta-suave">
-          Incluye <b>+{bono}</b> de bono por racha 🔥
-        </p>
-      )}
-
-      <div className="flex flex-wrap justify-center gap-6">
-        <BotonNino voz="Volver" onClick={() => navegar(-1)} className="grid size-28 place-items-center">
-          <Icono nombre="izquierda" className="size-12" />
-        </BotonNino>
-        <BotonNino voz="Ir a mi inicio" onClick={() => navegar(`/aula/${estudiante.id}`)} className="grid size-28 place-items-center bg-nino-menta">
-          <Icono nombre="casa" className="size-12" />
-        </BotonNino>
-        <BotonNino
-          voz="¡Jugar otra vez para ganar más!"
-          onClick={alReiniciar}
-          className={`grid h-28 place-items-center px-10 ${estrellas < 3 ? 'animate-pop border-[#e6c84d] bg-nino-amarillo' : ''}`}
-        >
-          <span aria-hidden="true" className="text-[1.6em]">🔁</span>
-        </BotonNino>
+    <main className="mx-auto grid min-h-[70dvh] max-w-3xl content-center justify-items-center gap-10 px-6 py-8 text-center">
+      <div className="relative grid place-items-center">
+        <span aria-hidden="true" className="premio-brillo absolute size-[7em] rounded-full" />
+        <span aria-hidden="true" className="premio-moneda relative text-[5em] leading-none">🪙</span>
       </div>
+      <p
+        className="animate-pop inline-flex items-center gap-3 rounded-full border-3 border-[#e6c84d] bg-nino-amarillo px-10 py-3 text-[2em] font-bold"
+        aria-label={`Ganaste ${monedas} monedas`}
+      >
+        +{monedas}
+      </p>
+      {variante !== 'juego' && (
+        <span
+          role="img"
+          aria-label={variante === 'logrado' ? 'Lo lograste' : 'Otra vez'}
+          className={`text-[3em] leading-none ${variante === 'logrado' ? 'animate-pop' : 'premio-girar'}`}
+        >
+          {variante === 'logrado' ? '🎉' : '🔁'}
+        </span>
+      )}
+      <div className="flex flex-wrap justify-center gap-6">{children}</div>
     </main>
-  )
-}
-
-function Dato({ icono, valor, texto }: { icono: string; valor: string; texto: string }) {
-  return (
-    <li className="rounded-2xl border-3 border-nino-azul bg-white px-3 py-3">
-      <span aria-hidden="true" className="block text-[1.6em] leading-none">{icono}</span>
-      <b className="block text-[1.3em]">{valor}</b>
-      <span className="text-tinta-suave">{texto}</span>
-    </li>
   )
 }

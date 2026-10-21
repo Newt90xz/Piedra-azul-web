@@ -153,6 +153,57 @@ body {
   background: var(--color-contorno);
   opacity: 0.5;
 }
+/* Rondas de elegir y premio (actividades/rondas.tsx, actividades/Partida.tsx). */
+@keyframes chispa {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(0.4); }
+  to { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.2); }
+}
+.chispas > span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  font-size: 0.9em;
+  animation: chispa 0.7s ease-out forwards;
+}
+.chispas > span:nth-child(1) { --dx: -2.2em; --dy: -1.6em; }
+.chispas > span:nth-child(2) { --dx: 2.2em; --dy: -1.8em; }
+.chispas > span:nth-child(3) { --dx: -2em; --dy: 1.6em; }
+.chispas > span:nth-child(4) { --dx: 2.1em; --dy: 1.5em; }
+@keyframes latir {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+.nino .revelada { animation: latir 1.1s ease-in-out infinite; }
+@keyframes oreja {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(-12deg); }
+  40% { transform: rotate(10deg); }
+}
+.estimulo-oreja { display: inline-block; animation: oreja 2.4s ease-in-out infinite; }
+@keyframes brillo {
+  from { transform: rotate(0); }
+  to { transform: rotate(360deg); }
+}
+.premio-brillo {
+  background: repeating-conic-gradient(#fff3c4 0 15deg, #ffe58a 15deg 30deg);
+  opacity: 0.7;
+  animation: brillo 12s linear infinite;
+}
+@keyframes moneda {
+  0% { transform: translateY(40px) scale(0.4) rotateY(0); }
+  60% { transform: translateY(-10px) scale(1.1) rotateY(540deg); }
+  100% { transform: none; }
+}
+.premio-moneda { display: inline-block; animation: moneda 0.9s ease-out; }
+.premio-girar { display: inline-block; animation: latir 1.2s ease-in-out infinite; }
+
+/* Camino del plan (paginas/aula/Secuencia.tsx). */
+@keyframes aqui {
+  0%, 100% { box-shadow: 0 0 0 3px var(--color-contorno), 0 0 0 8px rgb(255 229 138 / 0.9); }
+  50% { box-shadow: 0 0 0 3px var(--color-contorno), 0 0 0 14px rgb(255 229 138 / 0.3); }
+}
+.camino-aqui { animation: aqui 1.6s ease-in-out infinite; }
+
 .protector { background: radial-gradient(circle at 50% 40%, #35588a, #14213d 75%); border: 0; }
 .rebote { animation: rebotar ease-in-out infinite; }
 .nino[data-tamano='grande'] { font-size: 32px; }

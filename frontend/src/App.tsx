@@ -3,10 +3,7 @@ import { ProveedorSesion } from './app/Sesion.tsx'
 import Inicio from './paginas/Inicio.tsx'
 import Entrada from './paginas/alumno/Entrada.tsx'
 import Emocion from './paginas/aula/Emocion.tsx'
-import Grupo from './paginas/aula/Grupo.tsx'
-import Jugar from './paginas/aula/Jugar.tsx'
 import MiInicio from './paginas/aula/MiInicio.tsx'
-import Sala from './paginas/aula/Sala.tsx'
 import AvanceCurso from './paginas/docente/AvanceCurso.tsx'
 import Entrar from './paginas/docente/Entrar.tsx'
 import Estudiantes from './paginas/docente/Estudiantes.tsx'
@@ -34,12 +31,11 @@ export default function App() {
           </Route>
 
           <Route path="/alumno" element={<Entrada />} />
-          <Route path="/aula" element={<Sala />} />
+          {/* El niño no elige actividad: su inicio muestra lo que le asignó la docente. */}
+          <Route path="/aula" element={<Navigate to="/alumno" replace />} />
           <Route path="/aula/:id" element={<NinoShell />}>
             <Route index element={<MiInicio />} />
             <Route path="emocion" element={<Emocion />} />
-            <Route path="grupo/:grupo" element={<Grupo />} />
-            <Route path="jugar/:actividadId" element={<Jugar />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

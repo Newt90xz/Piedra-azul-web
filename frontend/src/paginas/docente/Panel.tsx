@@ -44,7 +44,7 @@ export default function Panel() {
       <h2 className="mt-9 text-lg font-bold text-tinta">Tu espacio de trabajo</h2>
       <p className="text-tinta-suave">Herramientas para la clase de hoy.</p>
       <div className="mt-4 grid gap-5 md:grid-cols-3">
-        <Acceso icono="aula" titulo="Abrir sala" texto="Cada niño entra tocando su foto, sin teclado." to="/aula" boton="Abrir sala →" primario />
+        <Acceso icono="aula" titulo="Salas" texto="Asigna a cada niño su sala y los contenidos que trabajará." to="/docente/salas" boton="Ir a salas →" primario />
         <Acceso icono="personas" titulo="Estudiantes" texto="Crea perfiles, ajusta apoyos y asigna niveles." to="/docente/estudiantes" boton="Ver estudiantes →" />
         <Acceso icono="grafico" titulo="Avance del curso" texto="Participación semanal, emociones y letras difíciles." to="/docente/avance" boton="Ver avance →" />
       </div>

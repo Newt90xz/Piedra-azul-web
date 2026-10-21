@@ -1,19 +1,22 @@
 import { createClient } from '@supabase/supabase-js'
 import type {
   Ajustes,
+  Conectado,
   Curso,
   Docente,
+  EstadoAlumno,
   Estudiante,
   IntentoRonda,
-  Nivel,
+  MensajeSala,
   MiembroSala,
+  Nivel,
   Observacion,
-  PerfilSala,
+  PerfilAlumno,
+  ProgresoSala,
   RegistroEmocion,
   ResultadoActividad,
   Sala,
-  SalaAbierta,
-  SalaActual,
+  TipoSala,
 } from '../dominio/tipos.ts'
 import type { Database } from './baseDatos.ts'
 import { guardarCredencial, leerCredencial, olvidarCredencial } from './dispositivo.ts'
@@ -53,6 +56,7 @@ const aEstudiante = (f: FilaEstudiante): Estudiante => ({
   activo: f.activo,
   nivelHabilitado: f.nivel_habilitado as Nivel,
   monedas: f.monedas,
+  avatarTienda: f.avatar_tienda ?? undefined,
   ajustes: { ...AJUSTES_POR_DEFECTO, ...(f.ajustes as Partial<Ajustes>) },
 })
 
@@ -69,11 +73,48 @@ const aFila = (e: Omit<Estudiante, 'id' | 'monedas'>) => ({
 })
 
 type FilaSala = Database['public']['Tables']['salas']['Row']
-const aSala = (f: FilaSala): Sala => ({ id: f.id, cursoId: f.curso_id, nombre: f.nombre, abierta: f.abierta, cupos: f.cupos })
+const aSala = (f: FilaSala): Sala => ({
+  id: f.id,
+  cursoId: f.curso_id,
+  nombre: f.nombre,
+  tipo: f.tipo as TipoSala,
+  contenidos: f.contenidos,
+  juegos: f.juegos,
+  asignacion: f.asignacion,
+})
 
-// Dispositivo del alumno: ajustes y datos llegan por la función de sala (sin foto).
-const aEstudianteDeSala = (f: Database['public']['Functions']['estudiante_en_sala']['Returns'][number]): Estudiante =>
-  aEstudiante({ ...f, foto_url: null, creado_en: '' })
+type FilaAlumno = Database['public']['Functions']['alumno_actual']['Returns'][number]
+
+// Dispositivo del alumno: ajustes y datos llegan por la función del alumno (sin foto).
+const aEstudianteDelDispositivo = (f: FilaAlumno): Estudiante => aEstudiante({ ...f, foto_url: null, creado_en: '' })
+
+const aEstadoAlumno = (f: FilaAlumno): EstadoAlumno => ({
+  estudiante: aEstudianteDelDispositivo(f),
+  sala: f.sala_id
+    ? {
+        id: f.sala_id,
+        nombre: f.sala_nombre ?? '',
+        tipo: (f.sala_tipo ?? 'trabajo') as TipoSala,
+        contenidos: f.contenidos ?? [],
+        juegos: f.juegos ?? [],
+        asignacion: f.asignacion ?? '',
+      }
+    : null,
+  progreso: { paso: f.paso, repeticiones: f.repeticiones },
+  avataresComprados: f.comprados,
+})
+
+type FilaMensaje = Database['public']['Functions']['mensajes_playground']['Returns'][number]
+const aMensaje = (f: FilaMensaje): MensajeSala => ({
+  id: f.id,
+  estudianteId: f.estudiante_id,
+  nombre: f.nombre,
+  avatar: f.avatar,
+  avatarTienda: f.avatar_tienda ?? undefined,
+  color: f.color,
+  picto: f.picto,
+  enviadoEn: f.enviado_en,
+})
 
 const aCurso = (f: { id: string; nombre: string; docente_id: string }): Curso => ({ id: f.id, nombre: f.nombre, docenteId: f.docente_id })
 
@@ -84,6 +125,14 @@ function tokenDe(estudianteId: string) {
   if (c?.estudianteId !== estudianteId) throw new Error('sin_sala')
   return c.token
 }
+
+// Credencial del alumno de este dispositivo; sin ella no hay nada que pedir.
+function credencial() {
+  const c = leerCredencial()
+  if (!c) throw new Error('sin_sesion')
+  return { p_estudiante: c.estudianteId, p_token: c.token }
+}
+
 
 async function cargarDocente(id: string): Promise<Docente> {
   const f = sinError(await supabase.from('docentes').select('id, nombre, email').eq('id', id).single())
@@ -149,8 +198,8 @@ export const repositorioSupabase: Repositorio = {
     if (!actual) {
       const c = leerCredencial()
       if (c?.estudianteId !== id) return null
-      const filas = sinError(await supabase.rpc('estudiante_en_sala', { p_estudiante: id, p_token: c.token }))
-      return filas[0] ? aEstudianteDeSala(filas[0]) : null
+      const filas = sinError(await supabase.rpc('alumno_actual', { p_estudiante: id, p_token: c.token }))
+      return filas[0] ? aEstudianteDelDispositivo(filas[0]) : null
     }
     const { data, error } = await supabase.from('estudiantes').select().eq('id', id).maybeSingle()
     if (error) throw new Error(error.message)
@@ -274,11 +323,14 @@ export const repositorioSupabase: Repositorio = {
     const filas = sinError(await supabase.from('salas').select().eq('curso_id', cursoId).order('creado_en'))
     return filas.map(aSala)
   },
-  async crearSala(cursoId, nombre, cupos) {
-    return aSala(sinError(await supabase.from('salas').insert({ curso_id: cursoId, nombre: nombre.trim(), cupos }).select().single()))
+  async crearSala(cursoId, nombre, tipo) {
+    return aSala(sinError(await supabase.from('salas').insert({ curso_id: cursoId, nombre: nombre.trim(), tipo }).select().single()))
   },
-  async actualizarSala(id, cambios) {
-    sinError(await supabase.from('salas').update(cambios).eq('id', id))
+  async renombrarSala(id, nombre) {
+    sinError(await supabase.from('salas').update({ nombre: nombre.trim() }).eq('id', id))
+  },
+  async asignarPlan(salaId, contenidos, juegos) {
+    sinError(await supabase.from('salas').update({ contenidos, juegos, asignacion: crypto.randomUUID() }).eq('id', salaId))
   },
   async eliminarSala(id) {
     sinError(await supabase.from('salas').delete().eq('id', id))
@@ -296,39 +348,112 @@ export const repositorioSupabase: Repositorio = {
   async desconectarEstudiante(estudianteId) {
     sinError(await supabase.from('sala_miembros').delete().eq('estudiante_id', estudianteId))
   },
-
-  async vaciarSala(salaId, cerrar) {
-    if (cerrar) sinError(await supabase.from('salas').update({ abierta: false }).eq('id', salaId))
+  async vaciarSala(salaId) {
     sinError(await supabase.from('sala_miembros').delete().eq('sala_id', salaId))
   },
+  async listarConectados(cursoId) {
+    const filas = sinError(
+      await supabase
+        .from('sesiones_alumno')
+        .select('estudiante_id, iniciada_en, visto_en, estudiantes!inner(curso_id)')
+        .eq('estudiantes.curso_id', cursoId),
+    )
+    return filas.map((f): Conectado => ({ estudianteId: f.estudiante_id, desde: f.iniciada_en, vistoEn: f.visto_en }))
+  },
+  async cerrarDispositivo(estudianteId) {
+    sinError(await supabase.from('sesiones_alumno').delete().eq('estudiante_id', estudianteId))
+  },
+  async listarProgreso(cursoId) {
+    const filas = sinError(
+      await supabase
+        .from('progreso_sala')
+        .select('estudiante_id, sala_id, asignacion, paso, repeticiones, necesita_ayuda, actualizado, salas!inner(curso_id)')
+        .eq('salas.curso_id', cursoId),
+    )
+    return filas.map(
+      (f): ProgresoSala => ({
+        estudianteId: f.estudiante_id,
+        salaId: f.sala_id,
+        asignacion: f.asignacion,
+        paso: f.paso,
+        repeticiones: f.repeticiones,
+        necesitaAyuda: f.necesita_ayuda,
+        actualizado: f.actualizado,
+      }),
+    )
+  },
+  async marcarApoyado(estudianteId) {
+    sinError(await supabase.from('progreso_sala').update({ necesita_ayuda: false }).eq('estudiante_id', estudianteId))
+  },
+  async mensajesSala(salaId) {
+    const filas = sinError(
+      await supabase
+        .from('mensajes_sala')
+        .select('id, estudiante_id, picto, enviado_en, estudiantes!inner(nombre, avatar, avatar_tienda, color)')
+        .eq('sala_id', salaId)
+        .order('id', { ascending: false })
+        .limit(40),
+    )
+    return filas.map((f) => aMensaje({ ...f, ...f.estudiantes }))
+  },
 
-  async salasAbiertas() {
-    const filas = sinError(await supabase.rpc('salas_abiertas'))
-    return filas.map((f): SalaAbierta => ({ id: f.id, nombre: f.nombre, curso: f.curso, cupos: f.cupos, ocupados: f.ocupados }))
+  async perfilesAlumnos() {
+    const filas = sinError(await supabase.rpc('perfiles_alumnos'))
+    return filas.map(
+      (f): PerfilAlumno => ({
+        id: f.id,
+        nombre: f.nombre,
+        avatar: f.avatar,
+        avatarTienda: f.avatar_tienda ?? undefined,
+        color: f.color,
+        ocupado: f.ocupado,
+      }),
+    )
   },
-  async perfilesDeSala(salaId) {
-    const filas = sinError(await supabase.rpc('perfiles_de_sala', { p_sala: salaId }))
-    return filas.map((f): PerfilSala => ({ id: f.id, nombre: f.nombre, avatar: f.avatar, color: f.color, ocupado: f.ocupado }))
-  },
-  async unirseASala(salaId, estudianteId) {
-    const token = sinError(await supabase.rpc('unirse_sala', { p_sala: salaId, p_estudiante: estudianteId }))
+  async entrarComoAlumno(estudianteId) {
+    const token = sinError(await supabase.rpc('entrar_alumno', { p_estudiante: estudianteId }))
     guardarCredencial({ estudianteId, token })
   },
   alumnoDelDispositivo() {
     return leerCredencial()?.estudianteId ?? null
   },
-  async salirDeSala() {
+  async salirComoAlumno() {
     const c = leerCredencial()
     olvidarCredencial()
-    if (c) sinError(await supabase.rpc('salir_sala', { p_estudiante: c.estudianteId, p_token: c.token }))
+    if (c) sinError(await supabase.rpc('salir_alumno', { p_estudiante: c.estudianteId, p_token: c.token }))
   },
   olvidarAlumno() {
     olvidarCredencial()
   },
-  async salaDelAlumno() {
+  async estadoAlumno() {
     const c = leerCredencial()
     if (!c) return null
-    const filas = sinError(await supabase.rpc('estudiante_en_sala', { p_estudiante: c.estudianteId, p_token: c.token }))
-    return filas[0] ? ({ id: filas[0].sala_id, nombre: filas[0].sala_nombre } satisfies SalaActual) : null
+    const filas = sinError(await supabase.rpc('alumno_actual', { p_estudiante: c.estudianteId, p_token: c.token }))
+    return filas[0] ? aEstadoAlumno(filas[0]) : null
+  },
+  async registrarProgreso(asignacion, paso, aprobado, resultadoId) {
+    const filas = sinError(
+      await supabase.rpc('registrar_progreso', {
+        ...credencial(),
+        p_asignacion: asignacion,
+        p_paso: paso,
+        p_aprobado: aprobado,
+        p_resultado: resultadoId,
+      }),
+    )
+    return { paso: filas[0].paso, repeticiones: filas[0].repeticiones }
+  },
+  async comprarAvatar(avatarId) {
+    sinError(await supabase.rpc('comprar_avatar', { ...credencial(), p_avatar: avatarId }))
+  },
+  async usarAvatar(avatarId) {
+    sinError(await supabase.rpc('usar_avatar', { ...credencial(), p_avatar: avatarId }))
+  },
+  async mensajesPlayground() {
+    const filas = sinError(await supabase.rpc('mensajes_playground', credencial()))
+    return filas.map(aMensaje)
+  },
+  async enviarMensaje(picto) {
+    sinError(await supabase.rpc('enviar_mensaje', { ...credencial(), p_picto: picto }))
   },
 }

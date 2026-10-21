@@ -61,6 +61,19 @@ export const PALABRAS: Palabra[] = [
   p('ratón', ['ra', 'tón'], '🐭'),
   p('queso', ['que', 'so'], '🧀'),
   p('chocolate', ['cho', 'co', 'la', 'te'], '🍫'),
+  // Familias silábicas y rimas de los contenidos (contenidos.ts).
+  p('moto', ['mo', 'to'], '🏍️'),
+  p('muñeca', ['mu', 'ñe', 'ca'], '🪆'),
+  p('maleta', ['ma', 'le', 'ta'], '🧳'),
+  p('lobo', ['lo', 'bo'], '🐺'),
+  p('leche', ['le', 'che'], '🥛'),
+  p('limón', ['li', 'món'], '🍋'),
+  p('semilla', ['se', 'mi', 'lla'], '🌱'),
+  p('sirena', ['si', 're', 'na'], '🧜‍♀️'),
+  p('sofá', ['so', 'fá'], '🛋️'),
+  p('galleta', ['ga', 'lle', 'ta'], '🍪'),
+  p('dado', ['da', 'do'], '🎲'),
+  p('noche', ['no', 'che'], '🌃'),
 ]
 
 // Nivel 1: vocales y consonantes de fácil articulación (M, P, L, S, T).
