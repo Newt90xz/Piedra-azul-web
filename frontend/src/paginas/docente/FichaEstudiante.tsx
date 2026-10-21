@@ -137,18 +137,25 @@ function Avance({ estudianteId }: { estudianteId: string }) {
         <h2 className="text-lg font-bold">Avance por letra y sílaba</h2>
         <p className="mb-5 text-sm text-tinta-suave">Porcentaje de rondas resueltas al primer intento. Ordenado de más difícil a más fácil.</p>
         {items.length === 0 && <p className="text-tinta-suave">Todavía no hay partidas registradas.</p>}
-        <ul className="grid gap-3">
+        {/* Columnas compartidas (subgrid): la del ítem toma el ancho del más largo
+            («La más larga», «unicornio») y las barras quedan alineadas entre filas.
+            En pantallas angostas «Le cuesta» baja de línea antes que partir palabras. */}
+        <ul className="grid grid-cols-[minmax(5.5rem,max-content)_minmax(4rem,1fr)_auto] items-center gap-x-3 gap-y-3">
           {items.map((a) => {
             const cuesta = a.tasa < UMBRAL_LE_CUESTA
             return (
-              <li key={a.item} className="grid grid-cols-[3.5rem_1fr_10rem] items-center gap-3">
-                <span className="font-escolar text-2xl font-bold">{a.item}</span>
+              <li key={a.item} className="col-span-3 grid grid-cols-subgrid items-center">
+                <span className={`max-w-44 font-escolar font-bold break-words ${a.item.length > 3 ? 'text-lg leading-tight' : 'text-2xl'}`}>{a.item}</span>
                 <span className="h-3.5 overflow-hidden rounded-full bg-fondo" aria-hidden="true">
                   <span className={`block h-full rounded-full ${cuesta ? 'bg-[#e8a35c]' : 'bg-menta'}`} style={{ width: `${Math.max(4, a.tasa * 100)}%` }} />
                 </span>
                 <span className="text-sm">
-                  <b>{Math.round(a.tasa * 100)}%</b> <span className="text-tinta-suave">de {a.rondas}</span>
-                  {cuesta && <span className="ml-1 rounded-md bg-[#fdf1e4] px-1.5 py-0.5 text-xs font-bold text-[#9a4d00]">Le cuesta</span>}
+                  <span className="whitespace-nowrap">
+                    <b>{Math.round(a.tasa * 100)}%</b> <span className="text-tinta-suave">de {a.rondas}</span>
+                  </span>
+                  {cuesta && (
+                    <span className="ml-1 inline-block rounded-md bg-[#fdf1e4] px-1.5 py-0.5 text-xs font-bold whitespace-nowrap text-[#9a4d00]">Le cuesta</span>
+                  )}
                 </span>
               </li>
             )

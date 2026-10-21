@@ -60,7 +60,11 @@ export default function Panel() {
           <ol className="grid gap-3">
             {cuestan.map((a) => (
               <li key={a.item} className="flex items-center gap-3 rounded-2xl bg-[#fdf1e4] px-4 py-3">
-                <span className="w-12 text-center font-escolar text-3xl font-bold text-tinta">{a.item}</span>
+                <span
+                  className={`w-24 shrink-0 text-center font-escolar font-bold break-words text-tinta ${a.item.length > 3 ? 'text-base leading-tight' : 'text-3xl'}`}
+                >
+                  {a.item}
+                </span>
                 <span className="min-w-0 flex-1">
                   <span className="block h-2.5 overflow-hidden rounded-full bg-white" aria-hidden="true">
                     <span className="block h-full rounded-full bg-[#e8a35c]" style={{ width: `${Math.max(4, a.tasa * 100)}%` }} />
