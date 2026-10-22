@@ -12,6 +12,7 @@ interface ValorSesion {
   errorCursos: Error | null
   recargarCursos: () => void
   crearCurso: (nombre: string) => Promise<void>
+  eliminarCurso: (id: string) => Promise<void>
   // '' hasta conocer un curso real de la docente: las páginas no consultan con ''.
   cursoId: string
   elegirCurso: (id: string) => void
@@ -70,6 +71,12 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
     crearCurso: async (nombre) => {
       const curso = await repo.crearCurso(nombre)
       elegirCurso(curso.id)
+      recargarCursos()
+    },
+    eliminarCurso: async (id) => {
+      await repo.eliminarCurso(id)
+      // Sin curso elegido se toma el primero que quede.
+      if (id === cursoId) elegirCurso('')
       recargarCursos()
     },
     cursoId: docente ? cursoId : '',

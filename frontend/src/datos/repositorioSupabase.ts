@@ -197,6 +197,10 @@ export const repositorioSupabase: Repositorio = {
     // docente_id lo pone la base (auth.uid()).
     return aCurso(sinError(await supabase.from('cursos').insert({ nombre: nombre.trim() }).select('id, nombre, docente_id').single()))
   },
+  async eliminarCurso(id) {
+    sinError(await supabase.from('estudiantes').delete().eq('curso_id', id))
+    sinError(await supabase.from('cursos').delete().eq('id', id))
+  },
   async listarEstudiantes(cursoId) {
     const filas = sinError(await supabase.from('estudiantes').select().eq('curso_id', cursoId).order('nombre'))
     return filas.map(aEstudiante)

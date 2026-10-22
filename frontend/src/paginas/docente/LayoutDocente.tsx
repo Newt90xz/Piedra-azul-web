@@ -1,6 +1,9 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useSesion } from '../../app/Sesion.tsx'
+import { repo } from '../../datos/index.ts'
+import type { Curso } from '../../dominio/tipos.ts'
+import { useConsulta } from '../../lib/useConsulta.ts'
 import { AvisoError, Boton, claseEntrada } from '../../ui/aula.tsx'
 import { Icono, type NombreIcono } from '../../ui/Icono.tsx'
 import PrimerCurso from './PrimerCurso.tsx'
@@ -93,8 +96,10 @@ function SelectorCurso() {
   const [nombre, setNombre] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [eliminando, setEliminando] = useState(false)
 
   if (!cursos?.length) return <span />
+  const actual = cursos.find((c) => c.id === cursoId)
 
   const existe = (n: string) => cursos.some((c) => sinTildes(c.nombre) === sinTildes(n))
   const sugeridos = SUGERIDOS.filter((n) => !existe(n)).slice(0, 2)
@@ -156,21 +161,114 @@ function SelectorCurso() {
     )
 
   return (
-    <label className="flex items-center gap-2 text-sm font-semibold text-tinta">
-      <span className="size-2.5 rounded-full bg-menta" aria-hidden="true" />
-      Curso actual
-      <select
-        value={cursoId}
-        onChange={(e) => (e.target.value === NUEVO ? setCreando(true) : elegirCurso(e.target.value))}
-        className="rounded-lg border border-borde bg-white px-2 py-1 font-semibold"
-      >
-        {cursos.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.nombre}
-          </option>
-        ))}
-        <option value={NUEVO}>+ Nuevo curso…</option>
-      </select>
-    </label>
+    <span className="flex items-center gap-1.5">
+      <label className="flex items-center gap-2 text-sm font-semibold text-tinta">
+        <span className="size-2.5 rounded-full bg-menta" aria-hidden="true" />
+        Curso actual
+        <select
+          value={cursoId}
+          onChange={(e) => (e.target.value === NUEVO ? setCreando(true) : elegirCurso(e.target.value))}
+          className="rounded-lg border border-borde bg-white px-2 py-1 font-semibold"
+        >
+          {cursos.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.nombre}
+            </option>
+          ))}
+          <option value={NUEVO}>+ Nuevo curso…</option>
+        </select>
+      </label>
+      {actual && (
+        <button
+          type="button"
+          aria-label={`Eliminar el curso ${actual.nombre}`}
+          title="Eliminar este curso"
+          onClick={() => setEliminando(true)}
+          className="grid size-8 place-items-center rounded-lg text-tinta-suave hover:bg-red-50 hover:text-[#b42318]"
+        >
+          <Icono nombre="basura" className="size-4" />
+        </button>
+      )}
+      {eliminando && actual && <EliminarCurso curso={actual} alCerrar={() => setEliminando(false)} />}
+    </span>
+  )
+}
+
+// Confirmación para borrar un curso. Si tiene estudiantes, también se borran
+// ellos y su historial: hay que escribir el nombre del curso para confirmarlo.
+function EliminarCurso({ curso, alCerrar }: { curso: Curso; alCerrar: () => void }) {
+  const { eliminarCurso } = useSesion()
+  const { datos: estudiantes, error: errorCarga } = useConsulta(() => repo.listarEstudiantes(curso.id), [curso.id])
+  const [escrito, setEscrito] = useState('')
+  const [borrando, setBorrando] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const n = estudiantes?.length ?? 0
+  const confirmado = n === 0 || escrito.trim().toLowerCase() === curso.nombre.trim().toLowerCase()
+
+  useEffect(() => {
+    const alTeclear = (e: KeyboardEvent) => e.key === 'Escape' && !borrando && alCerrar()
+    window.addEventListener('keydown', alTeclear)
+    return () => window.removeEventListener('keydown', alTeclear)
+  }, [alCerrar, borrando])
+
+  const borrar = async () => {
+    setBorrando(true)
+    setError(null)
+    try {
+      await eliminarCurso(curso.id)
+      alCerrar()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo eliminar el curso.')
+      setBorrando(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-tinta/40 p-4" onClick={(e) => e.target === e.currentTarget && !borrando && alCerrar()}>
+      <div role="alertdialog" aria-modal="true" aria-labelledby="titulo-eliminar-curso" className="grid w-full max-w-md gap-4 rounded-3xl bg-white p-6 shadow-2xl">
+        <span className="grid size-12 place-items-center rounded-2xl bg-red-50 text-[#b42318]">
+          <Icono nombre="basura" className="size-6" />
+        </span>
+        <h2 id="titulo-eliminar-curso" className="text-xl font-bold text-tinta">
+          ¿Eliminar «{curso.nombre}»?
+        </h2>
+        {estudiantes === undefined && !errorCarga ? (
+          <p className="text-tinta-suave">Revisando el curso…</p>
+        ) : errorCarga ? (
+          <p className="text-[#b42318]">No se pudo revisar el curso. Cierra e intenta otra vez.</p>
+        ) : n === 0 ? (
+          <p className="text-tinta-suave">El curso no tiene estudiantes. Se borran también sus salas.</p>
+        ) : (
+          <>
+            <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-900">
+              Se borrarán sus <b>{n} {n === 1 ? 'estudiante' : 'estudiantes'}</b> con todo su historial (partidas, emociones y observaciones) y sus
+              salas. <b>No se puede deshacer.</b>
+            </p>
+            <label className="grid gap-1.5 text-sm font-semibold text-tinta">
+              Escribe «{curso.nombre}» para confirmar
+              <input value={escrito} onChange={(e) => setEscrito(e.target.value)} autoFocus className={claseEntrada} />
+            </label>
+          </>
+        )}
+        {error && (
+          <p role="alert" className="text-sm font-semibold text-[#b42318]">
+            {error}
+          </p>
+        )}
+        <div className="flex flex-wrap justify-end gap-2">
+          <Boton variante="suave" disabled={borrando} onClick={alCerrar}>
+            Cancelar
+          </Boton>
+          <button
+            type="button"
+            disabled={estudiantes === undefined || !confirmado || borrando}
+            onClick={() => void borrar()}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#b42318] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#912018] disabled:opacity-50"
+          >
+            <Icono nombre="basura" className="size-4" /> {borrando ? 'Eliminando…' : 'Eliminar curso'}
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }

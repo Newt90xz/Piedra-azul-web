@@ -198,6 +198,18 @@ export const repositorioDemo: Repositorio = {
     mutar((e) => e.cursos.push(curso))
     return curso
   },
+  async eliminarCurso(cursoId) {
+    const ids = leer()
+      .estudiantes.filter((x) => x.cursoId === cursoId)
+      .map((x) => x.id)
+    for (const estudianteId of ids) await repositorioDemo.eliminarEstudiante(estudianteId)
+    mutar((e) => {
+      const salas = new Set(e.salas.filter((s) => s.cursoId === cursoId).map((s) => s.id))
+      e.salas = e.salas.filter((s) => !salas.has(s.id))
+      e.miembros = e.miembros.filter((m) => !salas.has(m.salaId))
+      e.cursos = e.cursos.filter((c) => c.id !== cursoId)
+    })
+  },
   async listarEstudiantes(cursoId) {
     return leer().estudiantes.filter((e) => e.cursoId === cursoId)
   },

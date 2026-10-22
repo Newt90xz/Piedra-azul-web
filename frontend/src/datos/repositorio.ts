@@ -33,6 +33,9 @@ export interface Repositorio {
 
   listarCursos(): Promise<Curso[]>
   crearCurso(nombre: string): Promise<Curso>
+  // Borra el curso y sus salas. Antes borra a sus estudiantes con todo su
+  // historial (la base no deja borrar un curso que aún tiene estudiantes).
+  eliminarCurso(id: string): Promise<void>
   listarEstudiantes(cursoId: string): Promise<Estudiante[]>
   obtenerEstudiante(id: string): Promise<Estudiante | null>
   guardarEstudiante(datos: NuevoEstudiante | Estudiante): Promise<Estudiante>
