@@ -1,6 +1,7 @@
 import { CATEGORIAS, actividad, type Categoria } from '../contenido/actividades.ts'
 import { categoriaDe } from '../contenido/contenidos.ts'
 import type { Emocion, ResultadoActividad } from '../dominio/tipos.ts'
+import { capitalizar } from './texto.ts'
 
 export interface AvanceItem {
   item: string
@@ -51,6 +52,12 @@ export interface DetalleItem {
   errores: { respuesta: string; veces: number }[]
   // Rondas de ese ítem, de la más reciente a la más antigua.
   historial: { fecha: string; actividadId: string; estudianteId: string; intentos: number; error?: string }[]
+}
+
+// En el conteo de sílabas el error es un número: «3» se lee «3 sílabas».
+export function respuestaLegible(r: string, conteo: boolean) {
+  if (conteo && /^\d+$/.test(r)) return `${r} ${r === '1' ? 'sílaba' : 'sílabas'}`
+  return capitalizar(r)
 }
 
 export function detalleItem(resultados: ResultadoActividad[], categoria: Categoria, item: string): DetalleItem {

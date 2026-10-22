@@ -16,6 +16,8 @@
     "@hookform/resolvers": "^5.9.1",
     "@supabase/supabase-js": "^2.117.2",
     "idb": "^8.0.3",
+    "jspdf": "3.0.1",
+    "jspdf-autotable": "5.0.2",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-hook-form": "^7.89.0",

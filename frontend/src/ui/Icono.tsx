@@ -17,6 +17,7 @@ const TRAZOS = {
   nota: 'M5 3h14v18H5zM9 8h6M9 12h6M9 16h4',
   check: 'M5 12l5 5 9-10',
   reintentar: 'M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5',
+  descargar: 'M12 4v11M7 10l5 5 5-5M5 20h14',
   arrastrar: 'M9 5.5v.01M9 12v.01M9 18.5v.01M15 5.5v.01M15 12v.01M15 18.5v.01',
 } as const
 

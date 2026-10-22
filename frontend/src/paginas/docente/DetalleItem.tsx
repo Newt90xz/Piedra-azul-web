@@ -1,8 +1,7 @@
 import { PALABRAS, quitarTildes } from '../../contenido/banco.ts'
 import { nombreActividad } from '../../contenido/contenidos.ts'
 import type { Estudiante, ResultadoActividad } from '../../dominio/tipos.ts'
-import { detalleItem, fechaCorta, type AvanceItem } from '../../lib/avance.ts'
-import { capitalizar } from '../../lib/texto.ts'
+import { detalleItem, fechaCorta, respuestaLegible, type AvanceItem } from '../../lib/avance.ts'
 import { Avatar } from '../../ui/Avatar.tsx'
 
 // Lo que se ve al tocar una palabra, sílaba o sonido en el avance: sus sílabas
@@ -100,10 +99,4 @@ function PorNino({ detalle, estudiantes, conteo }: { detalle: ReturnType<typeof 
       </ul>
     </div>
   )
-}
-
-// En el conteo de sílabas el error es un número: «3» se lee «3 sílabas».
-function respuestaLegible(r: string, conteo: boolean) {
-  if (conteo && /^\d+$/.test(r)) return `${r} ${r === '1' ? 'sílaba' : 'sílabas'}`
-  return capitalizar(r)
 }

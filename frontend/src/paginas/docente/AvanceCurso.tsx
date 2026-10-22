@@ -7,12 +7,15 @@ import { EMOCIONES, UMBRAL_LE_CUESTA, avancePorItem, inicioSemana, minutos, porC
 import { capitalizar } from '../../lib/texto.ts'
 import { useConsulta } from '../../lib/useConsulta.ts'
 import { Avatar } from '../../ui/Avatar.tsx'
-import { AvisoError, Encabezado, Tarjeta } from '../../ui/aula.tsx'
+import { Icono } from '../../ui/Icono.tsx'
+import { AvisoError, Boton, Encabezado, Tarjeta } from '../../ui/aula.tsx'
 import { DetalleItem } from './DetalleItem.tsx'
 
 // RF-17: participación semanal del curso en una sola vista.
 export default function AvanceCurso() {
-  const { cursoId } = useSesion()
+  const { cursoId, cursos } = useSesion()
+  const [generando, setGenerando] = useState(false)
+  const [falloPdf, setFalloPdf] = useState(false)
   const { datos, error, recargar } = useConsulta(async () => {
     const [estudiantes, semana, emociones] = await Promise.all([
       repo.listarEstudiantes(cursoId),
@@ -24,9 +27,37 @@ export default function AvanceCurso() {
 
   const semana = datos?.semana ?? []
 
+  const descargar = async () => {
+    if (!datos) return
+    setGenerando(true)
+    setFalloPdf(false)
+    try {
+      const { descargarAvancePdf } = await import('../../lib/pdfAvance.ts')
+      await descargarAvancePdf({ curso: cursos?.find((c) => c.id === cursoId)?.nombre ?? 'Curso', ...datos })
+    } catch (e) {
+      console.warn('[pdf] No se pudo generar.', e)
+      setFalloPdf(true)
+    }
+    setGenerando(false)
+  }
+
   return (
     <>
-      <Encabezado antetitulo="Seguimiento" titulo="Avance del curso" descripcion="Participación de esta semana (desde el lunes) y última emoción registrada." />
+      <Encabezado
+        antetitulo="Seguimiento"
+        titulo="Avance del curso"
+        descripcion="Participación de esta semana (desde el lunes) y última emoción registrada."
+        accion={
+          <Boton variante="secundario" disabled={!datos || generando} onClick={() => void descargar()}>
+            <Icono nombre="descargar" /> {generando ? 'Generando…' : 'Descargar PDF'}
+          </Boton>
+        }
+      />
+      {falloPdf && (
+        <p role="alert" className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+          No se pudo generar el PDF. Intenta otra vez.
+        </p>
+      )}
       {error && <AvisoError alReintentar={recargar} />}
       <Tarjeta className={`overflow-x-auto p-0 ${error ? 'hidden' : ''}`}>
         <table className="w-full min-w-[640px] text-left">
