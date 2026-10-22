@@ -97,6 +97,8 @@ function emocionGuardada(id: string): Emocion | null {
 }
 
 const REFRESCO_MS = 4000
+// En la espera se consulta más seguido: al asignarlo, el niño pasa a su sala casi al instante.
+const REFRESCO_ESPERA_MS = 2000
 
 // Vista del alumno conectado desde su dispositivo (entró por /alumno). Cada
 // pocos segundos consulta su estado: así ve la sala que le asigna la docente y,
@@ -117,10 +119,13 @@ export function NinoShell() {
 
   useEffect(() => {
     if (!conectado) return
-    const t = window.setInterval(() => {
-      void reenviarPendientes()
-      recargar()
-    }, REFRESCO_MS)
+    const t = window.setInterval(
+      () => {
+        void reenviarPendientes()
+        recargar()
+      },
+      estado?.sala ? REFRESCO_MS : REFRESCO_ESPERA_MS,
+    )
     return () => window.clearInterval(t)
   })
 
