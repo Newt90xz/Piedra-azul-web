@@ -172,6 +172,16 @@ body {
   animation: cruzar linear infinite;
   box-shadow: 2.5rem -1.4rem 0 0.4rem #fff, 5rem 0 0 0 #fff;
 }
+/* Emoji centrado en una caja de tamaño fijo. Algunas fuentes de emoji (p. ej.
+   la Segoe UI Emoji 3D de Windows 11) miden 1,37em de ancho: con letra grande el
+   emoji no cabe y la grilla lo empuja hacia la derecha/abajo. `unsafe center`
+   lo mantiene centrado aunque se desborde. */
+.centro-emoji {
+  display: grid;
+  place-items: center;
+  place-content: unsafe center;
+  line-height: 1;
+}
 /* Minijuego de espera (paginas/alumno/MiniJuego.tsx). */
 /* Por `top` y no por transform: el alto del área cambia con la pantalla. */
 @keyframes elevar {

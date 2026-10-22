@@ -95,7 +95,7 @@ export function MiniJuego() {
             disabled={g.reventado}
             onPointerDown={() => !g.reventado && reventar(g.id)}
             onAnimationEnd={(e) => e.animationName === 'elevar' && quitar(g.id)}
-            className={`globo absolute grid size-24 place-items-center rounded-full text-[2.2em] leading-none select-none ${quieto ? '' : 'elevando'}`}
+            className={`globo centro-emoji absolute size-24 rounded-full text-[2.2em] select-none ${quieto ? '' : 'elevando'}`}
             style={{
               left: `${g.izq}%`,
               top: quieto ? `${g.arriba}%` : '100%',

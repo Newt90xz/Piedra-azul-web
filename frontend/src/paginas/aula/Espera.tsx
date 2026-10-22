@@ -43,7 +43,7 @@ export default function Espera() {
             voz={musica ? 'Apagar la música' : 'Poner música'}
             aria-pressed={musica}
             onClick={alternarMusica}
-            className={`relative grid size-16 place-items-center text-[1.4em] ${musica ? 'bg-nino-lila' : 'opacity-70'}`}
+            className={`centro-emoji relative size-16 text-[1.4em] ${musica ? 'bg-nino-lila' : 'opacity-70'}`}
           >
             <span aria-hidden="true">🎵</span>
             {!musica && (
@@ -75,7 +75,7 @@ function Pestana({ activa, voz, icono, alTocar }: { activa: boolean; voz: string
       voz={voz}
       aria-pressed={activa}
       onClick={alTocar}
-      className={`grid h-16 w-28 place-items-center text-[1.6em] ${activa ? 'bg-nino-amarillo' : 'opacity-70'}`}
+      className={`centro-emoji h-16 w-28 text-[1.6em] ${activa ? 'bg-nino-amarillo' : 'opacity-70'}`}
     >
       <span aria-hidden="true">{icono}</span>
     </BotonNino>
