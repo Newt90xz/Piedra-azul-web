@@ -1,10 +1,14 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useSesion } from '../../app/Sesion.tsx'
 import { repo } from '../../datos/index.ts'
-import { EMOCIONES, inicioSemana, minutos } from '../../lib/avance.ts'
+import type { Estudiante, ResultadoActividad } from '../../dominio/tipos.ts'
+import { EMOCIONES, UMBRAL_LE_CUESTA, avancePorItem, inicioSemana, minutos, porCategoria } from '../../lib/avance.ts'
+import { capitalizar } from '../../lib/texto.ts'
 import { useConsulta } from '../../lib/useConsulta.ts'
 import { Avatar } from '../../ui/Avatar.tsx'
 import { AvisoError, Encabezado, Tarjeta } from '../../ui/aula.tsx'
+import { DetalleItem } from './DetalleItem.tsx'
 
 // RF-17: participación semanal del curso en una sola vista.
 export default function AvanceCurso() {
@@ -67,6 +71,56 @@ export default function AvanceCurso() {
           </tbody>
         </table>
       </Tarjeta>
+      {datos && <LeCuesta semana={semana} estudiantes={datos.estudiantes} />}
     </>
+  )
+}
+
+// Lo que más le cuesta al curso esta semana. Al tocar una palabra, sílaba o
+// sonido se ve con qué se confunden y a qué niños les cuesta.
+function LeCuesta({ semana, estudiantes }: { semana: ResultadoActividad[]; estudiantes: Estudiante[] }) {
+  const [abierto, setAbierto] = useState<string | null>(null)
+  const grupos = porCategoria(avancePorItem(semana).filter((a) => a.tasa < UMBRAL_LE_CUESTA))
+
+  return (
+    <Tarjeta className="mt-6">
+      <h2 className="text-lg font-bold">Lo que más le cuesta al curso</h2>
+      <p className="mb-4 text-sm text-tinta-suave">Menos del 60 % al primer intento esta semana. Toca uno para ver el detalle por niño.</p>
+      {grupos.length === 0 && <p className="text-tinta-suave">Nada por ahora.</p>}
+      <div className="grid gap-5">
+        {grupos.map((g) => (
+          <section key={g.categoria} aria-label={g.titulo}>
+            <h3 className="mb-2 text-sm font-bold text-tinta-suave">{g.titulo}</h3>
+            <ul className="flex flex-wrap gap-2">
+              {g.items.map((a) => {
+                const clave = `${a.categoria}|${a.item}`
+                const activo = abierto === clave
+                return (
+                  <li key={clave}>
+                    <button
+                      type="button"
+                      aria-expanded={activo}
+                      onClick={() => setAbierto(activo ? null : clave)}
+                      className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 ${activo ? 'border-menta bg-menta-fondo' : 'border-borde bg-white hover:border-menta'}`}
+                    >
+                      <b className="font-escolar text-lg">{capitalizar(a.item)}</b>
+                      <span className="text-sm font-semibold text-[#9a4d00]">{Math.round(a.tasa * 100)}%</span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+            {g.items.map(
+              (a) =>
+                abierto === `${a.categoria}|${a.item}` && (
+                  <div key={a.item} className="mt-3">
+                    <DetalleItem resultados={semana} item={a} estudiantes={estudiantes} />
+                  </div>
+                ),
+            )}
+          </section>
+        ))}
+      </div>
+    </Tarjeta>
   )
 }

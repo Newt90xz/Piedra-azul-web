@@ -81,6 +81,9 @@ export interface IntentoRonda {
   item: string
   intentos: number
   acertada: boolean
+  // Última respuesta equivocada de la ronda (sílaba, letra, palabra o número).
+  // Solo la última: tocar muchas veces por desesperación no llena el registro.
+  error?: string
 }
 
 export interface ResultadoActividad {

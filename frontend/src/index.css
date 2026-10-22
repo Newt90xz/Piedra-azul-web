@@ -36,6 +36,7 @@
   --animate-pop: pop 0.4s ease-out;
   --animate-sacudir: sacudir 0.4s ease-in-out;
   --animate-aparecer: aparecer 0.35s ease-out;
+  --animate-pantalla: pantalla 0.45s ease-out;
 
   @keyframes pop {
     0% { transform: scale(0.7); }
@@ -49,6 +50,10 @@
   }
   @keyframes aparecer {
     from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes pantalla {
+    from { opacity: 0; transform: scale(0.97); }
     to { opacity: 1; transform: none; }
   }
 }
@@ -99,7 +104,20 @@ body {
   box-shadow: 0 5px 0 rgb(43 74 107 / 0.18);
 }
 .nino h1 { text-shadow: 0 3px 0 rgb(255 255 255 / 0.9); letter-spacing: 0.01em; }
-.nino .ruleta { box-shadow: 0 0 0 4px var(--color-contorno), 0 12px 0 4px var(--color-contorno); }
+
+/* Transiciones de la vista del niño: las cajas (contenidos, juegos, emociones,
+   avatares) llegan una tras otra con un pequeño rebote. Cada una fija su
+   animation-delay; «backwards» la mantiene oculta mientras espera su turno. */
+@keyframes caja-entra {
+  0% { opacity: 0; transform: translateY(2.2rem) scale(0.6) rotate(-6deg); }
+  70% { opacity: 1; transform: translateY(-0.3rem) scale(1.05) rotate(1deg); }
+  100% { opacity: 1; transform: none; }
+}
+.caja-entra { animation: caja-entra 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.2) backwards; }
+
+/* Saludo al elegir perfil (paginas/alumno/Entrada.tsx). */
+.saludo-velo { background: rgb(36 52 71 / 0.35); animation: pantalla 0.3s ease-out; }
+.saludo-texto { animation: aparecer 0.4s ease-out 0.45s backwards; }
 
 /* Fondos vivos y protector de pantalla (ver ui/fondoNino.tsx). */
 @keyframes subir {
@@ -133,9 +151,10 @@ body {
   box-shadow: 2.5rem -1.4rem 0 0.4rem #fff, 5rem 0 0 0 #fff;
 }
 /* Minijuego de espera (paginas/alumno/MiniJuego.tsx). */
+/* Por `top` y no por transform: el alto del área cambia con la pantalla. */
 @keyframes elevar {
-  from { transform: translateY(0); }
-  to { transform: translateY(calc(-62dvh - 160%)); }
+  from { top: 100%; }
+  to { top: -8rem; }
 }
 .globo {
   box-shadow: 0 0 0 3px var(--color-contorno), inset -10px -12px 0 rgb(0 0 0 / 0.07);

@@ -3,15 +3,20 @@ import type { InputHTMLAttributes, ReactNode } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import type { Estudiante } from '../../dominio/tipos.ts'
+import { capitalizar } from '../../lib/texto.ts'
 import { AJUSTES_POR_DEFECTO, type NuevoEstudiante } from '../../datos/repositorio.ts'
 import { Boton, Campo, Tarjeta, claseEntrada } from '../../ui/aula.tsx'
 
-const AVATARES = ['🦊', '🦖', '🐬', '🚒', '🦄', '⚽', '🐼', '🦁', '🚀', '🐢', '🏴‍☠️', '🦈']
+const AVATARES = [
+  '🦊', '🦖', '🐬', '🚒', '🦄', '⚽', '🐼', '🦁', '🚀', '🐢', '🏴‍☠️', '🦈',
+  '🐶', '🐱', '🐰', '🐻', '🐨', '🐸', '🐵', '🦉', '🐧', '🦋', '🐝', '🐞',
+  '🦕', '🐳', '🦒', '🦓', '🚗', '🚂', '🚜', '✈️', '🌈', '⭐', '🌻', '🎈',
+]
 const COLORES = ['#fde2c8', '#d3f2e3', '#cfe8fb', '#f6d1d1', '#e4dcf7', '#fff3c4']
 
 const esquema = z.object({
   // RNF-09: solo el nombre de pila.
-  nombre: z.string().trim().min(2, 'Escribe el nombre de pila.').max(30),
+  nombre: z.string().trim().min(2, 'Escribe el nombre de pila.').max(30).transform(capitalizar),
   avatar: z.string(),
   color: z.string(),
   activo: z.boolean(),

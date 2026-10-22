@@ -1,19 +1,21 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { createContext, use, useEffect, useState, type DragEvent, type FormEvent, type ReactNode } from 'react'
 import { useSesion } from '../../app/Sesion.tsx'
 import { JUEGOS } from '../../contenido/actividades.ts'
-import { CONTENIDOS, OA, contenido, planDe } from '../../contenido/contenidos.ts'
+import { CONTENIDOS, contenido, planDe, type Contenido } from '../../contenido/contenidos.ts'
 import { pictoMensaje } from '../../contenido/mensajes.ts'
 import { repo } from '../../datos/index.ts'
 import type { Conectado, Emocion, Estudiante, MiembroSala, ProgresoSala, ResultadoActividad, Sala, TipoSala } from '../../dominio/tipos.ts'
 import { EMOCIONES, inicioDia, minutos } from '../../lib/avance.ts'
+import { capitalizar } from '../../lib/texto.ts'
 import { useConsulta } from '../../lib/useConsulta.ts'
 import { Avatar } from '../../ui/Avatar.tsx'
 import { Icono } from '../../ui/Icono.tsx'
-import { AvisoError, Boton, Encabezado, Tarjeta, claseEntrada } from '../../ui/aula.tsx'
+import { AvisoError, Boton, Encabezado, claseEntrada, claseTarjeta } from '../../ui/aula.tsx'
 
 const REFRESCO_MS = 5000
 // Igual que la base: un dispositivo sin señales por 10 minutos se da por apagado.
 const VIGENTE_MS = 10 * 60_000
+// Destino «sin sala»: soltar ahí saca al niño de su sala y vuelve a la espera.
 const ESPERA = ''
 
 interface Datos {
@@ -35,9 +37,28 @@ function avanceEn(sala: Sala, p: ProgresoSala | undefined) {
   return p && p.salaId === sala.id && p.asignacion === sala.asignacion ? p : undefined
 }
 
+// Mover niños entre salas: se arrastra su ficha a la caja de una sala (o a «Sin
+// sala»). En pantallas táctiles, donde arrastrar no siempre funciona, se toca la
+// ficha y luego la caja de destino.
+interface ValorMover {
+  elegido: Estudiante | null
+  elegir: (e: Estudiante | null) => void
+  salaDe: (estudianteId: string) => string
+  mover: (estudianteId: string, destino: string) => void
+}
+
+const MoverContexto = createContext<ValorMover | null>(null)
+
+function useMover() {
+  const v = use(MoverContexto)
+  if (!v) throw new Error('useMover debe usarse dentro de <Salas>')
+  return v
+}
+
 export default function Salas() {
   const { cursoId } = useSesion()
   const [accionError, setAccionError] = useState<string | null>(null)
+  const [elegido, setElegido] = useState<Estudiante | null>(null)
   const { datos, error, recargar } = useConsulta(async (): Promise<Datos> => {
     // Vista en vivo: se repite cada pocos segundos, así que solo trae lo de hoy
     // y la última emoción de cada niño (no el historial completo).
@@ -67,6 +88,14 @@ export default function Salas() {
     return () => window.clearInterval(t)
   })
 
+  // Escape suelta al niño elegido sin moverlo.
+  useEffect(() => {
+    if (!elegido) return
+    const alTeclear = (e: KeyboardEvent) => e.key === 'Escape' && setElegido(null)
+    window.addEventListener('keydown', alTeclear)
+    return () => window.removeEventListener('keydown', alTeclear)
+  }, [elegido])
+
   const ejecutar: Ejecutar = async (accion) => {
     setAccionError(null)
     try {
@@ -77,16 +106,20 @@ export default function Salas() {
     recargar()
   }
 
+  const salaDe = (id: string) => datos?.miembros.find((m) => m.estudianteId === id)?.salaId ?? ESPERA
+  const mover = (estudianteId: string, destino: string) => {
+    setElegido(null)
+    if (salaDe(estudianteId) === destino) return
+    void ejecutar(() => (destino === ESPERA ? repo.desconectarEstudiante(estudianteId) : repo.conectarEstudiante(destino, estudianteId)))
+  }
+
   const enSala = new Set(datos?.miembros.map((m) => m.estudianteId))
-  const enEspera = datos?.estudiantes.filter((e) => !enSala.has(e.id) && enLinea(datos.conectados.get(e.id))) ?? []
+  const sinSala = datos?.estudiantes.filter((e) => !enSala.has(e.id)) ?? []
+  const enEspera = sinSala.filter((e) => enLinea(datos?.conectados.get(e.id)))
 
   return (
-    <>
-      <Encabezado
-        antetitulo="Trabajo en aula"
-        titulo="Salas"
-        descripcion="Los niños eligen su perfil y quedan en espera. Tú los asignas a una sala y decides qué contenidos y juegos trabajan en ella."
-      />
+    <MoverContexto value={{ elegido, elegir: setElegido, salaDe, mover }}>
+      <Encabezado antetitulo="Trabajo en aula" titulo="Salas" descripcion="Arrastra a cada niño a su sala. En tablet: tócalo y luego toca la sala." />
       {datos && (
         <p className="mb-5 flex items-center gap-2 text-sm font-semibold text-tinta">
           <span className={`size-2.5 rounded-full ${enEspera.length + datos.miembros.length ? 'bg-menta' : 'bg-borde'}`} aria-hidden="true" />
@@ -108,21 +141,23 @@ export default function Salas() {
       {datos && (
         <>
           <Avisos datos={datos} ejecutar={ejecutar} />
-          <EnEspera ninos={enEspera} salas={datos.salas} ejecutar={ejecutar} />
           <CrearSala cursoId={cursoId} alCrear={(nombre, tipo) => ejecutar(() => repo.crearSala(cursoId, nombre, tipo))} />
-          <div className="grid items-start gap-5 xl:grid-cols-2">
-            {datos.salas.map((s) =>
-              s.tipo === 'playground' ? (
-                <TarjetaPlayground key={s.id} sala={s} datos={datos} ejecutar={ejecutar} />
-              ) : (
-                <TarjetaSala key={s.id} sala={s} datos={datos} ejecutar={ejecutar} />
-              ),
-            )}
+          <div className="grid items-start gap-5 xl:grid-cols-[17rem_1fr]">
+            <SinSala ninos={sinSala} datos={datos} />
+            <div className="grid items-start gap-5 2xl:grid-cols-2">
+              {datos.salas.map((s) =>
+                s.tipo === 'playground' ? (
+                  <TarjetaPlayground key={s.id} sala={s} datos={datos} ejecutar={ejecutar} />
+                ) : (
+                  <TarjetaSala key={s.id} sala={s} datos={datos} ejecutar={ejecutar} />
+                ),
+              )}
+              {datos.salas.length === 0 && <p className="text-tinta-suave">Aún no hay salas. Crea la primera arriba.</p>}
+            </div>
           </div>
-          {datos.salas.length === 0 && <p className="text-tinta-suave">Aún no hay salas. Crea la primera arriba.</p>}
         </>
       )}
-    </>
+    </MoverContexto>
   )
 }
 
@@ -148,9 +183,10 @@ function Avisos({ datos, ejecutar }: { datos: Datos; ejecutar: Ejecutar }) {
             <Avatar estudiante={e} className="size-10 text-2xl" />
             <span className="min-w-0 flex-1">
               <b className="text-tinta">{e.nombre}</b> <span className="text-tinta-suave">· {sala.nombre}</span>
-              <span className="block text-sm text-tinta-suave">
-                {paso ? `${paso.contenido.titulo}, actividad ${paso.numero}: «${paso.contenido.pasos[paso.numero - 1].titulo}»` : 'Actividad actual'} ·{' '}
-                <b className="text-[#9a4d00]">no logra el 60 % tras {p.repeticiones} intentos</b>
+              <span className="flex flex-wrap items-center gap-1.5 text-sm text-tinta-suave">
+                {paso && <IconoContenido c={paso.contenido} className="size-6 text-sm" />}
+                {paso ? `${paso.contenido.titulo} · act. ${paso.numero}` : 'Actividad actual'} ·{' '}
+                <b className="text-[#9a4d00]">{p.repeticiones} intentos sin lograrlo</b>
               </span>
             </span>
             <Boton variante="secundario" onClick={() => void ejecutar(() => repo.marcarApoyado(e.id))}>
@@ -163,72 +199,122 @@ function Avisos({ datos, ejecutar }: { datos: Datos; ejecutar: Ejecutar }) {
   )
 }
 
-function EnEspera({ ninos, salas, ejecutar }: { ninos: Estudiante[]; salas: Sala[]; ejecutar: Ejecutar }) {
-  const [destino, setDestino] = useState('')
-  const salaDestino = salas.some((s) => s.id === destino) ? destino : (salas[0]?.id ?? '')
+// Caja donde se suelta a un niño: una sala o «Sin sala». Resalta al arrastrar
+// encima y, si hay un niño elegido con un toque, ofrece moverlo aquí.
+function ZonaSoltar({ destino, nombre, className = '', children }: { destino: string; nombre: string; className?: string; children: ReactNode }) {
+  const { elegido, salaDe, mover } = useMover()
+  const [encima, setEncima] = useState(false)
+  const puedeRecibir = elegido && salaDe(elegido.id) !== destino
+
+  const alSoltar = (ev: DragEvent) => {
+    ev.preventDefault()
+    setEncima(false)
+    const id = ev.dataTransfer.getData('text/plain')
+    if (id) mover(id, destino)
+  }
 
   return (
-    <Tarjeta className="mb-6 grid gap-4 p-5">
-      <div className="flex flex-wrap items-center gap-3">
-        <h2 className="min-w-0 flex-1 text-lg font-bold text-tinta">
-          En espera <span className="text-tinta-suave">({ninos.length})</span>
-        </h2>
-        {ninos.length > 0 && salas.length > 0 && (
-          <span className="flex flex-wrap items-center gap-2 text-sm font-semibold">
-            <label className="flex items-center gap-2">
-              Asignar a todos a
-              <select value={salaDestino} onChange={(e) => setDestino(e.target.value)} className={`${claseEntrada} w-auto py-1.5`}>
-                {salas.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.nombre}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <Boton onClick={() => void ejecutar(() => Promise.all(ninos.map((n) => repo.conectarEstudiante(salaDestino, n.id))))}>Asignar</Boton>
-          </span>
-        )}
-      </div>
-      {ninos.length === 0 ? (
-        <p className="text-sm text-tinta-suave">Nadie esperando. Los niños aparecen aquí al tocar su perfil en su computador.</p>
-      ) : (
-        <ul className="grid gap-2 sm:grid-cols-2">
-          {ninos.map((e) => (
-            <li key={e.id} className="flex flex-wrap items-center gap-2 rounded-xl bg-fondo px-3 py-2">
-              <Avatar estudiante={e} className="size-9 text-xl" />
-              <span className="min-w-0 flex-1 font-semibold text-tinta">{e.nombre}</span>
-              <MoverA salas={salas} actual={ESPERA} alMover={(salaId) => ejecutar(() => repo.conectarEstudiante(salaId, e.id))} />
-            </li>
-          ))}
-        </ul>
+    <section
+      aria-label={nombre}
+      onDragOver={(ev) => {
+        ev.preventDefault()
+        ev.dataTransfer.dropEffect = 'move'
+        setEncima(true)
+      }}
+      onDragLeave={(ev) => {
+        if (!ev.currentTarget.contains(ev.relatedTarget as Node | null)) setEncima(false)
+      }}
+      onDrop={alSoltar}
+      className={`${claseTarjeta} grid gap-4 p-5 transition-shadow ${encima ? 'ring-3 ring-menta ring-offset-2' : puedeRecibir ? 'ring-2 ring-menta/50' : ''} ${className}`}
+    >
+      {puedeRecibir && (
+        <button
+          type="button"
+          onClick={() => mover(elegido.id, destino)}
+          className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-menta bg-menta-fondo px-3 py-2 text-sm font-bold text-menta-oscuro hover:bg-[#d3f0e2]"
+        >
+          <Avatar estudiante={elegido} className="size-7 text-base" />
+          Mover a {elegido.nombre} {destino === ESPERA ? 'a «Sin sala»' : `a «${nombre}»`}
+        </button>
       )}
-    </Tarjeta>
+      {children}
+    </section>
   )
 }
 
-function MoverA({ salas, actual, alMover }: { salas: Sala[]; actual: string; alMover: (salaId: string) => Promise<void> }) {
-  return (
-    <label className="text-sm font-semibold">
-      <span className="sr-only">Mover a</span>
-      <select
-        value=""
-        onChange={(e) => void alMover(e.target.value)}
-        className="rounded-lg border border-borde bg-white px-2 py-1.5 text-sm font-semibold"
+// Asa de la ficha de un niño: se arrastra o se toca para elegirlo.
+function useArrastrable(e: Estudiante) {
+  const { elegido, elegir } = useMover()
+  const activo = elegido?.id === e.id
+  return {
+    activo,
+    fila: {
+      draggable: true,
+      onDragStart: (ev: DragEvent) => {
+        ev.dataTransfer.setData('text/plain', e.id)
+        ev.dataTransfer.effectAllowed = 'move'
+        elegir(null)
+      },
+    },
+    asa: (
+      <button
+        type="button"
+        aria-pressed={activo}
+        aria-label={activo ? `Soltar a ${e.nombre}` : `Mover a ${e.nombre}`}
+        title="Arrastra a otra sala, o toca aquí y luego toca la sala"
+        onClick={() => elegir(activo ? null : e)}
+        className={`grid size-8 shrink-0 cursor-grab place-items-center rounded-lg active:cursor-grabbing ${activo ? 'bg-menta text-white' : 'text-tinta-suave hover:bg-white'}`}
       >
-        <option value="" disabled>
-          {actual === ESPERA ? 'Asignar a…' : 'Mover a…'}
-        </option>
-        {actual !== ESPERA && <option value={ESPERA}>Sala de espera</option>}
-        {salas
-          .filter((s) => s.id !== actual)
-          .map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.tipo === 'playground' ? '🎈 ' : ''}
-              {s.nombre}
-            </option>
+        <Icono nombre="arrastrar" className="size-5 [stroke-width:3.2]" />
+      </button>
+    ),
+  }
+}
+
+// Los que no están en ninguna sala: arriba los que ya esperan en su computador.
+function SinSala({ ninos, datos }: { ninos: Estudiante[]; datos: Datos }) {
+  const ordenados = [...ninos].sort((a, b) => Number(enLinea(datos.conectados.get(b.id))) - Number(enLinea(datos.conectados.get(a.id))))
+  return (
+    <ZonaSoltar destino={ESPERA} nombre="Sin sala" className="xl:sticky xl:top-4">
+      <h2 className="text-lg font-bold text-tinta">
+        Sin sala <span className="text-tinta-suave">({ninos.length})</span>
+      </h2>
+      {ninos.length === 0 ? (
+        <p className="text-sm text-tinta-suave">Todos están en una sala.</p>
+      ) : (
+        <ul className="grid gap-1.5">
+          {ordenados.map((e) => (
+            <FichaSinSala key={e.id} e={e} online={enLinea(datos.conectados.get(e.id))} />
           ))}
-      </select>
-    </label>
+        </ul>
+      )}
+    </ZonaSoltar>
+  )
+}
+
+function FichaSinSala({ e, online }: { e: Estudiante; online: boolean }) {
+  const { activo, fila, asa } = useArrastrable(e)
+  return (
+    <li {...fila} className={`flex items-center gap-2 rounded-xl px-2 py-1.5 ${activo ? 'bg-menta-fondo ring-2 ring-menta' : 'bg-fondo'} ${online ? '' : 'opacity-60'}`}>
+      {asa}
+      <EnLinea e={e} online={online} />
+      <span className="min-w-0 flex-1 leading-tight">
+        <span className="block truncate font-semibold text-tinta">{e.nombre}</span>
+        <span className="block text-xs font-semibold text-tinta-suave">{online ? 'Esperando' : 'Sin conectar'}</span>
+      </span>
+    </li>
+  )
+}
+
+function EnLinea({ e, online }: { e: Estudiante; online: boolean }) {
+  return (
+    <span className="relative shrink-0">
+      <Avatar estudiante={e} className="size-9 text-xl" />
+      <span
+        title={online ? 'Con dispositivo' : 'Sin dispositivo'}
+        className={`absolute -right-0.5 -bottom-0.5 size-3 rounded-full border-2 border-white ${online ? 'bg-menta' : 'bg-borde'}`}
+      />
+    </span>
   )
 }
 
@@ -240,7 +326,7 @@ function CrearSala({ cursoId, alCrear }: { cursoId: string; alCrear: (nombre: st
   const enviar = async (e: FormEvent) => {
     e.preventDefault()
     if (!nombre.trim()) return
-    await alCrear(nombre.trim(), tipo)
+    await alCrear(capitalizar(nombre.trim()), tipo)
     setNombre('')
   }
 
@@ -309,14 +395,14 @@ function TarjetaSala({ sala, datos, ejecutar }: { sala: Sala; datos: Datos; ejec
   const playground = datos.salas.find((s) => s.tipo === 'playground')
 
   return (
-    <Tarjeta className="grid gap-5 p-5">
+    <ZonaSoltar destino={sala.id} nombre={sala.nombre}>
       <EncabezadoSala sala={sala} n={dentro.length} ejecutar={ejecutar} />
       <EditorPlan sala={sala} conAvance={conAvance} ejecutar={ejecutar} />
 
       {dentro.length > 0 && terminaron.length === dentro.length && (
         <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-menta-fondo px-4 py-3 text-sm font-semibold text-menta-oscuro">
           <span aria-hidden="true" className="text-xl">🎉</span>
-          <span className="min-w-0 flex-1">Todos terminaron los contenidos y están en los juegos. Asigna un plan nuevo o muévelos.</span>
+          <span className="min-w-0 flex-1">Todos terminaron y están en los juegos.</span>
           {playground && (
             <Boton variante="secundario" onClick={() => void ejecutar(() => Promise.all(terminaron.map((e) => repo.conectarEstudiante(playground.id, e.id))))}>
               Mover a todos a «{playground.nombre}»
@@ -325,22 +411,49 @@ function TarjetaSala({ sala, datos, ejecutar }: { sala: Sala; datos: Datos; ejec
         </div>
       )}
 
-      <div>
-        <h3 className="mb-2 text-sm font-bold text-tinta-suave">Niños en la sala</h3>
-        {dentro.length === 0 ? (
-          <p className="text-sm text-tinta-suave">Nadie todavía. Asígnalos desde «En espera» o agrégalos abajo.</p>
-        ) : (
-          <ul className="grid gap-2">
-            {dentro.map((e) => (
-              <FilaNino key={e.id} e={e} sala={sala} datos={datos} ejecutar={ejecutar}>
-                <EstadoAvance sala={sala} p={avanceEn(sala, datos.progresoDe.get(e.id))} />
-              </FilaNino>
-            ))}
-          </ul>
-        )}
-      </div>
-      <AgregarNino sala={sala} datos={datos} ejecutar={ejecutar} />
-    </Tarjeta>
+      <ListaNinos sala={sala} dentro={dentro} datos={datos} ejecutar={ejecutar} vacia="Arrastra aquí a los niños de esta sala.">
+        {(e) => <EstadoAvance sala={sala} p={avanceEn(sala, datos.progresoDe.get(e.id))} />}
+      </ListaNinos>
+    </ZonaSoltar>
+  )
+}
+
+function ListaNinos({
+  sala,
+  dentro,
+  datos,
+  ejecutar,
+  vacia,
+  children,
+}: {
+  sala: Sala
+  dentro: Estudiante[]
+  datos: Datos
+  ejecutar: Ejecutar
+  vacia: string
+  children: (e: Estudiante) => ReactNode
+}) {
+  return (
+    <div>
+      {dentro.length === 0 ? (
+        <p className="rounded-2xl border-2 border-dashed border-borde px-4 py-5 text-center text-sm text-tinta-suave">{vacia}</p>
+      ) : (
+        <ul className="grid gap-2">
+          {dentro.map((e) => (
+            <FilaNino key={e.id} e={e} datos={datos} ejecutar={ejecutar}>
+              {children(e)}
+            </FilaNino>
+          ))}
+        </ul>
+      )}
+      {dentro.length > 0 && (
+        <div className="mt-3 flex justify-end">
+          <Boton variante="suave" onClick={() => void ejecutar(() => repo.vaciarSala(sala.id))}>
+            Sacar a todos de la sala
+          </Boton>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -348,35 +461,29 @@ function EstadoAvance({ sala, p }: { sala: Sala; p: ProgresoSala | undefined }) 
   const plan = planDe(sala.contenidos)
   const paso = p?.paso ?? 0
   if (plan.length === 0) return <>Sin contenidos asignados</>
-  if (paso >= plan.length) return <span className="font-semibold text-menta-oscuro">✓ Terminó los contenidos · en los juegos</span>
+  if (paso >= plan.length) return <span className="font-semibold text-menta-oscuro">✓ Terminó · en los juegos</span>
   const actual = plan[paso]
   return (
     <span className="flex flex-wrap items-center gap-x-2">
       <span className="inline-block h-1.5 w-16 overflow-hidden rounded-full bg-white" aria-hidden="true">
         <span className="block h-full rounded-full bg-menta" style={{ width: `${(paso / plan.length) * 100}%` }} />
       </span>
-      {paso}/{plan.length} · {actual.contenido.titulo}, act. {actual.numero}
-      {p && p.repeticiones > 0 && (
-        <b className={p.necesitaAyuda ? 'text-[#9a4d00]' : ''}>· intento {p.repeticiones + 1}</b>
-      )}
+      {paso}/{plan.length} · <span aria-hidden="true">{actual.contenido.icono}</span> {actual.contenido.titulo}, act. {actual.numero}
+      {p && p.repeticiones > 0 && <b className={p.necesitaAyuda ? 'text-[#9a4d00]' : ''}>· intento {p.repeticiones + 1}</b>}
     </span>
   )
 }
 
-function FilaNino({ e, sala, datos, ejecutar, children }: { e: Estudiante; sala: Sala; datos: Datos; ejecutar: Ejecutar; children: ReactNode }) {
+function FilaNino({ e, datos, ejecutar, children }: { e: Estudiante; datos: Datos; ejecutar: Ejecutar; children: ReactNode }) {
+  const { activo, fila, asa } = useArrastrable(e)
   const partidas = datos.resultadosHoy.filter((r) => r.estudianteId === e.id)
   const emocion = datos.emocionDe.get(e.id)
   const conectado = datos.conectados.get(e.id)
   const online = enLinea(conectado)
   return (
-    <li className="flex flex-wrap items-center gap-3 rounded-xl bg-fondo px-3 py-2">
-      <span className="relative">
-        <Avatar estudiante={e} className="size-9 text-xl" />
-        <span
-          title={online ? 'Con dispositivo' : 'Sin dispositivo'}
-          className={`absolute -right-0.5 -bottom-0.5 size-3 rounded-full border-2 border-white ${online ? 'bg-menta' : 'bg-borde'}`}
-        />
-      </span>
+    <li {...fila} className={`flex flex-wrap items-center gap-3 rounded-xl px-2 py-2 ${activo ? 'bg-menta-fondo ring-2 ring-menta' : 'bg-fondo'}`}>
+      {asa}
+      <EnLinea e={e} online={online} />
       <span className="min-w-44 flex-1">
         <span className="block font-semibold text-tinta">
           {e.nombre}
@@ -395,11 +502,6 @@ function FilaNino({ e, sala, datos, ejecutar, children }: { e: Estudiante; sala:
           {EMOCIONES[emocion].texto}
         </span>
       )}
-      <MoverA
-        salas={datos.salas}
-        actual={sala.id}
-        alMover={(destino) => ejecutar(() => (destino === ESPERA ? repo.desconectarEstudiante(e.id) : repo.conectarEstudiante(destino, e.id)))}
-      />
       {conectado && (
         <Boton variante="suave" title="Cierra la sesión del computador del niño: vuelve a elegir su perfil." onClick={() => void ejecutar(() => repo.cerrarDispositivo(e.id))}>
           Cerrar dispositivo
@@ -409,53 +511,20 @@ function FilaNino({ e, sala, datos, ejecutar, children }: { e: Estudiante; sala:
   )
 }
 
-function AgregarNino({ sala, datos, ejecutar }: { sala: Sala; datos: Datos; ejecutar: Ejecutar }) {
-  const [elegido, setElegido] = useState('')
-  const salaDe = new Map(datos.miembros.map((m) => [m.estudianteId, m.salaId]))
-  const disponibles = datos.estudiantes.filter((e) => salaDe.get(e.id) !== sala.id)
-  const dentro = datos.miembros.some((m) => m.salaId === sala.id)
+function IconoContenido({ c, className = 'size-10 text-xl' }: { c: Contenido; className?: string }) {
   return (
-    <div className="flex flex-wrap items-center gap-2 border-t border-borde pt-3">
-      <label className="min-w-48 flex-1 text-sm font-semibold text-tinta">
-        <span className="sr-only">Agregar estudiante a {sala.nombre}</span>
-        <select value={elegido} onChange={(e) => setElegido(e.target.value)} className={claseEntrada}>
-          <option value="">Agregar a un estudiante…</option>
-          {disponibles.map((e) => {
-            const otra = datos.salas.find((s) => s.id === salaDe.get(e.id))
-            return (
-              <option key={e.id} value={e.id}>
-                {e.nombre}
-                {otra ? ` (está en ${otra.nombre})` : ''}
-              </option>
-            )
-          })}
-        </select>
-      </label>
-      <Boton
-        disabled={!elegido}
-        onClick={() => {
-          void ejecutar(() => repo.conectarEstudiante(sala.id, elegido))
-          setElegido('')
-        }}
-      >
-        Agregar
-      </Boton>
-      {dentro && (
-        <Boton variante="suave" onClick={() => void ejecutar(() => repo.vaciarSala(sala.id))}>
-          Enviar a todos a la espera
-        </Boton>
-      )}
-    </div>
+    <span aria-hidden="true" className={`grid shrink-0 place-items-center rounded-full ${className}`} style={{ background: c.color }}>
+      {c.icono}
+    </span>
   )
 }
 
-// Plan de la sala: contenidos MINEDUC en orden (cada uno trae sus 3 actividades)
-// y los juegos a los que llegan al terminar. Guardar un plan nuevo reinicia el avance.
+// Plan de la sala: contenidos en orden (cada uno trae sus 3 actividades) y los
+// juegos a los que llegan al terminar. Guardar un plan nuevo reinicia el avance.
 function EditorPlan({ sala, conAvance, ejecutar }: { sala: Sala; conAvance: number; ejecutar: Ejecutar }) {
   const [editando, setEditando] = useState(false)
   const [contenidos, setContenidos] = useState(sala.contenidos)
   const [juegos, setJuegos] = useState(sala.juegos)
-  const [agregar, setAgregar] = useState('')
 
   const abrir = () => {
     setContenidos(sala.contenidos)
@@ -474,35 +543,40 @@ function EditorPlan({ sala, conAvance, ejecutar }: { sala: Sala; conAvance: numb
   }
 
   if (!editando) {
+    const juegosSala = JUEGOS.filter((j) => sala.juegos.includes(j.id))
     return (
       <div className="grid gap-3 rounded-2xl border border-borde p-4">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="min-w-0 flex-1 text-sm font-bold text-tinta-suave">Plan de la sala</h3>
+          <h3 className="min-w-0 flex-1 text-sm font-bold text-tinta-suave">Plan</h3>
           <Boton variante="suave" onClick={abrir}>
-            <Icono nombre="lapiz" /> {sala.contenidos.length ? 'Cambiar plan' : 'Asignar contenidos'}
+            <Icono nombre="lapiz" /> {sala.contenidos.length ? 'Cambiar' : 'Elegir contenidos'}
           </Boton>
         </div>
         {sala.contenidos.length === 0 ? (
-          <p className="text-sm text-tinta-suave">Sin contenidos: los niños de esta sala juegan a los globos mientras tanto.</p>
+          <p className="text-sm text-tinta-suave">Sin contenidos: mientras tanto juegan a los globos.</p>
         ) : (
-          <ol className="grid gap-1.5 text-sm">
+          <ol className="flex flex-wrap items-center gap-2">
             {sala.contenidos.map((id, i) => {
               const c = contenido(id)
               return (
-                <li key={`${id}-${i}`} className="flex flex-wrap items-center gap-2">
-                  <span className="grid size-6 place-items-center rounded-full bg-celeste-fondo text-xs font-bold">{i + 1}</span>
-                  <b className="text-tinta">{c?.titulo ?? id}</b>
-                  <span className="text-tinta-suave">· 3 actividades</span>
-                  {c?.oa.map((oa) => <ChipOA key={oa} oa={oa} />)}
+                <li key={`${id}-${i}`} className="flex items-center gap-2 rounded-full bg-fondo py-1 pr-3 pl-1 text-sm font-semibold text-tinta" title={c?.descripcion}>
+                  {c ? <IconoContenido c={c} className="size-8 text-base" /> : null}
+                  {c?.titulo ?? id}
                 </li>
               )
             })}
           </ol>
         )}
-        <p className="text-sm text-tinta-suave">
-          <b className="text-tinta">Juegos al terminar:</b>{' '}
-          {sala.juegos.length ? JUEGOS.filter((j) => sala.juegos.includes(j.id)).map((j) => `${j.icono} ${j.titulo}`).join(' · ') : 'ninguno (esperan con los globos)'}
-        </p>
+        {juegosSala.length > 0 && (
+          <p className="flex flex-wrap items-center gap-2 text-sm text-tinta-suave">
+            Después:
+            {juegosSala.map((j) => (
+              <span key={j.id} className="rounded-full bg-[#fff3c4] px-2.5 py-0.5 font-semibold text-tinta">
+                <span aria-hidden="true">{j.icono}</span> {j.titulo}
+              </span>
+            ))}
+          </p>
+        )}
       </div>
     )
   }
@@ -512,74 +586,65 @@ function EditorPlan({ sala, conAvance, ejecutar }: { sala: Sala; conAvance: numb
   return (
     <div className="grid gap-4 rounded-2xl border-2 border-menta p-4">
       <div>
-        <h3 className="text-sm font-bold text-tinta">Contenidos (en orden)</h3>
-        <p className="text-xs text-tinta-suave">
-          Bases Curriculares de Educación Parvularia, Lenguaje Verbal, nivel Transición. Cada contenido tiene 3 actividades; el niño pasa a la siguiente al lograr el 60 % y, si no, la repite con otras rondas.
-        </p>
+        <h3 className="text-sm font-bold text-tinta">Contenidos, en orden</h3>
+        <p className="text-xs text-tinta-suave">Cada uno trae 3 actividades.</p>
       </div>
-      {contenidos.length === 0 && <p className="text-sm text-tinta-suave">Agrega al menos un contenido.</p>}
-      <ol className="grid gap-2">
-        {contenidos.map((id, i) => {
-          const c = contenido(id)
-          return (
-            <li key={id} className="flex flex-wrap items-center gap-2 rounded-xl bg-fondo px-3 py-2 text-sm">
-              <span className="grid size-6 place-items-center rounded-full bg-white text-xs font-bold">{i + 1}</span>
-              <span className="min-w-0 flex-1">
-                <b className="text-tinta">{c?.titulo ?? id}</b>
-                <span className="block text-xs text-tinta-suave">{c?.pasos.map((p, k) => `${k + 1}. ${p.titulo}`).join(' · ')}</span>
-              </span>
-              <Boton variante="suave" aria-label="Subir" disabled={i === 0} onClick={() => mover(i, -1)}>↑</Boton>
-              <Boton variante="suave" aria-label="Bajar" disabled={i === contenidos.length - 1} onClick={() => mover(i, 1)}>↓</Boton>
-              <Boton variante="suave" aria-label={`Quitar ${c?.titulo ?? id}`} onClick={() => setContenidos((x) => x.filter((y) => y !== id))}>✕</Boton>
-            </li>
-          )
-        })}
-      </ol>
+      {contenidos.length > 0 && (
+        <ol className="grid gap-2">
+          {contenidos.map((id, i) => {
+            const c = contenido(id)
+            return (
+              <li key={id} className="flex items-center gap-2 rounded-xl bg-fondo px-2 py-1.5 text-sm" title={c?.pasos.map((p, k) => `${k + 1}. ${p.titulo}`).join('\n')}>
+                <span className="grid size-6 place-items-center rounded-full bg-white text-xs font-bold">{i + 1}</span>
+                {c && <IconoContenido c={c} className="size-9 text-lg" />}
+                <b className="min-w-0 flex-1 text-tinta">{c?.titulo ?? id}</b>
+                <Boton variante="suave" aria-label="Subir" disabled={i === 0} onClick={() => mover(i, -1)}>↑</Boton>
+                <Boton variante="suave" aria-label="Bajar" disabled={i === contenidos.length - 1} onClick={() => mover(i, 1)}>↓</Boton>
+                <Boton variante="suave" aria-label={`Quitar ${c?.titulo ?? id}`} onClick={() => setContenidos((x) => x.filter((y) => y !== id))}>✕</Boton>
+              </li>
+            )
+          })}
+        </ol>
+      )}
+
       {disponibles.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="min-w-56 flex-1 text-sm font-semibold">
-            <span className="sr-only">Agregar contenido</span>
-            <select value={agregar} onChange={(e) => setAgregar(e.target.value)} className={claseEntrada}>
-              <option value="">Agregar contenido…</option>
-              {(Object.keys(OA) as (keyof typeof OA)[]).map((oa) => (
-                <optgroup key={oa} label={`${oa}: ${OA[oa]}`}>
-                  {disponibles
-                    .filter((c) => c.oa[0] === oa)
-                    .map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.titulo} — {c.descripcion}
-                      </option>
-                    ))}
-                </optgroup>
-              ))}
-            </select>
-          </label>
-          <Boton
-            disabled={!agregar}
-            onClick={() => {
-              setContenidos((x) => [...x, agregar])
-              setAgregar('')
-            }}
-          >
-            <Icono nombre="mas" /> Agregar
-          </Boton>
+        <div>
+          <h4 className="mb-2 text-xs font-bold text-tinta-suave">Toca para agregar</h4>
+          <ul className="grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-2">
+            {disponibles.map((c) => (
+              <li key={c.id}>
+                <button
+                  type="button"
+                  title={c.descripcion}
+                  onClick={() => setContenidos((x) => [...x, c.id])}
+                  className="grid h-full w-full justify-items-center gap-1.5 rounded-xl border border-borde bg-white px-2 py-3 text-center text-sm font-semibold text-tinta transition-colors hover:border-menta hover:bg-menta-fondo"
+                >
+                  <IconoContenido c={c} className="size-11 text-2xl" />
+                  {c.titulo}
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
       <fieldset>
-        <legend className="mb-2 text-sm font-bold text-tinta">Juegos al terminar los contenidos</legend>
+        <legend className="mb-2 text-sm font-bold text-tinta">Juegos al terminar</legend>
         <div className="flex flex-wrap gap-2">
           {JUEGOS.map((j) => {
             const activo = juegos.includes(j.id)
             return (
-              <label key={j.id} className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold ${activo ? 'border-menta bg-menta-fondo' : 'border-borde bg-white'}`}>
+              <label
+                key={j.id}
+                className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold ${activo ? 'border-menta bg-menta-fondo' : 'border-borde bg-white'}`}
+              >
                 <input
                   type="checkbox"
                   checked={activo}
                   onChange={() => setJuegos((x) => (activo ? x.filter((y) => y !== j.id) : [...x, j.id]))}
                   className="accent-[var(--color-menta)]"
                 />
-                <span aria-hidden="true">{j.icono}</span> {j.titulo}
+                <span aria-hidden="true" className="text-lg">{j.icono}</span> {j.titulo}
               </label>
             )
           })}
@@ -588,7 +653,7 @@ function EditorPlan({ sala, conAvance, ejecutar }: { sala: Sala; conAvance: numb
 
       {conAvance > 0 && (
         <p className="rounded-xl bg-[#fdf1e4] px-3 py-2 text-sm font-semibold text-[#9a4d00]">
-          Al guardar, {conAvance} {conAvance === 1 ? 'niño vuelve' : 'niños vuelven'} a la primera actividad del plan nuevo.
+          Al guardar, {conAvance} {conAvance === 1 ? 'niño vuelve' : 'niños vuelven'} a empezar.
         </p>
       )}
       <div className="flex flex-wrap gap-2">
@@ -603,14 +668,6 @@ function EditorPlan({ sala, conAvance, ejecutar }: { sala: Sala; conAvance: numb
   )
 }
 
-function ChipOA({ oa }: { oa: keyof typeof OA }) {
-  return (
-    <span title={OA[oa]} className="rounded-md bg-celeste-fondo px-1.5 py-0.5 text-xs font-bold text-marino">
-      {oa}
-    </span>
-  )
-}
-
 function TarjetaPlayground({ sala, datos, ejecutar }: { sala: Sala; datos: Datos; ejecutar: Ejecutar }) {
   const dentro = datos.estudiantes.filter((e) => datos.miembros.some((m) => m.salaId === sala.id && m.estudianteId === e.id))
   const { datos: mensajes, recargar } = useConsulta(() => repo.mensajesSala(sala.id), [sala.id])
@@ -620,11 +677,9 @@ function TarjetaPlayground({ sala, datos, ejecutar }: { sala: Sala; datos: Datos
   })
 
   return (
-    <Tarjeta className="grid gap-5 p-5">
+    <ZonaSoltar destino={sala.id} nombre={sala.nombre}>
       <EncabezadoSala sala={sala} n={dentro.length} ejecutar={ejecutar} />
-      <p className="text-sm text-tinta-suave">
-        Espacio común para quienes terminaron: se comunican con pictogramas predefinidos (sin texto libre) mientras les asignas otra sala.
-      </p>
+      <p className="text-sm text-tinta-suave">Espacio común con pictogramas, para quienes terminaron.</p>
       <div>
         <h3 className="mb-2 text-sm font-bold text-tinta-suave">Últimos mensajes</h3>
         {mensajes?.length ? (
@@ -641,21 +696,9 @@ function TarjetaPlayground({ sala, datos, ejecutar }: { sala: Sala; datos: Datos
           <p className="text-sm text-tinta-suave">Aún no hay mensajes.</p>
         )}
       </div>
-      <div>
-        <h3 className="mb-2 text-sm font-bold text-tinta-suave">Niños en el playground</h3>
-        {dentro.length === 0 ? (
-          <p className="text-sm text-tinta-suave">Nadie todavía.</p>
-        ) : (
-          <ul className="grid gap-2">
-            {dentro.map((e) => (
-              <FilaNino key={e.id} e={e} sala={sala} datos={datos} ejecutar={ejecutar}>
-                En el playground
-              </FilaNino>
-            ))}
-          </ul>
-        )}
-      </div>
-      <AgregarNino sala={sala} datos={datos} ejecutar={ejecutar} />
-    </Tarjeta>
+      <ListaNinos sala={sala} dentro={dentro} datos={datos} ejecutar={ejecutar} vacia="Arrastra aquí a quienes terminaron.">
+        {() => 'En el playground'}
+      </ListaNinos>
+    </ZonaSoltar>
   )
 }

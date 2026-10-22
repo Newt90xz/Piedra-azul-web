@@ -42,6 +42,37 @@ export function porCategoria(items: AvanceItem[]) {
 
 export const UMBRAL_LE_CUESTA = 0.6
 
+// Detalle de un ítem (palabra, sílaba o sonido) al tocarlo en el avance: qué
+// respondió el niño cuando se equivocó y cómo le fue en cada ronda.
+export interface DetalleItem {
+  rondas: number
+  primerIntento: number
+  // Última respuesta equivocada de cada ronda, de la más repetida a la menos.
+  errores: { respuesta: string; veces: number }[]
+  // Rondas de ese ítem, de la más reciente a la más antigua.
+  historial: { fecha: string; actividadId: string; estudianteId: string; intentos: number; error?: string }[]
+}
+
+export function detalleItem(resultados: ResultadoActividad[], categoria: Categoria, item: string): DetalleItem {
+  const historial: DetalleItem['historial'] = []
+  for (const r of resultados) {
+    if (actividad(r.actividadId)?.practica || categoriaDe(r.actividadId) !== categoria) continue
+    for (const ronda of r.rondas) {
+      if (ronda.item !== item) continue
+      historial.push({ fecha: r.fecha, actividadId: r.actividadId, estudianteId: r.estudianteId, intentos: ronda.intentos, error: ronda.error })
+    }
+  }
+  historial.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
+  const veces = new Map<string, number>()
+  for (const h of historial) if (h.error) veces.set(h.error, (veces.get(h.error) ?? 0) + 1)
+  return {
+    rondas: historial.length,
+    primerIntento: historial.filter((h) => h.intentos === 1).length,
+    errores: [...veces].map(([respuesta, n]) => ({ respuesta, veces: n })).sort((a, b) => b.veces - a.veces),
+    historial,
+  }
+}
+
 export function inicioDia(d = new Date()) {
   const f = new Date(d)
   f.setHours(0, 0, 0, 0)

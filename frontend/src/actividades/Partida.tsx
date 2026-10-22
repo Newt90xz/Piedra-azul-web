@@ -22,6 +22,7 @@ const PRACTICA = { estrellas: 3, monedas: 2 }
 interface Registro {
   item: string
   intentos: number
+  error?: string
   estrellas: number
   monedas: number
 }
@@ -48,7 +49,8 @@ export function Partida({
   alSalir?: () => void
 }) {
   const { estudiante, silenciado, recargar } = useNino()
-  const [estado, setEstado] = useState({ indice: 0, intentos: 0, resuelta: false })
+  // `error`: la última respuesta equivocada de esta ronda (se reemplaza en cada fallo).
+  const [estado, setEstado] = useState<{ indice: number; intentos: number; resuelta: boolean; error?: string }>({ indice: 0, intentos: 0, resuelta: false })
   const [registro, setRegistro] = useState<Registro[]>([])
   const [racha, setRacha] = useState(0)
   const [inicio] = useState(() => Date.now())
@@ -69,7 +71,7 @@ export function Partida({
     const promedio = registro.reduce((s, r) => s + r.estrellas, 0) / Math.max(1, registro.length)
     const fin: FinPartida = {
       resultadoId: crypto.randomUUID(),
-      rondas: registro.map((r) => ({ item: r.item, intentos: r.intentos, acertada: r.intentos < 3 })),
+      rondas: registro.map((r) => ({ item: r.item, intentos: r.intentos, acertada: r.intentos < 3, error: r.error })),
       estrellas: promedio >= 2.5 ? 3 : promedio >= 1.75 ? 2 : 1,
       monedas: registro.reduce((s, r) => s + r.monedas, 0),
     }
@@ -89,11 +91,11 @@ export function Partida({
   const avanzar = (desde: number) =>
     setEstado((e) => (e.indice === desde ? { indice: desde + 1, intentos: 0, resuelta: false } : e))
 
-  const intentar = (correcto: boolean) => {
+  const intentar = (correcto: boolean, respuesta?: string) => {
     if (estado.resuelta || !ronda) return
     const intentos = estado.intentos + 1
     if (!correcto) {
-      setEstado({ ...estado, intentos })
+      setEstado({ ...estado, intentos, error: respuesta ?? estado.error })
       setRacha(0)
       efecto('intento', silenciado)
       if ('pista' in ronda) hablar(intentos === 1 ? ronda.pista : '¡Mira! Es esta. ¡Tócala!')
@@ -103,7 +105,7 @@ export function Partida({
     const nuevaRacha = !practica && intentos === 1 ? racha + 1 : 0
     setRacha(nuevaRacha)
     const bono = nuevaRacha >= 3 ? BONO_RACHA : 0
-    setRegistro((r) => [...r, { item: ronda.item, intentos, estrellas: p.estrellas, monedas: p.monedas + bono }])
+    setRegistro((r) => [...r, { item: ronda.item, intentos, error: estado.error, estrellas: p.estrellas, monedas: p.monedas + bono }])
     setEstado({ ...estado, intentos, resuelta: true })
     efecto('acierto', silenciado)
     const desde = estado.indice
@@ -115,8 +117,8 @@ export function Partida({
   if (!ronda) return null
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-6">
-      <div className="mb-6 flex items-center gap-4">
+    <main className="animate-pantalla mx-auto flex h-full max-w-5xl flex-col px-6 py-5">
+      <div className="mb-4 flex shrink-0 items-center gap-4">
         {alSalir && (
           <BotonNino voz="Volver a los juegos" onClick={alSalir} className="grid size-20 place-items-center bg-nino-lila">
             <Icono nombre="izquierda" className="size-9" />
@@ -140,13 +142,9 @@ export function Partida({
           ))}
         </ol>
       </div>
-      <RondaActual
-        key={estado.indice}
-        ronda={ronda}
-        resuelta={estado.resuelta}
-        revelar={!estado.resuelta && estado.intentos >= 2}
-        alIntentar={intentar}
-      />
+      <div key={estado.indice} className="animate-pantalla grid min-h-0 flex-1 content-center">
+        <RondaActual ronda={ronda} resuelta={estado.resuelta} revelar={!estado.resuelta && estado.intentos >= 2} alIntentar={intentar} />
+      </div>
     </main>
   )
 }
@@ -179,7 +177,7 @@ export function Premio({
   }, [])
 
   return (
-    <main className="mx-auto grid min-h-[70dvh] max-w-3xl content-center justify-items-center gap-10 px-6 py-8 text-center">
+    <main className="animate-pantalla mx-auto grid h-full max-w-3xl content-center justify-items-center gap-8 px-6 py-6 text-center">
       <div className="relative grid place-items-center">
         <span aria-hidden="true" className="premio-brillo absolute size-[7em] rounded-full" />
         <span aria-hidden="true" className="premio-moneda relative text-[5em] leading-none">🪙</span>

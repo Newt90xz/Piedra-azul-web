@@ -73,8 +73,8 @@ export function MiniJuego() {
   }
 
   return (
-    <main className="mx-auto max-w-5xl px-6 pt-6 pb-4">
-      <div className="mb-3 flex flex-wrap items-center justify-center gap-4 text-center">
+    <main className="mx-auto flex h-full max-w-5xl flex-col px-6 pt-4 pb-5">
+      <div className="mb-3 flex shrink-0 flex-wrap items-center justify-center gap-4 text-center">
         <p className="flex items-center gap-2 text-[1.4em] leading-none" aria-label="Esperando a tu profe">
           <span aria-hidden="true" className="animate-bounce">⏳</span>
           <span aria-hidden="true">🧑‍🏫</span>
@@ -87,7 +87,7 @@ export function MiniJuego() {
           <span aria-hidden="true">⭐</span> {puntos}
         </p>
       </div>
-      <div className="minijuego relative h-[62dvh] overflow-hidden rounded-[2rem] border-3 border-nino-azul bg-white/50">
+      <div className="minijuego relative min-h-48 flex-1 overflow-hidden rounded-[2rem] border-3 border-nino-azul bg-white/50">
         {globos.map((g) => (
           <button
             key={g.id}

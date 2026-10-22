@@ -4,9 +4,11 @@ import { useSesion } from '../../app/Sesion.tsx'
 import { nombreActividad } from '../../contenido/contenidos.ts'
 import { repo } from '../../datos/index.ts'
 import { EMOCIONES, UMBRAL_LE_CUESTA, avancePorItem, deEstaSemana, fechaCorta, minutos, porCategoria } from '../../lib/avance.ts'
+import { capitalizar } from '../../lib/texto.ts'
 import { useConsulta } from '../../lib/useConsulta.ts'
 import { Avatar } from '../../ui/Avatar.tsx'
 import { Antetitulo, AvisoError, Boton, BotonEnlace, Encabezado, Tarjeta, claseEntrada } from '../../ui/aula.tsx'
+import { DetalleItem } from './DetalleItem.tsx'
 import { FormEstudiante } from './FormEstudiante.tsx'
 
 const PESTANAS = [
@@ -21,7 +23,7 @@ export function NuevoEstudiante() {
   return (
     <>
       <BotonEnlace to="/docente/estudiantes" variante="suave" className="mb-5">← Volver a estudiantes</BotonEnlace>
-      <Encabezado antetitulo="Estudiantes / Nuevo" titulo="Añadir estudiante" descripcion="Solo el nombre de pila: no ingreses apellidos ni RUT (Ley 19.628 / 21.719)." />
+      <Encabezado antetitulo="Estudiantes / Nuevo" titulo="Añadir estudiante" />
       <FormEstudiante
         cursoId={cursoId}
         alGuardar={async (datos) => {
@@ -119,6 +121,8 @@ export default function FichaEstudiante() {
 }
 
 function Avance({ estudianteId }: { estudianteId: string }) {
+  // Ítem abierto («categoria|item»): muestra con qué se confundió y sus últimas rondas.
+  const [abierto, setAbierto] = useState<string | null>(null)
   const { datos, error, recargar } = useConsulta(
     async () => ({
       resultados: await repo.listarResultados({ estudianteId }),
@@ -133,10 +137,27 @@ function Avance({ estudianteId }: { estudianteId: string }) {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
+      {/* Arriba: es lo primero que la docente quiere ver al abrir la ficha. */}
+      <Tarjeta className="lg:col-span-2">
+        <h2 className="text-lg font-bold">¿Cómo llegó a la sesión?</h2>
+        {datos.emociones.length === 0 ? (
+          <p className="mt-2 text-tinta-suave">Aún no registra emociones.</p>
+        ) : (
+          <ul className="mt-4 flex flex-wrap gap-2">
+            {datos.emociones.slice(0, 8).map((e) => (
+              <li key={e.id} className="flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm" style={{ background: EMOCIONES[e.emocion].color }}>
+                <span aria-hidden="true">{EMOCIONES[e.emocion].cara}</span>
+                {EMOCIONES[e.emocion].texto} · {fechaCorta(e.fecha)}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Tarjeta>
+
       <Tarjeta>
         <h2 className="text-lg font-bold">Avance por categoría</h2>
         <p className="mb-5 text-sm text-tinta-suave">
-          Porcentaje de rondas resueltas al primer intento. En cada categoría, de más difícil a más fácil.
+          % al primer intento, de más difícil a más fácil. Toca una palabra, sílaba o sonido para ver con qué se confunde.
         </p>
         {items.length === 0 && <p className="text-tinta-suave">Todavía no hay partidas registradas.</p>}
         {/* Columnas compartidas (subgrid) por todos los grupos: la del ítem toma el
@@ -151,9 +172,18 @@ function Avance({ estudianteId }: { estudianteId: string }) {
               <ul className="col-span-3 grid grid-cols-subgrid items-center gap-y-3">
                 {g.items.map((a) => {
                   const cuesta = a.tasa < UMBRAL_LE_CUESTA
+                  const clave = `${a.categoria}|${a.item}`
+                  const verDetalle = abierto === clave
                   return (
-                    <li key={a.item} className="col-span-3 grid grid-cols-subgrid items-center">
-                      <span className={`max-w-44 font-escolar font-bold break-words ${a.item.length > 3 ? 'text-lg leading-tight' : 'text-2xl'}`}>{a.item}</span>
+                    <li key={a.item} className="col-span-3 grid grid-cols-subgrid items-center gap-y-2">
+                      <button
+                        type="button"
+                        aria-expanded={verDetalle}
+                        onClick={() => setAbierto(verDetalle ? null : clave)}
+                        className={`max-w-44 rounded-lg text-left font-escolar font-bold break-words underline decoration-borde decoration-2 underline-offset-4 hover:decoration-menta ${a.item.length > 3 ? 'text-lg leading-tight' : 'text-2xl'}`}
+                      >
+                        {capitalizar(a.item)}
+                      </button>
                       <span className="h-3.5 overflow-hidden rounded-full bg-fondo" aria-hidden="true">
                         <span className={`block h-full rounded-full ${cuesta ? 'bg-[#e8a35c]' : 'bg-menta'}`} style={{ width: `${Math.max(4, a.tasa * 100)}%` }} />
                       </span>
@@ -165,6 +195,11 @@ function Avance({ estudianteId }: { estudianteId: string }) {
                           <span className="ml-1 inline-block rounded-md bg-[#fdf1e4] px-1.5 py-0.5 text-xs font-bold whitespace-nowrap text-[#9a4d00]">Le cuesta</span>
                         )}
                       </span>
+                      {verDetalle && (
+                        <div className="col-span-3">
+                          <DetalleItem resultados={datos.resultados} item={a} />
+                        </div>
+                      )}
                     </li>
                   )
                 })}
@@ -191,17 +226,6 @@ function Avance({ estudianteId }: { estudianteId: string }) {
                   {'★'.repeat(r.estrellas)}
                   <span className="text-borde">{'★'.repeat(3 - r.estrellas)}</span>
                 </span>
-              </li>
-            ))}
-          </ul>
-        </Tarjeta>
-        <Tarjeta>
-          <h2 className="text-lg font-bold">¿Cómo llegó a la sesión?</h2>
-          <ul className="mt-4 flex flex-wrap gap-2">
-            {datos.emociones.slice(0, 8).map((e) => (
-              <li key={e.id} className="flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm" style={{ background: EMOCIONES[e.emocion].color }}>
-                <span aria-hidden="true">{EMOCIONES[e.emocion].cara}</span>
-                {EMOCIONES[e.emocion].texto} · {fechaCorta(e.fecha)}
               </li>
             ))}
           </ul>

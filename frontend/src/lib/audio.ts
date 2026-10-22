@@ -14,8 +14,9 @@ export interface OpcionesVoz {
   alTerminar?: () => void
 }
 
-// Silencio global: lo fija el botón de silencio del niño y calla también la voz.
-let mudo = false
+// Voz apagada hasta que el niño la active con el botón del altavoz. Solo calla
+// la voz: los efectos dependen del ajuste «silenciar efectos» de la docente.
+let mudo = true
 let pendiente: number | undefined
 let temporizadorApuntar: number | undefined
 
@@ -74,7 +75,7 @@ export function detener() {
 let contexto: AudioContext | null = null
 
 export function efecto(tipo: 'acierto' | 'intento' | 'premio' | 'toque', silenciado: boolean) {
-  if (silenciado || mudo) return
+  if (silenciado) return
   try {
     contexto ??= new AudioContext()
     const notas = { acierto: [523, 659, 784], intento: [392], premio: [523, 659, 784, 1047], toque: [880] }[tipo]

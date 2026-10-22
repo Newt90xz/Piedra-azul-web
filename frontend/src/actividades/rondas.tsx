@@ -9,7 +9,8 @@ interface PropsRonda<T extends Ronda['tipo']> {
   ronda: Extract<Ronda, { tipo: T }>
   resuelta: boolean
   revelar: boolean
-  alIntentar: (correcto: boolean) => void
+  // `respuesta`: lo que eligió si se equivocó, para el registro de errores.
+  alIntentar: (correcto: boolean, respuesta?: string) => void
 }
 
 export function RondaActual({ ronda, ...resto }: Omit<PropsRonda<Ronda['tipo']>, 'ronda'> & { ronda: Ronda }) {
@@ -44,7 +45,7 @@ function RondaElegir({ ronda, resuelta, revelar, alIntentar }: PropsRonda<'elegi
     setDescartadas((d) => [...d, o.id])
     setSacudir(o.id)
     window.setTimeout(() => setSacudir(null), 450)
-    alIntentar(false)
+    alIntentar(false, o.texto ?? o.audio)
   }
 
   const conImagen = ronda.opciones.some((o) => o.imagen)
@@ -151,7 +152,7 @@ function RondaConstruir({ ronda, resuelta, revelar, alIntentar }: PropsRonda<'co
     if (ficha !== siguiente) {
       setSacudir(i)
       window.setTimeout(() => setSacudir(null), 450)
-      return alIntentar(false)
+      return alIntentar(false, MAYUS(ficha))
     }
     const nuevas = [...usadas, i]
     setUsadas(nuevas)
@@ -205,7 +206,7 @@ function RondaAplausos({ ronda, resuelta, revelar, alIntentar }: PropsRonda<'apl
     if (resuelta || descartadas.includes(n)) return
     if (n === total) return alIntentar(true)
     setDescartadas((d) => [...d, n])
-    alIntentar(false)
+    alIntentar(false, String(n))
   }
 
   return (

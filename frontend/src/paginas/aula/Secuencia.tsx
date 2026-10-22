@@ -98,7 +98,9 @@ async function registrar(asignacion: string, paso: number, logrado: boolean, res
 }
 
 // El camino: un globo por actividad, agrupados por contenido. Lo hecho queda
-// con ✓, la actual late. Un solo botón grande para empezar.
+// con ✓, la actual late. Un solo botón grande para empezar. Al llegar a la sala
+// las cajas de los contenidos entran una tras otra y al final el botón.
+const RETRASO_CAJA_MS = 140
 function Camino({ plan, paso, repeticion, alEmpezar }: { plan: PasoPlan[]; paso: number; repeticion: number; alEmpezar: () => void }) {
   const actual = plan[paso]
   const contenidos = plan.filter((p) => p.numero === 1).map((p) => p.contenido)
@@ -108,10 +110,14 @@ function Camino({ plan, paso, repeticion, alEmpezar }: { plan: PasoPlan[]; paso:
   }, [actual, repeticion])
 
   return (
-    <main className="mx-auto grid max-w-5xl justify-items-center gap-10 px-6 py-8">
+    <main className="mx-auto grid h-full max-w-5xl content-center justify-items-center gap-10 px-6 py-6">
       <ol className="flex flex-wrap justify-center gap-5" aria-label={`Actividad ${paso + 1} de ${plan.length}`}>
         {contenidos.map((c, ci) => (
-          <li key={`${c.id}-${ci}`} className="flex items-center gap-2 rounded-full border-3 border-nino-borde bg-white/80 py-2 pr-4 pl-2">
+          <li
+            key={`${c.id}-${ci}`}
+            className="caja-entra flex items-center gap-2 rounded-full border-3 border-nino-borde bg-white/80 py-2 pr-4 pl-2"
+            style={{ animationDelay: `${ci * RETRASO_CAJA_MS}ms` }}
+          >
             <span aria-hidden="true" className="grid size-14 place-items-center rounded-full text-[1.4em]" style={{ background: c.color }}>
               {c.icono}
             </span>
@@ -138,8 +144,8 @@ function Camino({ plan, paso, repeticion, alEmpezar }: { plan: PasoPlan[]; paso:
       <BotonNino
         voz="¡Empezar!"
         onClick={alEmpezar}
-        className="grid size-48 place-items-center rounded-full border-nino-ok"
-        style={{ background: actual.contenido.color }}
+        className="caja-entra grid size-48 place-items-center rounded-full border-nino-ok"
+        style={{ background: actual.contenido.color, animationDelay: `${contenidos.length * RETRASO_CAJA_MS + 100}ms` }}
       >
         <span aria-hidden="true" className="grid justify-items-center gap-1 leading-none">
           <span className="text-[2.6em]">{actual.contenido.icono}</span>
@@ -158,7 +164,7 @@ function Resumen({ plan, estrellas, alSeguir }: { plan: PasoPlan[]; estrellas: R
   useEffect(() => hablar('¡Terminaste todo! Mira tus estrellas.'), [])
 
   return (
-    <main className="mx-auto grid max-w-4xl justify-items-center gap-10 px-6 py-10">
+    <main className="mx-auto grid h-full max-w-4xl content-center justify-items-center gap-10 px-6 py-6">
       <span role="img" aria-label="¡Terminaste!" className="animate-pop text-[4em] leading-none">🏆</span>
       <ul className="grid w-full gap-4 sm:grid-cols-2">
         {contenidos.map((c, ci) => {
@@ -241,10 +247,12 @@ function Juegos({ sala }: { sala: SalaTrabajo }) {
   }
 
   return (
-    <main className="mx-auto grid min-h-[60dvh] max-w-4xl content-center justify-items-center gap-8 px-6 py-10">
+    <main className="mx-auto grid h-full max-w-4xl content-center justify-items-center gap-8 px-6 py-6">
       <div className={`grid w-full gap-6 ${solo ? 'max-w-sm' : 'sm:grid-cols-2'}`}>
-        {juegos.map((j) => (
-          <TarjetaJuego key={j.id} juego={j} alTocar={() => jugar(j)} />
+        {juegos.map((j, i) => (
+          <span key={j.id} className="caja-entra" style={{ animationDelay: `${i * RETRASO_CAJA_MS}ms` }}>
+            <TarjetaJuego juego={j} alTocar={() => jugar(j)} />
+          </span>
         ))}
       </div>
     </main>

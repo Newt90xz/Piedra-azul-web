@@ -30,8 +30,10 @@ export function Antetitulo({ children, className = '' }: { children: ReactNode; 
   return <p className={`text-xs font-bold uppercase tracking-[0.14em] text-menta-oscuro ${className}`}>{children}</p>
 }
 
+export const claseTarjeta = 'rounded-3xl border border-borde bg-white shadow-[0_8px_24px_-12px_rgb(23_58_94/0.18)]'
+
 export function Tarjeta({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <div className={`rounded-3xl border border-borde bg-white p-6 shadow-[0_8px_24px_-12px_rgb(23_58_94/0.18)] ${className}`}>{children}</div>
+  return <div className={`${claseTarjeta} p-6 ${className}`}>{children}</div>
 }
 
 export function IconoCaja({ nombre, className = '' }: { nombre: NombreIcono; className?: string }) {

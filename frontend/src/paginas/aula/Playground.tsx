@@ -41,8 +41,9 @@ export default function Playground() {
   const enOrden = [...(mensajes ?? [])].reverse()
 
   return (
-    <main className="mx-auto grid max-w-4xl gap-5 px-6 py-6">
-      <ol aria-label="Mensajes" aria-live="polite" className="grid h-[52dvh] content-start gap-3 overflow-y-auto rounded-[2rem] border-3 border-nino-azul bg-white/60 p-5">
+    <main className="mx-auto flex h-full max-w-4xl flex-col gap-5 px-6 py-5">
+      {/* El chat se desplaza dentro de su caja; la página queda fija. */}
+      <ol aria-label="Mensajes" aria-live="polite" className="grid min-h-40 flex-1 content-start gap-3 overflow-y-auto rounded-[2rem] border-3 border-nino-azul bg-white/60 p-5">
         {enOrden.length === 0 && (
           <li className="grid h-full place-items-center text-[3em] opacity-40" aria-label="Aún no hay mensajes">
             <span aria-hidden="true">💬</span>
@@ -53,7 +54,7 @@ export default function Playground() {
         ))}
         <li ref={final} aria-hidden="true" />
       </ol>
-      <div className="grid grid-cols-4 gap-4 sm:grid-cols-8" role="group" aria-label="Enviar un mensaje">
+      <div className="grid shrink-0 grid-cols-4 gap-4 sm:grid-cols-8" role="group" aria-label="Enviar un mensaje">
         {PICTOS_MENSAJE.map((p) => (
           <BotonNino key={p.id} voz={p.voz} onClick={() => void enviar(p)} className="grid aspect-square place-items-center text-[1.8em]">
             <span aria-hidden="true">{p.emoji}</span>

@@ -18,6 +18,7 @@ import type {
   Sala,
   TipoSala,
 } from '../dominio/tipos.ts'
+import { capitalizar } from '../lib/texto.ts'
 import type { Database } from './baseDatos.ts'
 import { guardarCredencial, leerCredencial, olvidarCredencial } from './dispositivo.ts'
 import { AJUSTES_POR_DEFECTO, type Repositorio } from './repositorio.ts'
@@ -39,6 +40,12 @@ type FilaEstudiante = Database['public']['Tables']['estudiantes']['Row']
 // Igual al max-rows por defecto de Supabase (API > Settings).
 const POR_PAGINA = 1000
 
+// La columna `error` de cada ronda llega con la migración 20261022120000. Si la
+// base todavía no la tiene, los reportes se piden sin ella en vez de fallar.
+const COLUMNAS_RESULTADO = '*, rondas_resultado(orden, item, intentos, acertada, error), estudiantes!inner(curso_id)'
+const COLUMNAS_RESULTADO_SIN_ERROR = '*, rondas_resultado(orden, item, intentos, acertada), estudiantes!inner(curso_id)'
+let conColumnaError = true
+
 // Sin error, PostgREST siempre trae `data` (salvo `maybeSingle`, que se trata aparte).
 // El código SQL se conserva para distinguir un rechazo del servidor de un fallo de red.
 function sinError<T>({ data, error }: { data: T; error: { message: string; code?: string } | null }): NonNullable<T> {
@@ -46,10 +53,12 @@ function sinError<T>({ data, error }: { data: T; error: { message: string; code?
   return data as NonNullable<T>
 }
 
+// Los nombres (de niños y salas) se muestran siempre con mayúscula inicial,
+// también los que se guardaron antes en minúscula.
 const aEstudiante = (f: FilaEstudiante): Estudiante => ({
   id: f.id,
   cursoId: f.curso_id,
-  nombre: f.nombre,
+  nombre: capitalizar(f.nombre),
   avatar: f.avatar,
   color: f.color,
   fotoUrl: f.foto_url ?? undefined,
@@ -63,7 +72,7 @@ const aEstudiante = (f: FilaEstudiante): Estudiante => ({
 // `monedas` no se envía: solo la suma el trigger al guardar un resultado (RF-25).
 const aFila = (e: Omit<Estudiante, 'id' | 'monedas'>) => ({
   curso_id: e.cursoId,
-  nombre: e.nombre.trim(),
+  nombre: capitalizar(e.nombre.trim()),
   avatar: e.avatar,
   color: e.color,
   foto_url: e.fotoUrl ?? null,
@@ -76,7 +85,7 @@ type FilaSala = Database['public']['Tables']['salas']['Row']
 const aSala = (f: FilaSala): Sala => ({
   id: f.id,
   cursoId: f.curso_id,
-  nombre: f.nombre,
+  nombre: capitalizar(f.nombre),
   tipo: f.tipo as TipoSala,
   contenidos: f.contenidos,
   juegos: f.juegos,
@@ -93,7 +102,7 @@ const aEstadoAlumno = (f: FilaAlumno): EstadoAlumno => ({
   sala: f.sala_id
     ? {
         id: f.sala_id,
-        nombre: f.sala_nombre ?? '',
+        nombre: capitalizar(f.sala_nombre ?? ''),
         tipo: (f.sala_tipo ?? 'trabajo') as TipoSala,
         contenidos: f.contenidos ?? [],
         juegos: f.juegos ?? [],
@@ -108,7 +117,7 @@ type FilaMensaje = Database['public']['Functions']['mensajes_playground']['Retur
 const aMensaje = (f: FilaMensaje): MensajeSala => ({
   id: f.id,
   estudianteId: f.estudiante_id,
-  nombre: f.nombre,
+  nombre: capitalizar(f.nombre),
   avatar: f.avatar,
   avatarTienda: f.avatar_tienda ?? undefined,
   color: f.color,
@@ -257,7 +266,7 @@ export const repositorioSupabase: Repositorio = {
       p_duracion_ms: Math.round(r.duracionMs),
       p_estrellas: r.estrellas,
       p_monedas: r.monedas,
-      p_rondas: r.rondas.map(({ item, intentos, acertada }) => ({ item, intentos, acertada })),
+      p_rondas: r.rondas.map(({ item, intentos, acertada, error }) => ({ item, intentos, acertada, error: error?.slice(0, 20) })),
     }
     sinError(
       actual
@@ -272,7 +281,7 @@ export const repositorioSupabase: Repositorio = {
     for (let pagina = 0; ; pagina++) {
       let consulta = supabase
         .from('resultados_actividad')
-        .select('*, rondas_resultado(orden, item, intentos, acertada), estudiantes!inner(curso_id)')
+        .select((conColumnaError ? COLUMNAS_RESULTADO : COLUMNAS_RESULTADO_SIN_ERROR) as typeof COLUMNAS_RESULTADO)
         .order('fecha', { ascending: false })
         .order('id')
         .order('orden', { referencedTable: 'rondas_resultado' })
@@ -280,7 +289,15 @@ export const repositorioSupabase: Repositorio = {
       if (estudianteId) consulta = consulta.eq('estudiante_id', estudianteId)
       if (cursoId) consulta = consulta.eq('estudiantes.curso_id', cursoId)
       if (desde) consulta = consulta.gte('fecha', desde.toISOString())
-      const filas = sinError(await consulta)
+      const respuesta = await consulta
+      // 42703: columna inexistente. La base aún no tiene la migración de errores:
+      // se repite la página sin esa columna y se recuerda para las siguientes.
+      if (conColumnaError && respuesta.error?.code === '42703') {
+        conColumnaError = false
+        pagina--
+        continue
+      }
+      const filas = sinError(respuesta)
       resultados.push(
         ...filas.map(
           (f): ResultadoActividad => ({
@@ -290,7 +307,7 @@ export const repositorioSupabase: Repositorio = {
             fecha: f.fecha,
             duracionMs: f.duracion_ms,
             rondas: f.rondas_resultado.map(
-              ({ item, intentos, acertada }): IntentoRonda => ({ item, intentos, acertada }),
+              ({ item, intentos, acertada, error }): IntentoRonda => ({ item, intentos, acertada, error: error ?? undefined }),
             ),
             estrellas: f.estrellas,
             monedas: f.monedas,
@@ -324,10 +341,10 @@ export const repositorioSupabase: Repositorio = {
     return filas.map(aSala)
   },
   async crearSala(cursoId, nombre, tipo) {
-    return aSala(sinError(await supabase.from('salas').insert({ curso_id: cursoId, nombre: nombre.trim(), tipo }).select().single()))
+    return aSala(sinError(await supabase.from('salas').insert({ curso_id: cursoId, nombre: capitalizar(nombre.trim()), tipo }).select().single()))
   },
   async renombrarSala(id, nombre) {
-    sinError(await supabase.from('salas').update({ nombre: nombre.trim() }).eq('id', id))
+    sinError(await supabase.from('salas').update({ nombre: capitalizar(nombre.trim()) }).eq('id', id))
   },
   async asignarPlan(salaId, contenidos, juegos) {
     sinError(await supabase.from('salas').update({ contenidos, juegos, asignacion: crypto.randomUUID() }).eq('id', salaId))
@@ -402,7 +419,7 @@ export const repositorioSupabase: Repositorio = {
     return filas.map(
       (f): PerfilAlumno => ({
         id: f.id,
-        nombre: f.nombre,
+        nombre: capitalizar(f.nombre),
         avatar: f.avatar,
         avatarTienda: f.avatar_tienda ?? undefined,
         color: f.color,

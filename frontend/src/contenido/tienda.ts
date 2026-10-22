@@ -1,7 +1,6 @@
-// Tienda de avatares de la sala de espera (RF-24). Versión de prueba: 3
-// avatares para mostrar la compra. Los precios los vuelve a validar la base
-// (privado.precio_avatar en supabase/migrations): cambiarlos aquí sin la
-// migración no cambia lo que se cobra.
+// Tienda de avatares de la sala de espera (RF-24). Los precios los vuelve a
+// validar la base (privado.precio_avatar en supabase/migrations): cambiarlos o
+// agregar avatares aquí sin la migración no cambia lo que se cobra.
 
 export interface AvatarTienda {
   id: string
@@ -11,8 +10,14 @@ export interface AvatarTienda {
 }
 
 export const AVATARES_TIENDA: AvatarTienda[] = [
+  { id: 'pollito', emoji: '🐥', nombre: 'Pollito', precio: 10 },
+  { id: 'pulpo', emoji: '🐙', nombre: 'Pulpo', precio: 20 },
   { id: 'dragon', emoji: '🐲', nombre: 'Dragón', precio: 30 },
+  { id: 'tigre', emoji: '🐯', nombre: 'Tigre', precio: 40 },
+  { id: 'mago', emoji: '🧙', nombre: 'Mago', precio: 50 },
   { id: 'robot', emoji: '🤖', nombre: 'Robot', precio: 60 },
+  { id: 'sirena', emoji: '🧜‍♀️', nombre: 'Sirena', precio: 70 },
+  { id: 'superheroe', emoji: '🦸', nombre: 'Superhéroe', precio: 80 },
   { id: 'astronauta', emoji: '🧑‍🚀', nombre: 'Astronauta', precio: 90 },
 ]
 

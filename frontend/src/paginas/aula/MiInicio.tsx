@@ -1,3 +1,4 @@
+import { Navigate } from 'react-router-dom'
 import { useNino } from '../../ui/nino.tsx'
 import Espera from './Espera.tsx'
 import Playground from './Playground.tsx'
@@ -7,12 +8,24 @@ import Secuencia from './Secuencia.tsx'
 //   Sin sala   → sala de espera (globos y tienda).
 //   Trabajo    → los contenidos del plan, en orden, y luego los juegos.
 //   Playground → espacio común con mensajes de pictogramas.
+// Antes de todo, al abrir su perfil, dice cómo se siente (RF-14).
 export default function MiInicio() {
-  const { estado } = useNino()
+  const { estado, emocion } = useNino()
   const { sala } = estado
 
-  if (!sala) return <Espera />
-  if (sala.tipo === 'playground') return <Playground key={sala.id} />
-  // Un plan nuevo (otra asignación) parte de cero.
-  return <Secuencia key={`${sala.id}-${sala.asignacion}`} sala={sala} />
+  if (!emocion) return <Navigate to="emocion" replace />
+
+  // La clave cambia con la sala: al pasar de una a otra la vista entra animada.
+  return (
+    <div key={sala ? `${sala.id}-${sala.asignacion}` : 'espera'} className="animate-pantalla h-full">
+      {!sala ? (
+        <Espera />
+      ) : sala.tipo === 'playground' ? (
+        <Playground />
+      ) : (
+        // Un plan nuevo (otra asignación) parte de cero.
+        <Secuencia sala={sala} />
+      )}
+    </div>
+  )
 }

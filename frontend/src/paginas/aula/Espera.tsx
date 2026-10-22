@@ -14,13 +14,15 @@ export default function Espera() {
   const [vista, setVista] = useState<'globos' | 'tienda'>('globos')
 
   return (
-    <>
-      <nav aria-label="Sala de espera" className="mx-auto flex max-w-5xl justify-center gap-6 px-6 pt-5">
+    <div className="flex h-full flex-col">
+      <nav aria-label="Sala de espera" className="mx-auto flex max-w-5xl shrink-0 justify-center gap-6 px-6 pt-4">
         <Pestana activa={vista === 'globos'} voz="Globos" icono="🎈" alTocar={() => setVista('globos')} />
         <Pestana activa={vista === 'tienda'} voz="Tienda de avatares" icono="🛍️" alTocar={() => setVista('tienda')} />
       </nav>
-      {vista === 'globos' ? <MiniJuego /> : <Tienda />}
-    </>
+      <div key={vista} className="animate-pantalla min-h-0 flex-1">
+        {vista === 'globos' ? <MiniJuego /> : <Tienda />}
+      </div>
+    </div>
   )
 }
 
@@ -30,7 +32,7 @@ function Pestana({ activa, voz, icono, alTocar }: { activa: boolean; voz: string
       voz={voz}
       aria-pressed={activa}
       onClick={alTocar}
-      className={`grid h-20 w-32 place-items-center text-[1.8em] ${activa ? 'bg-nino-amarillo' : 'opacity-70'}`}
+      className={`grid h-16 w-28 place-items-center text-[1.6em] ${activa ? 'bg-nino-amarillo' : 'opacity-70'}`}
     >
       <span aria-hidden="true">{icono}</span>
     </BotonNino>
@@ -85,35 +87,35 @@ function Tienda() {
   }
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-6">
-      <ul className="grid grid-cols-2 gap-6 md:grid-cols-4">
-        <li>
+    <main className="mx-auto grid h-full max-w-6xl content-center px-6 py-4">
+      <ul className="grid grid-cols-3 gap-x-5 gap-y-3 sm:grid-cols-4 lg:grid-cols-5">
+        <li className="caja-entra">
           {/* El avatar que eligió la docente: siempre gratis. */}
           <BotonNino
             voz="Mi avatar de siempre"
             disabled={ocupado}
             onClick={() => void usar(null)}
-            className={`grid w-full justify-items-center gap-3 p-5 ${!estudiante.avatarTienda ? 'bg-nino-menta ring-4 ring-nino-ok ring-offset-4' : ''}`}
+            className={`grid w-full justify-items-center gap-2 p-3 ${!estudiante.avatarTienda ? 'bg-nino-menta ring-4 ring-nino-ok ring-offset-4' : ''}`}
           >
-            <Avatar estudiante={{ ...estudiante, avatarTienda: undefined }} className="size-28 text-7xl" />
+            <Avatar estudiante={{ ...estudiante, avatarTienda: undefined }} className="size-20 text-5xl" />
             <span aria-hidden="true" className="text-[1.2em]">{!estudiante.avatarTienda ? '✅' : '🏠'}</span>
           </BotonNino>
         </li>
-        {AVATARES_TIENDA.map((a) => {
+        {AVATARES_TIENDA.map((a, i) => {
           const tiene = comprados.includes(a.id)
           const puesto = estudiante.avatarTienda === a.id
           const alcanza = estudiante.monedas >= a.precio
           return (
-            <li key={a.id}>
+            <li key={a.id} className="caja-entra" style={{ animationDelay: `${(i + 1) * 60}ms` }}>
               <BotonNino
                 voz={tiene ? a.nombre : `${a.nombre}, ${a.precio} monedas`}
                 disabled={ocupado}
                 onClick={() => tocar(a)}
-                className={`relative grid w-full justify-items-center gap-3 p-5 ${puesto ? 'bg-nino-menta ring-4 ring-nino-ok ring-offset-4' : ''}`}
+                className={`relative grid w-full justify-items-center gap-2 p-3 ${puesto ? 'bg-nino-menta ring-4 ring-nino-ok ring-offset-4' : ''}`}
               >
                 <span
                   aria-hidden="true"
-                  className={`grid size-28 place-items-center rounded-[30%] text-7xl ${!tiene && !alcanza ? 'opacity-40 grayscale' : ''}`}
+                  className={`grid size-20 place-items-center rounded-[30%] text-5xl ${!tiene && !alcanza ? 'opacity-40 grayscale' : ''}`}
                   style={{ background: estudiante.color }}
                 >
                   {a.emoji}

@@ -316,9 +316,9 @@ export type Database = {
         ]
       }
       rondas_resultado: {
-        Row: { acertada: boolean; intentos: number; item: string; orden: number; resultado_id: string }
-        Insert: { acertada: boolean; intentos: number; item: string; orden: number; resultado_id: string }
-        Update: { acertada?: boolean; intentos?: number; item?: string; orden?: number; resultado_id?: string }
+        Row: { acertada: boolean; error: string | null; intentos: number; item: string; orden: number; resultado_id: string }
+        Insert: { acertada: boolean; error?: string | null; intentos: number; item: string; orden: number; resultado_id: string }
+        Update: { acertada?: boolean; error?: string | null; intentos?: number; item?: string; orden?: number; resultado_id?: string }
         Relationships: [
           {
             foreignKeyName: 'rondas_resultado_resultado_id_fkey'
