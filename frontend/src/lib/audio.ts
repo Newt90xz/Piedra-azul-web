@@ -74,10 +74,16 @@ export function detener() {
 // silenciarlos dejando solo la voz.
 let contexto: AudioContext | null = null
 
+// Un solo contexto de audio para efectos y música (ver lib/musica.ts).
+export function contextoAudio() {
+  contexto ??= new AudioContext()
+  return contexto
+}
+
 export function efecto(tipo: 'acierto' | 'intento' | 'premio' | 'toque', silenciado: boolean) {
   if (silenciado) return
   try {
-    contexto ??= new AudioContext()
+    contextoAudio()
     const notas = { acierto: [523, 659, 784], intento: [392], premio: [523, 659, 784, 1047], toque: [880] }[tipo]
     notas.forEach((f, i) => {
       const osc = contexto!.createOscillator()

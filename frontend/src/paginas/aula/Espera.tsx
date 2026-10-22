@@ -2,28 +2,71 @@ import { useEffect, useState } from 'react'
 import { AVATARES_TIENDA, type AvatarTienda } from '../../contenido/tienda.ts'
 import { repo } from '../../datos/index.ts'
 import { efecto, hablar } from '../../lib/audio.ts'
+import { detenerMusica, iniciarMusica } from '../../lib/musica.ts'
 import { Avatar } from '../../ui/Avatar.tsx'
 import { Icono } from '../../ui/Icono.tsx'
 import { BotonNino, useNino } from '../../ui/nino.tsx'
 import { MiniJuego } from '../alumno/MiniJuego.tsx'
 
 // Sala de espera: el niño todavía no tiene sala. Juega con los globos o gasta
-// sus monedas en la tienda; la sala reemplaza esta vista sola en cuanto la
-// docente lo asigna.
+// sus monedas en la tienda mientras suena una música suave; la sala reemplaza
+// esta vista sola en cuanto la docente lo asigna (y la música se apaga).
 export default function Espera() {
   const [vista, setVista] = useState<'globos' | 'tienda'>('globos')
+  const { silenciado } = useNino()
+  const [musica, setMusica] = useState(musicaGuardada)
+
+  // Si la docente silenció los efectos del niño, tampoco hay música.
+  const suena = musica && !silenciado
+  useEffect(() => {
+    if (!suena) return
+    iniciarMusica()
+    return detenerMusica
+  }, [suena])
+
+  const alternarMusica = () => {
+    setMusica(!musica)
+    try {
+      sessionStorage.setItem(CLAVE_MUSICA, musica ? 'no' : 'si')
+    } catch {
+      // Sin almacenamiento, al volver a la espera la música parte encendida.
+    }
+  }
 
   return (
     <div className="flex h-full flex-col">
       <nav aria-label="Sala de espera" className="mx-auto flex max-w-5xl shrink-0 justify-center gap-6 px-6 pt-4">
         <Pestana activa={vista === 'globos'} voz="Globos" icono="🎈" alTocar={() => setVista('globos')} />
         <Pestana activa={vista === 'tienda'} voz="Tienda de avatares" icono="🛍️" alTocar={() => setVista('tienda')} />
+        {!silenciado && (
+          <BotonNino
+            voz={musica ? 'Apagar la música' : 'Poner música'}
+            aria-pressed={musica}
+            onClick={alternarMusica}
+            className={`relative grid size-16 place-items-center text-[1.4em] ${musica ? 'bg-nino-lila' : 'opacity-70'}`}
+          >
+            <span aria-hidden="true">🎵</span>
+            {!musica && (
+              <span aria-hidden="true" className="absolute inset-x-2 top-1/2 h-1 -rotate-45 rounded-full bg-nino-tinta/70" />
+            )}
+          </BotonNino>
+        )}
       </nav>
       <div key={vista} className="animate-pantalla min-h-0 flex-1">
         {vista === 'globos' ? <MiniJuego /> : <Tienda />}
       </div>
     </div>
   )
+}
+
+const CLAVE_MUSICA = 'leer-para-todos/musica-espera'
+
+function musicaGuardada() {
+  try {
+    return sessionStorage.getItem(CLAVE_MUSICA) !== 'no'
+  } catch {
+    return true
+  }
 }
 
 function Pestana({ activa, voz, icono, alTocar }: { activa: boolean; voz: string; icono: string; alTocar: () => void }) {
