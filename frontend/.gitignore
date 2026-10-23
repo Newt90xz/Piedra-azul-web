@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Voz pregenerada (scripts/voz): caché de Python y entorno local
+__pycache__/
+venv-voz/

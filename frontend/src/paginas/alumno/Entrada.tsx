@@ -69,7 +69,7 @@ function ElegirPerfil() {
     // El avatar del botón crece hasta el centro y saluda; luego pasa a su inicio.
     const avatar = boton.querySelector('[data-avatar]') ?? boton
     setSaludo({ perfil: p, desde: avatar.getBoundingClientRect() })
-    hablar(`¡Hola, ${p.nombre}!`)
+    hablar(`¡Hola, ${p.nombre}!`, { respaldo: '¡Hola!' })
     window.setTimeout(() => navegar(`/aula/${p.id}`), SALUDO_MS)
   }
 

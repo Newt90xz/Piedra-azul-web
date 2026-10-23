@@ -24,3 +24,7 @@ export const AVATARES_TIENDA: AvatarTienda[] = [
 export function avatarTienda(id: string | undefined) {
   return AVATARES_TIENDA.find((a) => a.id === id)
 }
+
+// Lo que oye el niño si no le alcanza (también lo usa scripts/frasesVoz.ts).
+export const faltanMonedas = (n: number) =>
+  n === 1 ? 'Te falta 1 moneda. ¡Juega para ganar más!' : `Te faltan ${n} monedas. ¡Juega para ganar más!`

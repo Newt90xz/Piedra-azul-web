@@ -74,7 +74,7 @@ function Burbuja({ mensaje, mio }: { mensaje: MensajeSala; mio: boolean }) {
       <Avatar estudiante={mensaje} className="size-14 text-4xl" />
       <button
         {...voz}
-        onClick={() => hablar(dicho)}
+        onClick={() => hablar(dicho, { respaldo: picto?.voz })}
         aria-label={dicho}
         className={`rounded-3xl border-3 px-5 py-2 text-[1.8em] leading-none ${mio ? 'rounded-br-md border-nino-ok bg-nino-menta' : 'rounded-bl-md border-nino-azul bg-white'}`}
       >

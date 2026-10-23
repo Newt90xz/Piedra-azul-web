@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AVATARES_TIENDA, type AvatarTienda } from '../../contenido/tienda.ts'
+import { AVATARES_TIENDA, faltanMonedas, type AvatarTienda } from '../../contenido/tienda.ts'
 import { repo } from '../../datos/index.ts'
 import { efecto, hablar } from '../../lib/audio.ts'
 import { detenerMusica, iniciarMusica } from '../../lib/musica.ts'
@@ -108,7 +108,7 @@ function Tienda() {
   const tocar = (a: AvatarTienda) => {
     if (comprados.includes(a.id)) return void usar(a.id)
     if (estudiante.monedas < a.precio) {
-      hablar(`Te faltan ${a.precio - estudiante.monedas} monedas. ¡Juega para ganar más!`)
+      hablar(faltanMonedas(a.precio - estudiante.monedas))
       return
     }
     setEligiendo(a)
