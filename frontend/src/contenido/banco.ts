@@ -98,7 +98,7 @@ export const VOCALES = ['a', 'e', 'i', 'o', 'u'] as const
 export const PALABRAS_NIVEL_3 = ['mama', 'papa', 'mano', 'mapa', 'mono', 'pato', 'puma', 'luna', 'lupa', 'sapo', 'sopa', 'taza', 'gato', 'casa']
 
 export function quitarTildes(s: string) {
-  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 }
 
 export function palabra(id: string): Palabra {

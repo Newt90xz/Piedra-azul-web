@@ -15,6 +15,11 @@ import { AvisoError, Boton, Encabezado, claseEntrada, claseTarjeta } from '../..
 const REFRESCO_MS = 5000
 // Igual que la base: un dispositivo sin señales por 10 minutos se da por apagado.
 const VIGENTE_MS = 10 * 60_000
+const TIPOS: Record<TipoSala, { nombre: string; icono: string; color: string; ayuda: string }> = {
+  trabajo: { nombre: 'Sala de trabajo', icono: '📚', color: 'text-menta-oscuro', ayuda: 'Contenidos en orden y juegos al terminar.' },
+  playground: { nombre: 'Playground', icono: '🎈', color: 'text-[#7a5b00]', ayuda: 'Espacio común con mensajes de pictogramas.' },
+  dibujo: { nombre: 'Dibujo', icono: '🎨', color: 'text-[#7b3fa0]', ayuda: 'Dibujo libre y repasar letras.' },
+}
 // Destino «sin sala»: soltar ahí saca al niño de su sala y vuelve a la espera.
 const ESPERA = ''
 // Si el servidor nunca confirma un movimiento, el aviso «Conectándolo…» se quita igual.
@@ -186,6 +191,8 @@ export default function Salas() {
             {datos.salas.map((s) =>
               s.tipo === 'playground' ? (
                 <TarjetaPlayground key={s.id} sala={s} dentro={enDestino(s.id)} datos={datos} ejecutar={ejecutar} />
+              ) : s.tipo === 'dibujo' ? (
+                <TarjetaDibujo key={s.id} sala={s} dentro={enDestino(s.id)} datos={datos} ejecutar={ejecutar} />
               ) : (
                 <TarjetaSala key={s.id} sala={s} dentro={enDestino(s.id)} datos={datos} ejecutar={ejecutar} />
               ),
@@ -390,17 +397,17 @@ function CrearSala({ cursoId, alCrear }: { cursoId: string; alCrear: (nombre: st
         <span className="sr-only">Nombre de la sala</span>
         <input value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={40} placeholder="Nombre, ej.: Grupo Sílabas" className={claseEntrada} />
       </label>
-      <fieldset className="flex gap-2 text-sm font-semibold text-tinta">
+      <fieldset className="grid grid-cols-3 gap-2 text-sm font-semibold text-tinta">
         <legend className="sr-only">Tipo</legend>
-        {(
-          [
-            ['trabajo', 'Sala de trabajo'],
-            ['playground', 'Playground'],
-          ] as const
-        ).map(([valor, texto]) => (
-          <label key={valor} className={`flex-1 cursor-pointer rounded-xl border px-3 py-2 text-center ${tipo === valor ? 'border-menta bg-menta-fondo' : 'border-borde bg-white'}`}>
+        {(Object.keys(TIPOS) as TipoSala[]).map((valor) => (
+          <label
+            key={valor}
+            title={TIPOS[valor].ayuda}
+            className={`grid cursor-pointer justify-items-center gap-0.5 rounded-xl border px-2 py-2 text-center leading-tight ${tipo === valor ? 'border-menta bg-menta-fondo' : 'border-borde bg-white'}`}
+          >
+            <span aria-hidden="true" className="text-lg">{TIPOS[valor].icono}</span>
             <input type="radio" name="tipo-sala" value={valor} checked={tipo === valor} onChange={() => setTipo(valor)} className="sr-only" />
-            {texto}
+            {TIPOS[valor].nombre}
           </label>
         ))}
       </fieldset>
@@ -433,8 +440,8 @@ function EncabezadoSala({ sala, n, ejecutar, accion }: { sala: Sala; n: number; 
         <h2 className="truncate text-lg font-bold text-tinta" title={sala.nombre}>
           {sala.nombre}
         </h2>
-        <p className={`text-xs font-bold ${sala.tipo === 'playground' ? 'text-[#7a5b00]' : 'text-menta-oscuro'}`}>
-          {sala.tipo === 'playground' ? 'Playground' : 'Sala de trabajo'} · {n} {n === 1 ? 'niño' : 'niños'}
+        <p className={`text-xs font-bold ${TIPOS[sala.tipo].color}`}>
+          <span aria-hidden="true">{TIPOS[sala.tipo].icono}</span> {TIPOS[sala.tipo].nombre} · {n} {n === 1 ? 'niño' : 'niños'}
         </p>
       </div>
       {accion}
@@ -788,6 +795,22 @@ function TarjetaPlayground({ sala, dentro, datos, ejecutar }: { sala: Sala; dent
         {(e) => {
           const destino = pendiente(e.id)
           return destino !== undefined ? <Conectando destino={destino} /> : <span className="text-xs text-tinta-suave">En el playground</span>
+        }}
+      </ListaNinos>
+    </ZonaSoltar>
+  )
+}
+
+function TarjetaDibujo({ sala, dentro, datos, ejecutar }: { sala: Sala; dentro: Estudiante[]; datos: Datos; ejecutar: Ejecutar }) {
+  const { pendiente } = useMover()
+  return (
+    <ZonaSoltar destino={sala.id} nombre={sala.nombre} className="grid gap-4 p-4">
+      <EncabezadoSala sala={sala} n={dentro.length} ejecutar={ejecutar} />
+      <p className="text-sm text-tinta-suave">Dibujo libre con colores, sellos y letras para repasar con el dedo.</p>
+      <ListaNinos sala={sala} dentro={dentro} datos={datos} ejecutar={ejecutar} vacia="Arrastra aquí a quienes van a dibujar.">
+        {(e) => {
+          const destino = pendiente(e.id)
+          return destino !== undefined ? <Conectando destino={destino} /> : <span className="text-xs text-tinta-suave">Dibujando</span>
         }}
       </ListaNinos>
     </ZonaSoltar>

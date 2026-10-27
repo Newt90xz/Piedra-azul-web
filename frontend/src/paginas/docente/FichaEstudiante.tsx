@@ -8,6 +8,7 @@ import { capitalizar } from '../../lib/texto.ts'
 import { useConsulta } from '../../lib/useConsulta.ts'
 import { Avatar } from '../../ui/Avatar.tsx'
 import { Antetitulo, AvisoError, Boton, BotonEnlace, Encabezado, Tarjeta, claseEntrada } from '../../ui/aula.tsx'
+import { BotonInforme } from './BotonInforme.tsx'
 import { DetalleItem } from './DetalleItem.tsx'
 import { FormEstudiante } from './FormEstudiante.tsx'
 
@@ -56,9 +57,9 @@ export default function FichaEstudiante() {
   return (
     <>
       <BotonEnlace to="/docente/estudiantes" variante="suave" className="mb-5">← Volver a estudiantes</BotonEnlace>
-      <div className="mb-6 flex items-center gap-5">
+      <div className="mb-6 flex flex-wrap items-center gap-5">
         <Avatar estudiante={estudiante} className="size-20 text-5xl" />
-        <div>
+        <div className="min-w-0 flex-1">
           <Antetitulo>Ficha del estudiante</Antetitulo>
           <h1 className="text-3xl font-bold tracking-tight">{estudiante.nombre}</h1>
           <p className="text-tinta-suave">
@@ -82,6 +83,7 @@ export default function FichaEstudiante() {
             </p>
           )}
         </div>
+        <BotonInforme estudiante={estudiante} />
       </div>
 
       <div role="tablist" aria-label="Secciones de la ficha" className="mb-6 flex gap-2 border-b border-borde">
