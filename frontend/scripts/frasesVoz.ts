@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url'
 import { ACTIVIDADES, type Ronda } from '../src/contenido/actividades.ts'
 import { fonemaDe } from '../src/contenido/banco.ts'
 import { CONTENIDOS } from '../src/contenido/contenidos.ts'
+import { COLORES, GROSORES, LETRAS } from '../src/contenido/dibujo.ts'
 import { PICTOS_MENSAJE } from '../src/contenido/mensajes.ts'
 import { AVATARES_TIENDA, faltanMonedas } from '../src/contenido/tienda.ts'
 import { EMOCIONES } from '../src/lib/avance.ts'
@@ -102,6 +103,26 @@ for (let n = 1; n <= maxPrecio; n++) agregar(faltanMonedas(n))
 for (const a of AVATARES_TIENDA) {
   agregar(a.nombre, `${a.nombre}, ${a.precio} monedas`, `¿Quieres el ${a.nombre}? Cuesta ${a.precio} monedas.`, `¡Ahora eres un ${a.nombre}!`)
 }
+
+// ---------- Sala de dibujo (paginas/aula/Dibujo.tsx) ----------
+
+agregar(
+  '¡La sala de dibujo! Elige un color y dibuja.',
+  ...COLORES.map((c) => c.nombre),
+  ...GROSORES.map((g) => g.nombre),
+  'Goma',
+  'Sellos',
+  'Sello',
+  'Repasar letras',
+  'Sin letra',
+  ...LETRAS.map((l) => `Letra ${l}`),
+  'Sigue la letra con tu dedo.',
+  'Deshacer',
+  'Hoja nueva',
+  '¡Hoja nueva!',
+  'No, seguir dibujando',
+  'Sí, hoja nueva',
+)
 
 // ---------- Nombres de los niños (opcional) ----------
 

@@ -32,6 +32,10 @@
   "texto": "Activar la voz"
  },
  {
+  "clave": "15qe2k01ezc",
+  "texto": "Amarillo"
+ },
+ {
   "clave": "2bokulj6ww4",
   "texto": "Apagar la música"
  },
@@ -54,6 +58,10 @@
  {
   "clave": "roe17bep6t",
   "texto": "Astronauta, 90 monedas"
+ },
+ {
+  "clave": "265ggz9elg0",
+  "texto": "Azul"
  },
  {
   "clave": "jwy7wfh4pv",
@@ -104,6 +112,10 @@
   "texto": "Busca la que suena uuuu."
  },
  {
+  "clave": "1x56detb61s",
+  "texto": "Café"
+ },
+ {
   "clave": "1i981od4jre",
   "texto": "Cuenta:"
  },
@@ -142,6 +154,10 @@
  {
   "clave": "n7ta4n6wej",
   "texto": "Cuesta 90 monedas."
+ },
+ {
+  "clave": "1cxwe2tgaww",
+  "texto": "Deshacer"
  },
  {
   "clave": "1aq4ply5yrb",
@@ -210,6 +226,10 @@
  {
   "clave": "21b6mbp5g8n",
   "texto": "El choque de sonidos"
+ },
+ {
+  "clave": "v1m852dkpr",
+  "texto": "Elige un color y dibuja."
  },
  {
   "clave": "1er4fzepx3z",
@@ -504,6 +524,14 @@
   "texto": "Globos"
  },
  {
+  "clave": "2fdb1hz8un",
+  "texto": "Goma"
+ },
+ {
+  "clave": "pmgaoidct0",
+  "texto": "Hoja nueva"
+ },
+ {
   "clave": "ke3hxojukt",
   "texto": "Intenta otra vez."
  },
@@ -672,6 +700,54 @@
   "texto": "La más larga de tres."
  },
  {
+  "clave": "14blg39ai46",
+  "texto": "Letra A"
+ },
+ {
+  "clave": "1mt4v0xqrun",
+  "texto": "Letra E"
+ },
+ {
+  "clave": "4m1opzp3v5",
+  "texto": "Letra I"
+ },
+ {
+  "clave": "uk1abw6wam",
+  "texto": "Letra L"
+ },
+ {
+  "clave": "1ugu5hu9loe",
+  "texto": "Letra M"
+ },
+ {
+  "clave": "28py0vduays",
+  "texto": "Letra O"
+ },
+ {
+  "clave": "1ej7dlwmoo5",
+  "texto": "Letra P"
+ },
+ {
+  "clave": "jlicascz9z",
+  "texto": "Letra S"
+ },
+ {
+  "clave": "ytidp3e7jx",
+  "texto": "Letra U"
+ },
+ {
+  "clave": "y10mlki2yv",
+  "texto": "Lápiz fino"
+ },
+ {
+  "clave": "264nc6wnkqk",
+  "texto": "Lápiz grueso"
+ },
+ {
+  "clave": "1qbnhcf8p5x",
+  "texto": "Lápiz mediano"
+ },
+ {
   "clave": "155tevra0v3",
   "texto": "MA de maleta."
  },
@@ -760,6 +836,18 @@
   "texto": "Mira tus estrellas."
  },
  {
+  "clave": "1fg9idcmj3d",
+  "texto": "Morado"
+ },
+ {
+  "clave": "kkmkh750ii",
+  "texto": "Naranjo"
+ },
+ {
+  "clave": "1h4ou4tytkl",
+  "texto": "Negro"
+ },
+ {
   "clave": "1lxhtfq217",
   "texto": "No se pudo cambiar."
  },
@@ -774,6 +862,10 @@
  {
   "clave": "1z9oa0bd3c",
   "texto": "No, gracias"
+ },
+ {
+  "clave": "2gdl6brd9oi",
+  "texto": "No, seguir dibujando"
  },
  {
   "clave": "h8udbrz2rv",
@@ -860,6 +952,10 @@
   "texto": "Pulpo, 20 monedas"
  },
  {
+  "clave": "oli96mrrln",
+  "texto": "Repasar letras"
+ },
+ {
   "clave": "1xlt8tg23n1",
   "texto": "Rima entre cuatro."
  },
@@ -878,6 +974,14 @@
  {
   "clave": "2edowznhqa2",
   "texto": "Robot, 60 monedas"
+ },
+ {
+  "clave": "2f9bun9qaw9",
+  "texto": "Rojo"
+ },
+ {
+  "clave": "by8twehb7f",
+  "texto": "Rosado"
  },
  {
   "clave": "1a8eq58h5vt",
@@ -936,8 +1040,24 @@
   "texto": "Seguir"
  },
  {
+  "clave": "1pjl3bt7amn",
+  "texto": "Sello"
+ },
+ {
+  "clave": "448apa9uv9",
+  "texto": "Sellos"
+ },
+ {
+  "clave": "26aw61ilbsd",
+  "texto": "Sigue la letra con tu dedo."
+ },
+ {
   "clave": "1d7k1txlwap",
   "texto": "Siguiente"
+ },
+ {
+  "clave": "1493povegxc",
+  "texto": "Sin letra"
  },
  {
   "clave": "25p2velu47g",
@@ -954,6 +1074,10 @@
  {
   "clave": "8vfm7bv9y5",
   "texto": "Superhéroe, 80 monedas"
+ },
+ {
+  "clave": "28gek3242tf",
+  "texto": "Sí, hoja nueva"
  },
  {
   "clave": "22jy6pb5kke",
@@ -1590,6 +1714,10 @@
  {
   "clave": "2cp8yfhnxk0",
   "texto": "Vamos a intentarlo otra vez."
+ },
+ {
+  "clave": "25ehft1aed7",
+  "texto": "Verde"
  },
  {
   "clave": "okyyn4b1nn",
@@ -5248,6 +5376,10 @@
   "texto": "¡Guau!"
  },
  {
+  "clave": "23b1wdoppjh",
+  "texto": "¡Hoja nueva!"
+ },
+ {
   "clave": "mft9kmo41",
   "texto": "¡Hola!"
  },
@@ -5274,6 +5406,10 @@
  {
   "clave": "tcgl2ae59h",
   "texto": "¡LUPA!"
+ },
+ {
+  "clave": "l0j19xmjzd",
+  "texto": "¡La sala de dibujo!"
  },
  {
   "clave": "ysvlnyqzw",

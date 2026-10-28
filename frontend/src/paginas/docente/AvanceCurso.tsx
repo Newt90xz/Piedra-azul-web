@@ -9,6 +9,7 @@ import { useConsulta } from '../../lib/useConsulta.ts'
 import { Avatar } from '../../ui/Avatar.tsx'
 import { Icono } from '../../ui/Icono.tsx'
 import { AvisoError, Boton, Encabezado, Tarjeta } from '../../ui/aula.tsx'
+import { BotonInforme } from './BotonInforme.tsx'
 import { DetalleItem } from './DetalleItem.tsx'
 
 // RF-17: participación semanal del curso en una sola vista.
@@ -46,10 +47,10 @@ export default function AvanceCurso() {
       <Encabezado
         antetitulo="Seguimiento"
         titulo="Avance del curso"
-        descripcion="Participación de esta semana (desde el lunes) y última emoción registrada."
+        descripcion="Participación de esta semana (desde el lunes) y última emoción registrada. El informe de cada estudiante incluye todo su historial."
         accion={
           <Boton variante="secundario" disabled={!datos || generando} onClick={() => void descargar()}>
-            <Icono nombre="descargar" /> {generando ? 'Generando…' : 'Descargar PDF'}
+            <Icono nombre="descargar" /> {generando ? 'Generando…' : 'PDF del curso'}
           </Boton>
         }
       />
@@ -68,6 +69,7 @@ export default function AvanceCurso() {
               <th scope="col" className="px-4 py-4 font-semibold">Minutos</th>
               <th scope="col" className="px-4 py-4 font-semibold">Estrellas promedio</th>
               <th scope="col" className="px-4 py-4 font-semibold">Última emoción</th>
+              <th scope="col" className="px-4 py-4 font-semibold">Informe</th>
             </tr>
           </thead>
           <tbody>
@@ -95,6 +97,9 @@ export default function AvanceCurso() {
                     ) : (
                       '—'
                     )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <BotonInforme estudiante={e} compacto />
                   </td>
                 </tr>
               )

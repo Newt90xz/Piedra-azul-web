@@ -108,7 +108,7 @@ export interface Observacion {
 // Una sala de trabajo tiene un plan: contenidos MINEDUC en orden (cada uno con 3
 // actividades) y los juegos a los que se llega al terminarlos. El playground es
 // un espacio común con mensajes de pictogramas, mientras esperan otra sala.
-export type TipoSala = 'trabajo' | 'playground'
+export type TipoSala = 'trabajo' | 'playground' | 'dibujo'
 
 export interface Sala {
   id: string
