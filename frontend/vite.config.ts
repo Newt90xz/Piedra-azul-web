@@ -5,6 +5,10 @@ import { defineConfig } from 'vite'
 
 // https://vite.dev/config/
 export default defineConfig({
+  css: {
+    // Prevent loading unrelated PostCSS configurations from parent directories.
+    postcss: { plugins: [] },
+  },
   plugins: [
     react(),
     babel({ presets: [reactCompilerPreset()] }),
