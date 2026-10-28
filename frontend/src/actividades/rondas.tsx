@@ -109,19 +109,20 @@ function RondaElegir({ ronda, resuelta, revelar, alIntentar }: PropsRonda<'elegi
 function Estimulo({ ronda, resuelta }: { ronda: Extract<Ronda, { tipo: 'elegir' }>; resuelta: boolean }) {
   const { estimulo } = ronda
   const voz = useVozAlApuntar(estimulo.audio ?? '')
+  const soloAudio = !estimulo.imagen && !estimulo.texto
   const contenido = estimulo.imagen ? (
     <ImagenNino imagen={estimulo.imagen} className="size-[3.36em] text-[3.36em]" />
   ) : estimulo.texto ? (
     <span className="text-[3em] font-bold">{estimulo.texto}</span>
   ) : (
-    <span aria-hidden="true" className="estimulo-oreja text-[3.4em] leading-none">👂</span>
+    <img src={`${import.meta.env.BASE_URL}imagenes/escuchar.png`} alt="Escuchar" className="size-[2.4em] object-contain" />
   )
-  const clase = `${tile} relative min-h-[3.4em] min-w-[3.4em] px-8 py-4 ${resuelta ? 'animate-pop border-nino-ok bg-nino-menta' : 'border-nino-azul bg-white'}`
+  const clase = `${tile} relative ${soloAudio ? 'min-h-[2.8em] min-w-[2.8em] px-4 py-2' : 'min-h-[3.4em] min-w-[3.4em] px-8 py-4'} ${resuelta ? 'animate-pop border-nino-ok bg-nino-menta' : 'border-nino-azul bg-white'}`
   if (!estimulo.audio) return <span className={clase}>{contenido}</span>
   return (
     <button {...voz} onClick={() => hablar(estimulo.audio!)} aria-label={`Escuchar: ${estimulo.audio}`} className={`${clase} hover:-translate-y-1`}>
       {contenido}
-      <span aria-hidden="true" className="absolute -right-3 -bottom-3 grid size-12 place-items-center rounded-full border-3 border-nino-ok bg-nino-menta text-[0.6em]">
+      <span aria-hidden="true" className={`absolute ${soloAudio ? '-right-2 -bottom-2 size-9 border-2 text-[0.5em]' : '-right-3 -bottom-3 size-12 border-3 text-[0.6em]'} grid place-items-center rounded-full border-nino-ok bg-nino-menta`}>
         🔊
       </span>
     </button>
