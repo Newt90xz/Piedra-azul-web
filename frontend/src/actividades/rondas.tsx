@@ -55,7 +55,7 @@ function RondaElegir({ ronda, resuelta, revelar, alIntentar }: PropsRonda<'elegi
       {!estimulo.silabas && (estimulo.audio || estimulo.texto || estimulo.imagen) && <Estimulo ronda={ronda} resuelta={resuelta} />}
       {estimulo.silabas && (
         <div className="flex flex-wrap items-center justify-center gap-6">
-          {estimulo.imagen && <ImagenNino imagen={estimulo.imagen} className="text-[4em]" />}
+          {estimulo.imagen && <ImagenNino imagen={estimulo.imagen} className="size-[3.2em] text-[3.2em]" />}
           {estimulo.texto && <span className={`${tile} ${normal} min-w-[2.6em] px-6 py-2 text-[3em]`}>{estimulo.texto}</span>}
           {estimulo.silabas.map((s, i) =>
             i === estimulo.hueco ? (
@@ -110,7 +110,7 @@ function Estimulo({ ronda, resuelta }: { ronda: Extract<Ronda, { tipo: 'elegir' 
   const { estimulo } = ronda
   const voz = useVozAlApuntar(estimulo.audio ?? '')
   const contenido = estimulo.imagen ? (
-    <ImagenNino imagen={estimulo.imagen} className="text-[4.2em]" />
+    <ImagenNino imagen={estimulo.imagen} className="size-[3.36em] text-[3.36em]" />
   ) : estimulo.texto ? (
     <span className="text-[3em] font-bold">{estimulo.texto}</span>
   ) : (
@@ -161,7 +161,7 @@ function RondaConstruir({ ronda, resuelta, revelar, alIntentar }: PropsRonda<'co
 
   return (
     <div className="grid justify-items-center gap-8">
-      <ImagenNino imagen={palabra.imagen} className={`text-[4.5em] ${resuelta ? 'animate-pop' : ''}`} />
+      <ImagenNino imagen={palabra.imagen} className={`size-[3.6em] text-[3.6em] ${resuelta ? 'animate-pop' : ''}`} />
       <div className={`flex gap-3 rounded-3xl p-2 ${resuelta ? 'animate-pop bg-nino-menta' : ''}`}>
         {palabra.silabas.map((_, i) => (
           <span key={i} className={`${tile} min-h-[2.4em] min-w-[3.2em] px-4 text-[1.6em] ${colocadas[i] ? 'border-nino-ok bg-nino-menta' : 'border-dashed border-nino-borde bg-white'}`}>
@@ -211,7 +211,7 @@ function RondaAplausos({ ronda, resuelta, revelar, alIntentar }: PropsRonda<'apl
 
   return (
     <div className="grid justify-items-center gap-8">
-      <ImagenNino imagen={palabra.imagen} className="text-[4.5em]" />
+      <ImagenNino imagen={palabra.imagen} className="size-[3.6em] text-[3.6em]" />
       <div className="flex gap-4">
         {palabra.silabas.map((s, i) => (
           <BotonNino
@@ -266,7 +266,7 @@ function RondaExplorar({ ronda, resuelta, alIntentar }: PropsRonda<'explorar'>) 
       {escuchada && (
         <div className="animate-aparecer flex flex-wrap items-center justify-center gap-8">
           <span className="flex flex-col items-center gap-2 rounded-3xl bg-white p-5">
-            <ImagenNino imagen={ronda.ejemplo.imagen} className="text-[3.5em]" />
+            <ImagenNino imagen={ronda.ejemplo.imagen} className="size-[2.8em] text-[2.8em]" />
             <span className="text-[0.9em] font-bold">{ronda.ejemplo.texto}</span>
           </span>
           {/* RF-19: marcador hasta tener la ilustración de labios y lengua. */}
