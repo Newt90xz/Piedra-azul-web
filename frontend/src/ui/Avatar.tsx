@@ -13,7 +13,12 @@ export function Avatar({ estudiante, className = '' }: { estudiante: ConAvatar; 
       style={{ background: estudiante.color }}
       aria-hidden="true"
     >
-      {estudiante.fotoUrl ? <img src={estudiante.fotoUrl} alt="" className="size-full object-cover" /> : emojiAvatar(estudiante)}
+      {estudiante.fotoUrl ? (
+        <img src={estudiante.fotoUrl} alt="" className="size-full object-cover" />
+      ) : (
+        // Sin avatar (p. ej. la base ya no lo envía): la inicial del nombre, para que la ficha no quede vacía.
+        (emojiAvatar(estudiante) ?? <span className="font-sans font-bold text-[0.6em] text-nino-tinta/70">{estudiante.nombre.charAt(0).toUpperCase()}</span>)
+      )}
     </span>
   )
 }

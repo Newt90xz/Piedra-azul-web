@@ -1,46 +1,55 @@
-# Voz de la app (Serena · Qwen3-TTS)
+# Voz de la app (Lola · Pocket-TTS)
 
-La app habla con la voz **Serena** del modelo [Qwen3-TTS 0.6B CustomVoice](https://huggingface.co/Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice)
-(Apache-2.0). La voz **no se genera en los computadores del colegio**: se pregraba una sola vez
-y la app solo reproduce archivos MP3 livianos.
+La app habla con la voz **Lola** de [Pocket-TTS](https://github.com/kyutai-labs/pocket-tts), de Kyutai
+(código MIT; voz española del catálogo de Kyutai). La voz **no se genera en los computadores del
+colegio**: se pregraba una sola vez y la app solo reproduce archivos MP3 livianos.
 
 Las frases se graban **por trozos** (cada oración o palabra suelta, ver `src/lib/claveVoz.ts`) y la
-app los encadena. Así ~10.000 frases posibles quedan en ~1.550 audios cortos. Si falta algún trozo,
-la app dice esa frase con la voz del navegador, así que funciona aunque la generación no esté completa.
+app los encadena. Así unas 17.000 frases posibles quedan en unos 2.100 audios cortos. Si falta algún
+trozo, la app dice esa frase con la voz del navegador, así que funciona aunque la generación no esté
+completa.
 
-## Generar los audios (con GPU)
+## Generar los audios
 
-Requisitos: Python 3.12, Node 24 y una GPU NVIDIA con CUDA (~2 GB de VRAM bastan). En CPU también
-funciona, pero tarda unas 4 horas; con GPU, del orden de minutos.
+Pocket-TTS corre en el procesador, sin tarjeta gráfica. En un i5 de escritorio el modelo normal
+genera unas 2,5 veces más rápido que el tiempo real: todo el catálogo toma del orden de 20 minutos
+(el de alta calidad, unas 3 veces más).
 
 ```bash
-# 1. Entorno de Python (fuera del repo o en una carpeta ignorada)
+# 1. Entorno de Python (fuera del repo o en una carpeta ignorada), Python 3.10 a 3.14
 python -m venv venv-voz
 venv-voz\Scripts\activate          # Windows  (Linux/Mac: source venv-voz/bin/activate)
-pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu128   # según tu versión de CUDA
-pip install qwen-tts soundfile
+pip install pocket-tts soundfile
 
 # 2. Desde la carpeta frontend/: catálogo de trozos y generación
 node scripts/frasesVoz.ts           # escribe scripts/voz/trozos.json
 python scripts/voz/generar.py       # escribe public/voz/*.mp3 y public/voz/indice.json
 ```
 
-- `python scripts/voz/generar.py --max 20` genera solo 20, para escuchar antes de hacer todo.
-- Si se corta, se vuelve a correr y sigue donde quedó (no regenera lo que ya existe).
-- El modelo (~2,4 GB) se descarga la primera vez. Para guardarlo en otro disco: variable `HF_HOME`.
-- Al final lista los trozos **descartados** (el modelo divagó varias veces); esos quedan con la voz
-  del navegador. Se pueden reintentar volviendo a correr el script.
+| Opción | Qué hace |
+| --- | --- |
+| `--max 20` | Genera solo 20 trozos, para escuchar antes de hacer todo |
+| `--calidad alta` | Modelo de 24 capas (`spanish_24l`): voz más natural, unas 3 veces más lento |
+| `--voz archivo.wav` | Imita la voz de una grabación limpia de 5 a 10 segundos en vez de Lola |
 
-Luego se hace commit de `frontend/public/voz/` (son ~10–15 MB).
+- Si se corta, se vuelve a correr y sigue donde quedó (no regenera lo que ya existe).
+- El modelo se descarga la primera vez. Para guardarlo en otro disco: variable `HF_HOME`.
+- **Imitar una voz** (`--voz`) requiere aceptar los términos del modelo en
+  [huggingface.co/kyutai/pocket-tts](https://huggingface.co/kyutai/pocket-tts) e iniciar sesión con
+  `hf auth login`. Usar solo grabaciones con permiso de la persona.
+- Al final lista los trozos **descartados** (el audio salió demasiado largo varias veces); esos quedan
+  con la voz del navegador. Se pueden reintentar volviendo a correr el script.
+
+Luego se hace commit de `frontend/public/voz/`.
 
 ## Cuándo volver a generar
 
 - **Se agregan o cambian textos** de actividades, palabras del banco o pantallas del niño: correr de
   nuevo los dos comandos; solo se generan los trozos nuevos. Los audios que ya nadie usa se pueden borrar.
 - **Nombres de los niños**: no se conocen de antemano. Escribirlos en `scripts/voz/nombres.txt`
-  (uno por línea) y volver a correr; así también el «¡Hola, Sofía!» suena con Serena. Sin eso, el
-  saludo dice solo «¡Hola!».
-- **Cambiar la voz o el estilo**: editar `VOZ` / `ESTILO` en `generar.py`, borrar `public/voz/` y generar todo.
+  (uno por línea) y volver a correr; así también el «¡Hola, Sofía!» suena con la voz de la app. Sin
+  eso, el saludo dice solo «¡Hola!».
+- **Cambiar la voz o la calidad**: borrar `public/voz/` y generar todo con las opciones nuevas.
 
 ## Audios grabados por una persona
 

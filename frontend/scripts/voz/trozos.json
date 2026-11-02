@@ -28,6 +28,18 @@
   "texto": "4 sílabas."
  },
  {
+  "clave": "l6uni208wq",
+  "texto": "A, de abeja."
+ },
+ {
+  "clave": "5pwe73lka",
+  "texto": "A, de avión."
+ },
+ {
+  "clave": "1tzgwu4jk8t",
+  "texto": "A, de árbol."
+ },
+ {
   "clave": "8jxau2v3wb",
   "texto": "Activar la voz"
  },
@@ -52,6 +64,10 @@
   "texto": "Aplausos silábicos"
  },
  {
+  "clave": "gd7ie5vb33",
+  "texto": "Arma la palabra con sílabas."
+ },
+ {
   "clave": "1qepyxeiven",
   "texto": "Astronauta"
  },
@@ -64,8 +80,16 @@
   "texto": "Azul"
  },
  {
+  "clave": "1076c5lc3s2",
+  "texto": "Borrar"
+ },
+ {
   "clave": "jwy7wfh4pv",
   "texto": "Busca el dibujo de la vocal."
+ },
+ {
+  "clave": "10os45uaget",
+  "texto": "Busca el dibujo que empieza igual."
  },
  {
   "clave": "7tli7lq88j",
@@ -116,6 +140,10 @@
   "texto": "Café"
  },
  {
+  "clave": "n2ymnczz68",
+  "texto": "Completa la sílaba que falta."
+ },
+ {
   "clave": "1i981od4jre",
   "texto": "Cuenta:"
  },
@@ -158,6 +186,10 @@
  {
   "clave": "1cxwe2tgaww",
   "texto": "Deshacer"
+ },
+ {
+  "clave": "15l09pmp6u2",
+  "texto": "Después toca el número."
  },
  {
   "clave": "1aq4ply5yrb",
@@ -224,12 +256,100 @@
   "texto": "Dragón, 30 monedas"
  },
  {
+  "clave": "2e8moyiiddw",
+  "texto": "E, de elefante."
+ },
+ {
+  "clave": "1dsfl792r1x",
+  "texto": "E, de estrella."
+ },
+ {
   "clave": "21b6mbp5g8n",
   "texto": "El choque de sonidos"
  },
  {
   "clave": "v1m852dkpr",
   "texto": "Elige un color y dibuja."
+ },
+ {
+  "clave": "1k9e6yyxy9d",
+  "texto": "Empieza con la…"
+ },
+ {
+  "clave": "179ymglagfa",
+  "texto": "Empieza con le…"
+ },
+ {
+  "clave": "9m6gbrj5np",
+  "texto": "Empieza con li…"
+ },
+ {
+  "clave": "jfne31t6vk",
+  "texto": "Empieza con lo…"
+ },
+ {
+  "clave": "4cntxwrbf8",
+  "texto": "Empieza con lu…"
+ },
+ {
+  "clave": "10qv6goxvhw",
+  "texto": "Empieza con ma…"
+ },
+ {
+  "clave": "17dk5tu0ey1",
+  "texto": "Empieza con mo…"
+ },
+ {
+  "clave": "1sfei1u39uw",
+  "texto": "Empieza con mu…"
+ },
+ {
+  "clave": "2392sye4jbk",
+  "texto": "Empieza con pa…"
+ },
+ {
+  "clave": "1hdyguacvhv",
+  "texto": "Empieza con pe…"
+ },
+ {
+  "clave": "1lkq07qcm22",
+  "texto": "Empieza con po…"
+ },
+ {
+  "clave": "101evwwdac",
+  "texto": "Empieza con pu…"
+ },
+ {
+  "clave": "lkyuw9nuug",
+  "texto": "Empieza con sa…"
+ },
+ {
+  "clave": "dycz170goq",
+  "texto": "Empieza con se…"
+ },
+ {
+  "clave": "ov1o877wmi",
+  "texto": "Empieza con si…"
+ },
+ {
+  "clave": "13m7o2wi15a",
+  "texto": "Empieza con so…"
+ },
+ {
+  "clave": "13qh8r92ru0",
+  "texto": "Encuentra la palabra más larga de tres."
+ },
+ {
+  "clave": "2ex7ptcd46q",
+  "texto": "Encuentra la rima entre cuatro palabras."
+ },
+ {
+  "clave": "whw9lwpvc9",
+  "texto": "Encuentra la rima entre dos palabras."
+ },
+ {
+  "clave": "16zwvwd56vo",
+  "texto": "Encuentra la rima entre tres palabras."
  },
  {
   "clave": "1er4fzepx3z",
@@ -240,8 +360,304 @@
   "texto": "Es esta."
  },
  {
+  "clave": "bt6iz2whas",
+  "texto": "Escribe casa."
+ },
+ {
+  "clave": "jexf3yt2o0",
+  "texto": "Escribe gato."
+ },
+ {
+  "clave": "o6bdq8yedz",
+  "texto": "Escribe la palabra."
+ },
+ {
+  "clave": "2b1ba0yc4uj",
+  "texto": "Escribe la sílaba con que empieza leche."
+ },
+ {
+  "clave": "eol1gk4knc",
+  "texto": "Escribe la sílaba con que empieza león."
+ },
+ {
+  "clave": "pl6cft55i1",
+  "texto": "Escribe la sílaba con que empieza limón."
+ },
+ {
+  "clave": "1y7ep56sd4n",
+  "texto": "Escribe la sílaba con que empieza lobo."
+ },
+ {
+  "clave": "18pp28hmaqs",
+  "texto": "Escribe la sílaba con que empieza luna."
+ },
+ {
+  "clave": "3dypbi0wi3",
+  "texto": "Escribe la sílaba con que empieza lupa."
+ },
+ {
+  "clave": "5h5oo830kf",
+  "texto": "Escribe la sílaba con que empieza lápiz."
+ },
+ {
+  "clave": "n26cmxrrgo",
+  "texto": "Escribe la sílaba con que empieza maleta."
+ },
+ {
+  "clave": "20dxx74yvl2",
+  "texto": "Escribe la sílaba con que empieza mamá."
+ },
+ {
+  "clave": "2bfp206n7hy",
+  "texto": "Escribe la sílaba con que empieza mano."
+ },
+ {
+  "clave": "26b3ml5ieq7",
+  "texto": "Escribe la sílaba con que empieza mapa."
+ },
+ {
+  "clave": "1068uvw13ek",
+  "texto": "Escribe la sílaba con que empieza mariposa."
+ },
+ {
+  "clave": "1p1zcdz95es",
+  "texto": "Escribe la sílaba con que empieza mono."
+ },
+ {
+  "clave": "j6l7ty44z7",
+  "texto": "Escribe la sílaba con que empieza moto."
+ },
+ {
+  "clave": "xm3rcgm6lk",
+  "texto": "Escribe la sílaba con que empieza muñeca."
+ },
+ {
+  "clave": "2b2ndl3im5o",
+  "texto": "Escribe la sílaba con que empieza papá."
+ },
+ {
+  "clave": "1w7pn8ppw3u",
+  "texto": "Escribe la sílaba con que empieza pato."
+ },
+ {
+  "clave": "rn0yljwwj0",
+  "texto": "Escribe la sílaba con que empieza pelota."
+ },
+ {
+  "clave": "1650uetu18q",
+  "texto": "Escribe la sílaba con que empieza pera."
+ },
+ {
+  "clave": "1a5qvgqeq40",
+  "texto": "Escribe la sílaba con que empieza perro."
+ },
+ {
+  "clave": "qf37btacr0",
+  "texto": "Escribe la sílaba con que empieza pollito."
+ },
+ {
+  "clave": "7u1894452f",
+  "texto": "Escribe la sílaba con que empieza puma."
+ },
+ {
+  "clave": "kwhig89nxb",
+  "texto": "Escribe la sílaba con que empieza sapo."
+ },
+ {
+  "clave": "21rgf8sk6c0",
+  "texto": "Escribe la sílaba con que empieza semilla."
+ },
+ {
+  "clave": "1xvapxmxnaq",
+  "texto": "Escribe la sílaba con que empieza silla."
+ },
+ {
+  "clave": "6rr8ytnaml",
+  "texto": "Escribe la sílaba con que empieza sirena."
+ },
+ {
+  "clave": "23ne4fwaqf0",
+  "texto": "Escribe la sílaba con que empieza sofá."
+ },
+ {
+  "clave": "4tuz2xlipw",
+  "texto": "Escribe la sílaba con que empieza sopa."
+ },
+ {
+  "clave": "mkgs1kfgb6",
+  "texto": "Escribe la sílaba con que empieza."
+ },
+ {
+  "clave": "96pacy8uz9",
+  "texto": "Escribe la vocal con que empieza abeja."
+ },
+ {
+  "clave": "10wxyycucei",
+  "texto": "Escribe la vocal con que empieza avión."
+ },
+ {
+  "clave": "1ksza9ps371",
+  "texto": "Escribe la vocal con que empieza elefante."
+ },
+ {
+  "clave": "5pps3mml51",
+  "texto": "Escribe la vocal con que empieza estrella."
+ },
+ {
+  "clave": "29lbj2sdh7w",
+  "texto": "Escribe la vocal con que empieza iglesia."
+ },
+ {
+  "clave": "1gz24o7n00t",
+  "texto": "Escribe la vocal con que empieza isla."
+ },
+ {
+  "clave": "10s9tj51ojz",
+  "texto": "Escribe la vocal con que empieza ojo."
+ },
+ {
+  "clave": "21jmp1akana",
+  "texto": "Escribe la vocal con que empieza oso."
+ },
+ {
+  "clave": "299i5yih43t",
+  "texto": "Escribe la vocal con que empieza unicornio."
+ },
+ {
+  "clave": "20rrun16b70",
+  "texto": "Escribe la vocal con que empieza uvas."
+ },
+ {
+  "clave": "2ed3hgtyja5",
+  "texto": "Escribe la vocal con que empieza árbol."
+ },
+ {
+  "clave": "paqwwczjva",
+  "texto": "Escribe la vocal con que empieza."
+ },
+ {
+  "clave": "12eb97xyym2",
+  "texto": "Escribe luna."
+ },
+ {
+  "clave": "lp0r3sv5v8",
+  "texto": "Escribe lupa."
+ },
+ {
+  "clave": "12fx29870vz",
+  "texto": "Escribe mamá."
+ },
+ {
+  "clave": "vzvqeupuae",
+  "texto": "Escribe mano."
+ },
+ {
+  "clave": "rhuvh88xuc",
+  "texto": "Escribe mapa."
+ },
+ {
+  "clave": "r4znrm27jl",
+  "texto": "Escribe mono."
+ },
+ {
+  "clave": "mz4sj6g655",
+  "texto": "Escribe papá."
+ },
+ {
+  "clave": "1ni8zd9h4ml",
+  "texto": "Escribe pato."
+ },
+ {
+  "clave": "ukt0ynth46",
+  "texto": "Escribe puma."
+ },
+ {
+  "clave": "zj9uljju3o",
+  "texto": "Escribe sapo."
+ },
+ {
+  "clave": "pecifaen8m",
+  "texto": "Escribe sopa."
+ },
+ {
+  "clave": "k0pgtfqziy",
+  "texto": "Escribe taza."
+ },
+ {
+  "clave": "1a8t6qm24di",
+  "texto": "Escribiste casa."
+ },
+ {
+  "clave": "boc6xld16g",
+  "texto": "Escribiste gato."
+ },
+ {
+  "clave": "2bunsb8z394",
+  "texto": "Escribiste luna."
+ },
+ {
+  "clave": "1ite0zpnq9w",
+  "texto": "Escribiste lupa."
+ },
+ {
+  "clave": "gdj5fbm280",
+  "texto": "Escribiste mamá."
+ },
+ {
+  "clave": "3oum8mh007",
+  "texto": "Escribiste mano."
+ },
+ {
+  "clave": "1exm9c7mcv",
+  "texto": "Escribiste mapa."
+ },
+ {
+  "clave": "1fct20sucqp",
+  "texto": "Escribiste mono."
+ },
+ {
+  "clave": "rwiu9mn18c",
+  "texto": "Escribiste papá."
+ },
+ {
+  "clave": "99uixjd6fc",
+  "texto": "Escribiste pato."
+ },
+ {
+  "clave": "2bczitl6uhq",
+  "texto": "Escribiste puma."
+ },
+ {
+  "clave": "u9z7xtxi1z",
+  "texto": "Escribiste sapo."
+ },
+ {
+  "clave": "62n9lvuqx9",
+  "texto": "Escribiste sopa."
+ },
+ {
+  "clave": "hkot9a7y98",
+  "texto": "Escribiste taza."
+ },
+ {
   "clave": "25bx34cu5e2",
   "texto": "Escucha bien:"
+ },
+ {
+  "clave": "34qw9tbzng",
+  "texto": "Escucha con atención y toca la respuesta correcta."
+ },
+ {
+  "clave": "w78yamsz8n",
+  "texto": "Escucha dos palabras."
+ },
+ {
+  "clave": "ku96xb0057",
+  "texto": "Escucha la palabra y toca el dibujo que empieza con el mismo sonido."
+ },
+ {
+  "clave": "1b0j280jnh1",
+  "texto": "Escucha la palabra y toca su dibujo."
  },
  {
   "clave": "15akbbmt8g9",
@@ -524,12 +940,24 @@
   "texto": "Globos"
  },
  {
+  "clave": "1150ybh7rqf",
+  "texto": "Globos de palabras"
+ },
+ {
   "clave": "2fdb1hz8un",
   "texto": "Goma"
  },
  {
   "clave": "pmgaoidct0",
   "texto": "Hoja nueva"
+ },
+ {
+  "clave": "28hlwevdlg6",
+  "texto": "I, de iglesia."
+ },
+ {
+  "clave": "1jdrgdyt53d",
+  "texto": "I, de isla."
  },
  {
   "clave": "ke3hxojukt",
@@ -696,8 +1124,44 @@
   "texto": "La U suena uuuu."
  },
  {
-  "clave": "238w9vth6rw",
-  "texto": "La más larga de tres."
+  "clave": "m5zu8xdgdk",
+  "texto": "Las dos empiezan con aaaa."
+ },
+ {
+  "clave": "89t3vtma0n",
+  "texto": "Las dos empiezan con eeee."
+ },
+ {
+  "clave": "gs8s4zppwu",
+  "texto": "Las dos empiezan con iiii."
+ },
+ {
+  "clave": "y4zb6y8u09",
+  "texto": "Las dos empiezan con llll."
+ },
+ {
+  "clave": "1sdfzvkow0p",
+  "texto": "Las dos empiezan con mmmm."
+ },
+ {
+  "clave": "r3tvt19ybq",
+  "texto": "Las dos empiezan con oooo."
+ },
+ {
+  "clave": "1x9mkm2nbeq",
+  "texto": "Las dos empiezan con p."
+ },
+ {
+  "clave": "1hadds61zhi",
+  "texto": "Las dos empiezan con ssss."
+ },
+ {
+  "clave": "tgkhm3bib7",
+  "texto": "Las dos empiezan con t."
+ },
+ {
+  "clave": "m5096h8vtz",
+  "texto": "Las dos empiezan con uuuu."
  },
  {
   "clave": "14blg39ai46",
@@ -832,6 +1296,22 @@
   "texto": "Mientras esperas a tu profe, ¡revienta los globos!"
  },
  {
+  "clave": "27u31k4avlw",
+  "texto": "Mira el dibujo y escribe con las letras grandes de abajo."
+ },
+ {
+  "clave": "1diuwemoih4",
+  "texto": "Mira el dibujo y escribe la palabra completa, letra por letra."
+ },
+ {
+  "clave": "16l0n460l0z",
+  "texto": "Mira el dibujo y escribe la sílaba con que empieza."
+ },
+ {
+  "clave": "1dtmlr1adxh",
+  "texto": "Mira el dibujo y escribe la vocal con que empieza."
+ },
+ {
   "clave": "13cu8dlkpr0",
   "texto": "Mira tus estrellas."
  },
@@ -846,6 +1326,10 @@
  {
   "clave": "1h4ou4tytkl",
   "texto": "Negro"
+ },
+ {
+  "clave": "1cgxbj9pjk0",
+  "texto": "No"
  },
  {
   "clave": "1lxhtfq217",
@@ -866,6 +1350,14 @@
  {
   "clave": "2gdl6brd9oi",
   "texto": "No, seguir dibujando"
+ },
+ {
+  "clave": "213qvzah3zp",
+  "texto": "O, de ojo."
+ },
+ {
+  "clave": "17q155tz36i",
+  "texto": "O, de oso."
  },
  {
   "clave": "h8udbrz2rv",
@@ -956,16 +1448,72 @@
   "texto": "Repasar letras"
  },
  {
-  "clave": "1xlt8tg23n1",
-  "texto": "Rima entre cuatro."
+  "clave": "2fxu4m39dgf",
+  "texto": "Revienta los globos con las sílabas en orden para formar la palabra."
  },
  {
-  "clave": "uvhjq8sy5s",
-  "texto": "Rima entre dos."
+  "clave": "yu46qtg8dh",
+  "texto": "Revienta los globos en orden para formar casa."
  },
  {
-  "clave": "1k2p436xnq8",
-  "texto": "Rima entre tres."
+  "clave": "22v0x8n59vv",
+  "texto": "Revienta los globos en orden para formar gato."
+ },
+ {
+  "clave": "1tqj1k98wfn",
+  "texto": "Revienta los globos en orden para formar luna."
+ },
+ {
+  "clave": "2ftb9bj0byy",
+  "texto": "Revienta los globos en orden para formar lupa."
+ },
+ {
+  "clave": "b1334cq60s",
+  "texto": "Revienta los globos en orden para formar mamá."
+ },
+ {
+  "clave": "h1nqtg5m38",
+  "texto": "Revienta los globos en orden para formar mano."
+ },
+ {
+  "clave": "1rcfltjf0wb",
+  "texto": "Revienta los globos en orden para formar mapa."
+ },
+ {
+  "clave": "2938sbzfnsh",
+  "texto": "Revienta los globos en orden para formar mono."
+ },
+ {
+  "clave": "131s8fa119z",
+  "texto": "Revienta los globos en orden para formar papá."
+ },
+ {
+  "clave": "r7c17nsrsf",
+  "texto": "Revienta los globos en orden para formar pato."
+ },
+ {
+  "clave": "1s61opcq00d",
+  "texto": "Revienta los globos en orden para formar puma."
+ },
+ {
+  "clave": "2b2wz1hbvjb",
+  "texto": "Revienta los globos en orden para formar sapo."
+ },
+ {
+  "clave": "4a31xxexxq",
+  "texto": "Revienta los globos en orden para formar sopa."
+ },
+ {
+  "clave": "2cefhgcws6z",
+  "texto": "Revienta los globos en orden para formar taza."
+ },
+ {
+  "clave": "1zwe8dlp4ms",
+  "texto": "Revienta los globos mientras tu profe te asigna una sala."
+ },
+ {
+  "clave": "ua5qoxjg85",
+  "texto": "Revienta los globos y forma la palabra."
  },
  {
   "clave": "1y5zlzrsi2f",
@@ -1048,6 +1596,10 @@
   "texto": "Sellos"
  },
  {
+  "clave": "19ets7xg8kq",
+  "texto": "Si empiezan igual toca el pulgar arriba; si no, el pulgar abajo."
+ },
+ {
   "clave": "26aw61ilbsd",
   "texto": "Sigue la letra con tu dedo."
  },
@@ -1074,6 +1626,10 @@
  {
   "clave": "8vfm7bv9y5",
   "texto": "Superhéroe, 80 monedas"
+ },
+ {
+  "clave": "gln4kev688",
+  "texto": "Sí"
  },
  {
   "clave": "28gek3242tf",
@@ -1464,6 +2020,10 @@
   "texto": "Toca el dibujo que empieza con eeee."
  },
  {
+  "clave": "1chi6ipw0m6",
+  "texto": "Toca el dibujo que empieza con el mismo sonido."
+ },
+ {
   "clave": "2byaimnp0q8",
   "texto": "Toca el dibujo que empieza con iiii."
  },
@@ -1494,6 +2054,10 @@
  {
   "clave": "16ybmala40q",
   "texto": "Toca el dibujo que empieza con uuuu."
+ },
+ {
+  "clave": "sq0fr9yzx4",
+  "texto": "Toca el dibujo que escuchaste."
  },
  {
   "clave": "3937cx096v",
@@ -1558,6 +2122,10 @@
  {
   "clave": "11arlt3lofv",
   "texto": "Toca la imagen que empieza con so."
+ },
+ {
+  "clave": "1ifl5bxvbmh",
+  "texto": "Toca la letra para escuchar cómo suena."
  },
  {
   "clave": "1r0f9myzvc",
@@ -1684,8 +2252,16 @@
   "texto": "Toca la sílaba su."
  },
  {
+  "clave": "yt6rebr6oi",
+  "texto": "Toca las palmas para contar las sílabas."
+ },
+ {
   "clave": "207qqvbh3hv",
   "texto": "Toca las palmas para contar."
+ },
+ {
+  "clave": "szwprn1oof",
+  "texto": "Toca las sílabas en orden para armar la palabra."
  },
  {
   "clave": "2b9dzgjerg4",
@@ -1706,6 +2282,14 @@
  {
   "clave": "smcradj8iw",
   "texto": "Triste"
+ },
+ {
+  "clave": "b6neo2w372",
+  "texto": "U, de unicornio."
+ },
+ {
+  "clave": "14eqo4vmyqt",
+  "texto": "U, de uvas."
  },
  {
   "clave": "opuzcvpxlc",
@@ -1730,6 +2314,42 @@
  {
   "clave": "2590vnr8is2",
   "texto": "aaaa"
+ },
+ {
+  "clave": "23dm5k12ntr",
+  "texto": "aaaa y eeee suenan distinto."
+ },
+ {
+  "clave": "ohh0pyw9sc",
+  "texto": "aaaa y iiii suenan distinto."
+ },
+ {
+  "clave": "1uzabryueef",
+  "texto": "aaaa y llll suenan distinto."
+ },
+ {
+  "clave": "ixl68u5amg",
+  "texto": "aaaa y mmmm suenan distinto."
+ },
+ {
+  "clave": "1i6i9q1885z",
+  "texto": "aaaa y oooo suenan distinto."
+ },
+ {
+  "clave": "25adkwrfp2x",
+  "texto": "aaaa y p suenan distinto."
+ },
+ {
+  "clave": "tcem2gnoya",
+  "texto": "aaaa y ssss suenan distinto."
+ },
+ {
+  "clave": "24p3003dxw2",
+  "texto": "aaaa y t suenan distinto."
+ },
+ {
+  "clave": "1xx9sx5qibi",
+  "texto": "aaaa y uuuu suenan distinto."
  },
  {
   "clave": "ggpytbpoj3",
@@ -1764,8 +2384,16 @@
   "texto": "abeja tiene 3:"
  },
  {
+  "clave": "1rrehlcs7uv",
+  "texto": "abeja y avión empiezan con aaaa."
+ },
+ {
   "clave": "242jxdkd85k",
   "texto": "abeja y coneja terminan en ja."
+ },
+ {
+  "clave": "oqho02lu5p",
+  "texto": "abeja y árbol empiezan con aaaa."
  },
  {
   "clave": "16cmi8b7qny",
@@ -1784,6 +2412,14 @@
   "texto": "avión tiene 2:"
  },
  {
+  "clave": "1lv3ty7aj0t",
+  "texto": "avión y abeja empiezan con aaaa."
+ },
+ {
+  "clave": "kou0fes0up",
+  "texto": "avión y árbol empiezan con aaaa."
+ },
+ {
   "clave": "24i6nsta7nr",
   "texto": "avión."
  },
@@ -1794,6 +2430,10 @@
  {
   "clave": "c7pdqkjnga",
   "texto": "a…"
+ },
+ {
+  "clave": "2dic9ba9q67",
+  "texto": "b"
  },
  {
   "clave": "khrgrdsaa7",
@@ -1826,6 +2466,10 @@
  {
   "clave": "218eph66b3d",
   "texto": "bol:"
+ },
+ {
+  "clave": "259fwfz8om",
+  "texto": "c"
  },
  {
   "clave": "1hynanhcode",
@@ -1972,6 +2616,10 @@
   "texto": "cuatro sílabas."
  },
  {
+  "clave": "1bs9vsy6jju",
+  "texto": "d"
+ },
+ {
   "clave": "749yvcqh7o",
   "texto": "da"
  },
@@ -2032,6 +2680,42 @@
   "texto": "eeee"
  },
  {
+  "clave": "7m114iun5p",
+  "texto": "eeee y aaaa suenan distinto."
+ },
+ {
+  "clave": "1aakv1ouk2v",
+  "texto": "eeee y iiii suenan distinto."
+ },
+ {
+  "clave": "2b27zpgriz9",
+  "texto": "eeee y llll suenan distinto."
+ },
+ {
+  "clave": "clbagzwutl",
+  "texto": "eeee y mmmm suenan distinto."
+ },
+ {
+  "clave": "loh2tkxdz9",
+  "texto": "eeee y oooo suenan distinto."
+ },
+ {
+  "clave": "f63h3cod8d",
+  "texto": "eeee y p suenan distinto."
+ },
+ {
+  "clave": "umjof4t068",
+  "texto": "eeee y ssss suenan distinto."
+ },
+ {
+  "clave": "w8mxj96x1q",
+  "texto": "eeee y t suenan distinto."
+ },
+ {
+  "clave": "129i2d7ta99",
+  "texto": "eeee y uuuu suenan distinto."
+ },
+ {
   "clave": "doog66460f",
   "texto": "eeee, de elefante."
  },
@@ -2064,6 +2748,10 @@
   "texto": "elefante y chocolate terminan en te."
  },
  {
+  "clave": "1pmaym1as7o",
+  "texto": "elefante y estrella empiezan con eeee."
+ },
+ {
   "clave": "1amkztdzlej",
   "texto": "elefante y tomate terminan en te."
  },
@@ -2092,6 +2780,10 @@
   "texto": "estrella tiene 3:"
  },
  {
+  "clave": "xptpc9olmj",
+  "texto": "estrella y elefante empiezan con eeee."
+ },
+ {
   "clave": "d9sk3qqwwe",
   "texto": "estrella y semilla terminan en lla."
  },
@@ -2114,6 +2806,10 @@
  {
   "clave": "1w3am1n2b08",
   "texto": "e…"
+ },
+ {
+  "clave": "ki96j9x895",
+  "texto": "f"
  },
  {
   "clave": "hu1lf4yeu3",
@@ -2170,6 +2866,10 @@
  {
   "clave": "27xkbfy9pf2",
   "texto": "fá:"
+ },
+ {
+  "clave": "2gfet4owiyz",
+  "texto": "g"
  },
  {
   "clave": "1x8h1y4hqmm",
@@ -2272,6 +2972,10 @@
   "texto": "gle…"
  },
  {
+  "clave": "13bkqrc25ti",
+  "texto": "h"
+ },
+ {
   "clave": "1agiqc9zszi",
   "texto": "he"
  },
@@ -2324,6 +3028,10 @@
   "texto": "iglesia tiene 3:"
  },
  {
+  "clave": "1175zoirtl6",
+  "texto": "iglesia y isla empiezan con iiii."
+ },
+ {
   "clave": "lp70v20qdx",
   "texto": "iglesia."
  },
@@ -2334,6 +3042,42 @@
  {
   "clave": "1oyk35hbka3",
   "texto": "iiii"
+ },
+ {
+  "clave": "xrft2ahrur",
+  "texto": "iiii y aaaa suenan distinto."
+ },
+ {
+  "clave": "2nzu3sa5ji",
+  "texto": "iiii y eeee suenan distinto."
+ },
+ {
+  "clave": "sxlfnwikx5",
+  "texto": "iiii y llll suenan distinto."
+ },
+ {
+  "clave": "261yr1rubtm",
+  "texto": "iiii y mmmm suenan distinto."
+ },
+ {
+  "clave": "1lbczxwipfq",
+  "texto": "iiii y oooo suenan distinto."
+ },
+ {
+  "clave": "11f363som8c",
+  "texto": "iiii y p suenan distinto."
+ },
+ {
+  "clave": "ce3cs71xox",
+  "texto": "iiii y ssss suenan distinto."
+ },
+ {
+  "clave": "2cuhcso2h00",
+  "texto": "iiii y t suenan distinto."
+ },
+ {
+  "clave": "ooo9cdsox",
+  "texto": "iiii y uuuu suenan distinto."
  },
  {
   "clave": "qyiki66pk6",
@@ -2364,6 +3108,10 @@
   "texto": "isla tiene 2:"
  },
  {
+  "clave": "2amdx1uieiy",
+  "texto": "isla y iglesia empiezan con iiii."
+ },
+ {
   "clave": "28b5kg2p5tl",
   "texto": "isla."
  },
@@ -2378,6 +3126,10 @@
  {
   "clave": "rvyz2dg5nd",
   "texto": "i…"
+ },
+ {
+  "clave": "19egyz7ekzo",
+  "texto": "j"
  },
  {
   "clave": "hbondudmkl",
@@ -2416,6 +3168,10 @@
   "texto": "la"
  },
  {
+  "clave": "18jand4syml",
+  "texto": "la, de lápiz."
+ },
+ {
   "clave": "d557vdmgs3",
   "texto": "la."
  },
@@ -2432,6 +3188,14 @@
   "texto": "le"
  },
  {
+  "clave": "1z9m97bxp9f",
+  "texto": "le, de leche."
+ },
+ {
+  "clave": "288r88qy2az",
+  "texto": "le, de león."
+ },
+ {
   "clave": "gohglxfau4",
   "texto": "le."
  },
@@ -2446,6 +3210,30 @@
  {
   "clave": "1tjcxndqi7j",
   "texto": "leche tiene 2:"
+ },
+ {
+  "clave": "f6e4j9tquv",
+  "texto": "leche y león empiezan con llll."
+ },
+ {
+  "clave": "dtsd9rk5qi",
+  "texto": "leche y limón empiezan con llll."
+ },
+ {
+  "clave": "2a0tfko2sh2",
+  "texto": "leche y lobo empiezan con llll."
+ },
+ {
+  "clave": "tugcewh4q3",
+  "texto": "leche y luna empiezan con llll."
+ },
+ {
+  "clave": "1il67ccrzzt",
+  "texto": "leche y lupa empiezan con llll."
+ },
+ {
+  "clave": "1z2gd33094g",
+  "texto": "leche y lápiz empiezan con llll."
  },
  {
   "clave": "ocu19t3fdb",
@@ -2468,6 +3256,30 @@
   "texto": "león tiene 2:"
  },
  {
+  "clave": "1u2o4kn1769",
+  "texto": "león y leche empiezan con llll."
+ },
+ {
+  "clave": "13knxuqssk7",
+  "texto": "león y limón empiezan con llll."
+ },
+ {
+  "clave": "dgzzn6qbgp",
+  "texto": "león y lobo empiezan con llll."
+ },
+ {
+  "clave": "28x5kczu3uq",
+  "texto": "león y luna empiezan con llll."
+ },
+ {
+  "clave": "2184thx8f8r",
+  "texto": "león y lupa empiezan con llll."
+ },
+ {
+  "clave": "wtf51rxuwr",
+  "texto": "león y lápiz empiezan con llll."
+ },
+ {
   "clave": "1czksol3sra",
   "texto": "león."
  },
@@ -2484,6 +3296,10 @@
   "texto": "li"
  },
  {
+  "clave": "1lvmtpaa8s0",
+  "texto": "li, de limón."
+ },
+ {
   "clave": "16o1vggko3g",
   "texto": "li."
  },
@@ -2494,6 +3310,30 @@
  {
   "clave": "3dfp4j458x",
   "texto": "limón tiene 2:"
+ },
+ {
+  "clave": "21cqljmemcg",
+  "texto": "limón y leche empiezan con llll."
+ },
+ {
+  "clave": "19pag7b8vxa",
+  "texto": "limón y león empiezan con llll."
+ },
+ {
+  "clave": "fcswq977m1",
+  "texto": "limón y lobo empiezan con llll."
+ },
+ {
+  "clave": "149uh3yt323",
+  "texto": "limón y luna empiezan con llll."
+ },
+ {
+  "clave": "zvjdkmxegb",
+  "texto": "limón y lupa empiezan con llll."
+ },
+ {
+  "clave": "1p22zfiqiwe",
+  "texto": "limón y lápiz empiezan con llll."
  },
  {
   "clave": "zur22k44br",
@@ -2548,6 +3388,42 @@
   "texto": "llll"
  },
  {
+  "clave": "ow2xa28j4h",
+  "texto": "llll y aaaa suenan distinto."
+ },
+ {
+  "clave": "28al746njff",
+  "texto": "llll y eeee suenan distinto."
+ },
+ {
+  "clave": "1q5osku2kkh",
+  "texto": "llll y iiii suenan distinto."
+ },
+ {
+  "clave": "27io7q3sb93",
+  "texto": "llll y mmmm suenan distinto."
+ },
+ {
+  "clave": "1iq38utx6z8",
+  "texto": "llll y oooo suenan distinto."
+ },
+ {
+  "clave": "26useqvdrw8",
+  "texto": "llll y p suenan distinto."
+ },
+ {
+  "clave": "shhopssvk7",
+  "texto": "llll y ssss suenan distinto."
+ },
+ {
+  "clave": "13ilpqcyk9b",
+  "texto": "llll y t suenan distinto."
+ },
+ {
+  "clave": "drgno3b9i7",
+  "texto": "llll y uuuu suenan distinto."
+ },
+ {
   "clave": "p0tcm3qsov",
   "texto": "llll, de león."
  },
@@ -2592,6 +3468,10 @@
   "texto": "lo"
  },
  {
+  "clave": "1bw2u1junot",
+  "texto": "lo, de lobo."
+ },
+ {
   "clave": "1fk4kcp4id8",
   "texto": "lo."
  },
@@ -2602,6 +3482,30 @@
  {
   "clave": "lcs958olpe",
   "texto": "lobo tiene 2:"
+ },
+ {
+  "clave": "1xlpl75betw",
+  "texto": "lobo y leche empiezan con llll."
+ },
+ {
+  "clave": "13nrgkc8cf1",
+  "texto": "lobo y león empiezan con llll."
+ },
+ {
+  "clave": "1edom9d7mpm",
+  "texto": "lobo y limón empiezan con llll."
+ },
+ {
+  "clave": "21z9r130nje",
+  "texto": "lobo y luna empiezan con llll."
+ },
+ {
+  "clave": "1ovzjvpcc9e",
+  "texto": "lobo y lupa empiezan con llll."
+ },
+ {
+  "clave": "11f6wegyu8r",
+  "texto": "lobo y lápiz empiezan con llll."
  },
  {
   "clave": "v30yqxty7l",
@@ -2618,6 +3522,14 @@
  {
   "clave": "he7v23wmf",
   "texto": "lu"
+ },
+ {
+  "clave": "1frrbks7rk4",
+  "texto": "lu, de luna."
+ },
+ {
+  "clave": "1yufiugi2ta",
+  "texto": "lu, de lupa."
  },
  {
   "clave": "1e69exd0u0b",
@@ -2638,6 +3550,30 @@
  {
   "clave": "bki1owznef",
   "texto": "luna tiene 2:"
+ },
+ {
+  "clave": "10sv2ke8a1q",
+  "texto": "luna y leche empiezan con llll."
+ },
+ {
+  "clave": "14uxyit2il6",
+  "texto": "luna y león empiezan con llll."
+ },
+ {
+  "clave": "zwtg515spq",
+  "texto": "luna y limón empiezan con llll."
+ },
+ {
+  "clave": "244k5hy39on",
+  "texto": "luna y lobo empiezan con llll."
+ },
+ {
+  "clave": "8j8tejomne",
+  "texto": "luna y lupa empiezan con llll."
+ },
+ {
+  "clave": "1m07oub32s1",
+  "texto": "luna y lápiz empiezan con llll."
  },
  {
   "clave": "2agdp6wbub4",
@@ -2670,6 +3606,30 @@
  {
   "clave": "eub137jjta",
   "texto": "lupa tiene 2:"
+ },
+ {
+  "clave": "sidibumq6",
+  "texto": "lupa y leche empiezan con llll."
+ },
+ {
+  "clave": "1q382lnwwl7",
+  "texto": "lupa y león empiezan con llll."
+ },
+ {
+  "clave": "2gxsesvnqi",
+  "texto": "lupa y limón empiezan con llll."
+ },
+ {
+  "clave": "1s07qd51vdp",
+  "texto": "lupa y lobo empiezan con llll."
+ },
+ {
+  "clave": "pcguo2v18y",
+  "texto": "lupa y luna empiezan con llll."
+ },
+ {
+  "clave": "wl6f3r0e5m",
+  "texto": "lupa y lápiz empiezan con llll."
  },
  {
   "clave": "1cpjgu4hw2y",
@@ -2708,6 +3668,30 @@
   "texto": "lápiz tiene 2:"
  },
  {
+  "clave": "1qs2pd50pb9",
+  "texto": "lápiz y leche empiezan con llll."
+ },
+ {
+  "clave": "1f58usmwf3j",
+  "texto": "lápiz y león empiezan con llll."
+ },
+ {
+  "clave": "1bfygmh3knq",
+  "texto": "lápiz y limón empiezan con llll."
+ },
+ {
+  "clave": "gc8oikxpfo",
+  "texto": "lápiz y lobo empiezan con llll."
+ },
+ {
+  "clave": "1hhuilocf3t",
+  "texto": "lápiz y luna empiezan con llll."
+ },
+ {
+  "clave": "8jirr5mn04",
+  "texto": "lápiz y lupa empiezan con llll."
+ },
+ {
   "clave": "1xao2on5wf7",
   "texto": "lápiz."
  },
@@ -2722,6 +3706,26 @@
  {
   "clave": "20fozh8hxvv",
   "texto": "ma"
+ },
+ {
+  "clave": "yf4zjbf0fk",
+  "texto": "ma, de maleta."
+ },
+ {
+  "clave": "1lmhqif1hrd",
+  "texto": "ma, de mamá."
+ },
+ {
+  "clave": "2516dxs4usi",
+  "texto": "ma, de mano."
+ },
+ {
+  "clave": "pig9jeotw5",
+  "texto": "ma, de mapa."
+ },
+ {
+  "clave": "251azm3d7yv",
+  "texto": "ma, de mariposa."
  },
  {
   "clave": "1b0zpxirvqv",
@@ -2746,6 +3750,38 @@
  {
   "clave": "1brucyy2dzs",
   "texto": "maleta y galleta terminan en ta."
+ },
+ {
+  "clave": "ri1xmvm8rr",
+  "texto": "maleta y mamá empiezan con mmmm."
+ },
+ {
+  "clave": "bq1uye1ibx",
+  "texto": "maleta y mano empiezan con mmmm."
+ },
+ {
+  "clave": "1mw3pm4gnla",
+  "texto": "maleta y manzana empiezan con mmmm."
+ },
+ {
+  "clave": "8aqdrjbvpp",
+  "texto": "maleta y mapa empiezan con mmmm."
+ },
+ {
+  "clave": "1eomb2qc4i1",
+  "texto": "maleta y mariposa empiezan con mmmm."
+ },
+ {
+  "clave": "2da0mvq5qfe",
+  "texto": "maleta y mono empiezan con mmmm."
+ },
+ {
+  "clave": "237462kofrp",
+  "texto": "maleta y moto empiezan con mmmm."
+ },
+ {
+  "clave": "bo9d7d4iv3",
+  "texto": "maleta y muñeca empiezan con mmmm."
  },
  {
   "clave": "37k69m6jzt",
@@ -2774,6 +3810,38 @@
  {
   "clave": "rp4rgt99w0",
   "texto": "mamá tiene 2:"
+ },
+ {
+  "clave": "s6dm2jjb3o",
+  "texto": "mamá y maleta empiezan con mmmm."
+ },
+ {
+  "clave": "s00ef55d9",
+  "texto": "mamá y mano empiezan con mmmm."
+ },
+ {
+  "clave": "22wrnrjadzf",
+  "texto": "mamá y manzana empiezan con mmmm."
+ },
+ {
+  "clave": "v2t0rbd3bs",
+  "texto": "mamá y mapa empiezan con mmmm."
+ },
+ {
+  "clave": "2cru96rt172",
+  "texto": "mamá y mariposa empiezan con mmmm."
+ },
+ {
+  "clave": "18e6jnsiivj",
+  "texto": "mamá y mono empiezan con mmmm."
+ },
+ {
+  "clave": "1j9isz0k7p",
+  "texto": "mamá y moto empiezan con mmmm."
+ },
+ {
+  "clave": "fkvkc7dj5m",
+  "texto": "mamá y muñeca empiezan con mmmm."
  },
  {
   "clave": "1tnsd6n99v6",
@@ -2808,8 +3876,40 @@
   "texto": "mano tiene 2:"
  },
  {
+  "clave": "c3rlb3tnj5",
+  "texto": "mano y maleta empiezan con mmmm."
+ },
+ {
+  "clave": "1c0plq0g1w8",
+  "texto": "mano y mamá empiezan con mmmm."
+ },
+ {
+  "clave": "10kvj5zpgcn",
+  "texto": "mano y manzana empiezan con mmmm."
+ },
+ {
+  "clave": "2dl2da0xy12",
+  "texto": "mano y mapa empiezan con mmmm."
+ },
+ {
+  "clave": "83l15l2ew9",
+  "texto": "mano y mariposa empiezan con mmmm."
+ },
+ {
+  "clave": "srevbduscs",
+  "texto": "mano y mono empiezan con mmmm."
+ },
+ {
   "clave": "1l7k5do7lxm",
   "texto": "mano y mono terminan en no."
+ },
+ {
+  "clave": "frwmncagpi",
+  "texto": "mano y moto empiezan con mmmm."
+ },
+ {
+  "clave": "r8qm3zi14l",
+  "texto": "mano y muñeca empiezan con mmmm."
  },
  {
   "clave": "275lvwf0onk",
@@ -2834,6 +3934,38 @@
  {
   "clave": "i5tfw18jrm",
   "texto": "manzana y luna terminan en na."
+ },
+ {
+  "clave": "1mv3l64uvu6",
+  "texto": "manzana y maleta empiezan con mmmm."
+ },
+ {
+  "clave": "2cb3fo10s5w",
+  "texto": "manzana y mamá empiezan con mmmm."
+ },
+ {
+  "clave": "lhn3lei1n3",
+  "texto": "manzana y mano empiezan con mmmm."
+ },
+ {
+  "clave": "1y9devzexsc",
+  "texto": "manzana y mapa empiezan con mmmm."
+ },
+ {
+  "clave": "9e98pgxn4i",
+  "texto": "manzana y mariposa empiezan con mmmm."
+ },
+ {
+  "clave": "1hxnzlgr4r4",
+  "texto": "manzana y mono empiezan con mmmm."
+ },
+ {
+  "clave": "29gmoz0wdjb",
+  "texto": "manzana y moto empiezan con mmmm."
+ },
+ {
+  "clave": "1bcf9b5l5ub",
+  "texto": "manzana y muñeca empiezan con mmmm."
  },
  {
   "clave": "1je51ugipt9",
@@ -2872,6 +4004,38 @@
   "texto": "mapa y lupa terminan en pa."
  },
  {
+  "clave": "naih73s2wl",
+  "texto": "mapa y maleta empiezan con mmmm."
+ },
+ {
+  "clave": "24jz248pvvy",
+  "texto": "mapa y mamá empiezan con mmmm."
+ },
+ {
+  "clave": "tsedhq9ypv",
+  "texto": "mapa y mano empiezan con mmmm."
+ },
+ {
+  "clave": "815k8ardjz",
+  "texto": "mapa y manzana empiezan con mmmm."
+ },
+ {
+  "clave": "10y4wxz9ss7",
+  "texto": "mapa y mariposa empiezan con mmmm."
+ },
+ {
+  "clave": "2b243dgmem4",
+  "texto": "mapa y mono empiezan con mmmm."
+ },
+ {
+  "clave": "21cld4urnjz",
+  "texto": "mapa y moto empiezan con mmmm."
+ },
+ {
+  "clave": "1w3pv3njh2k",
+  "texto": "mapa y muñeca empiezan con mmmm."
+ },
+ {
   "clave": "1wmf0z20rmt",
   "texto": "mapa y papá terminan en pa."
  },
@@ -2902,6 +4066,38 @@
  {
   "clave": "16orgf9u38j",
   "texto": "mariposa y casa terminan en sa."
+ },
+ {
+  "clave": "1ne8dfctga3",
+  "texto": "mariposa y maleta empiezan con mmmm."
+ },
+ {
+  "clave": "ds7p3817zu",
+  "texto": "mariposa y mamá empiezan con mmmm."
+ },
+ {
+  "clave": "11rtas8uv2r",
+  "texto": "mariposa y mano empiezan con mmmm."
+ },
+ {
+  "clave": "gn06g2ly4u",
+  "texto": "mariposa y manzana empiezan con mmmm."
+ },
+ {
+  "clave": "2d3wob7iwlw",
+  "texto": "mariposa y mapa empiezan con mmmm."
+ },
+ {
+  "clave": "1etqn3ni78h",
+  "texto": "mariposa y mono empiezan con mmmm."
+ },
+ {
+  "clave": "2b4a7c0h1wp",
+  "texto": "mariposa y moto empiezan con mmmm."
+ },
+ {
+  "clave": "q68cerzrbe",
+  "texto": "mariposa y muñeca empiezan con mmmm."
  },
  {
   "clave": "22yt1cgyze6",
@@ -2938,6 +4134,42 @@
  {
   "clave": "9gs090kgr9",
   "texto": "mmmm"
+ },
+ {
+  "clave": "28etah4tles",
+  "texto": "mmmm y aaaa suenan distinto."
+ },
+ {
+  "clave": "1ysfa1c8v53",
+  "texto": "mmmm y eeee suenan distinto."
+ },
+ {
+  "clave": "ftn3s60zk6",
+  "texto": "mmmm y iiii suenan distinto."
+ },
+ {
+  "clave": "1u9nzs9j5bj",
+  "texto": "mmmm y llll suenan distinto."
+ },
+ {
+  "clave": "til59r9t47",
+  "texto": "mmmm y oooo suenan distinto."
+ },
+ {
+  "clave": "17a3ibvn477",
+  "texto": "mmmm y p suenan distinto."
+ },
+ {
+  "clave": "1fkkwd4xbo7",
+  "texto": "mmmm y ssss suenan distinto."
+ },
+ {
+  "clave": "2auachzgu67",
+  "texto": "mmmm y t suenan distinto."
+ },
+ {
+  "clave": "1p7siddswlf",
+  "texto": "mmmm y uuuu suenan distinto."
  },
  {
   "clave": "aoj180h5mq",
@@ -2984,6 +4216,14 @@
   "texto": "mo"
  },
  {
+  "clave": "p1rp4tx67x",
+  "texto": "mo, de mono."
+ },
+ {
+  "clave": "1u9avtg47us",
+  "texto": "mo, de moto."
+ },
+ {
   "clave": "20i0tod2pny",
   "texto": "mo."
  },
@@ -3004,8 +4244,40 @@
   "texto": "mono tiene 2:"
  },
  {
+  "clave": "1ydm3zyb9av",
+  "texto": "mono y maleta empiezan con mmmm."
+ },
+ {
+  "clave": "d0oquq5t52",
+  "texto": "mono y mamá empiezan con mmmm."
+ },
+ {
+  "clave": "i04b31lqgg",
+  "texto": "mono y mano empiezan con mmmm."
+ },
+ {
   "clave": "14o7eafckws",
   "texto": "mono y mano terminan en no."
+ },
+ {
+  "clave": "7gzbus3upb",
+  "texto": "mono y manzana empiezan con mmmm."
+ },
+ {
+  "clave": "1217uyfajjs",
+  "texto": "mono y mapa empiezan con mmmm."
+ },
+ {
+  "clave": "1byrwl753st",
+  "texto": "mono y mariposa empiezan con mmmm."
+ },
+ {
+  "clave": "t0oz2ibhht",
+  "texto": "mono y moto empiezan con mmmm."
+ },
+ {
+  "clave": "2g1g06bp12e",
+  "texto": "mono y muñeca empiezan con mmmm."
  },
  {
   "clave": "1nflz0w519j",
@@ -3030,6 +4302,38 @@
  {
   "clave": "15b1fdu1v6u",
   "texto": "moto y gato terminan en to."
+ },
+ {
+  "clave": "btkspzyfvm",
+  "texto": "moto y maleta empiezan con mmmm."
+ },
+ {
+  "clave": "a54dxc58mm",
+  "texto": "moto y mamá empiezan con mmmm."
+ },
+ {
+  "clave": "29802cxfmr8",
+  "texto": "moto y mano empiezan con mmmm."
+ },
+ {
+  "clave": "nq7zxrz54c",
+  "texto": "moto y manzana empiezan con mmmm."
+ },
+ {
+  "clave": "u93zh4scul",
+  "texto": "moto y mapa empiezan con mmmm."
+ },
+ {
+  "clave": "23rgkcnbvsb",
+  "texto": "moto y mariposa empiezan con mmmm."
+ },
+ {
+  "clave": "10rx058ajqu",
+  "texto": "moto y mono empiezan con mmmm."
+ },
+ {
+  "clave": "vedvf4hjn9",
+  "texto": "moto y muñeca empiezan con mmmm."
  },
  {
   "clave": "1h2ejnwiksc",
@@ -3060,6 +4364,10 @@
   "texto": "mu"
  },
  {
+  "clave": "1yv62b57qmj",
+  "texto": "mu, de muñeca."
+ },
+ {
   "clave": "1po5ddtslh9",
   "texto": "mu."
  },
@@ -3070,6 +4378,38 @@
  {
   "clave": "etfavu3pcq",
   "texto": "muñeca tiene 3:"
+ },
+ {
+  "clave": "m2j4ai69n2",
+  "texto": "muñeca y maleta empiezan con mmmm."
+ },
+ {
+  "clave": "8d7cnjzfs4",
+  "texto": "muñeca y mamá empiezan con mmmm."
+ },
+ {
+  "clave": "1i3h2w4zz8a",
+  "texto": "muñeca y mano empiezan con mmmm."
+ },
+ {
+  "clave": "z471gaqsk2",
+  "texto": "muñeca y manzana empiezan con mmmm."
+ },
+ {
+  "clave": "12aqrs50i47",
+  "texto": "muñeca y mapa empiezan con mmmm."
+ },
+ {
+  "clave": "1vc2e5ev3fu",
+  "texto": "muñeca y mariposa empiezan con mmmm."
+ },
+ {
+  "clave": "1ymtqu9h2tv",
+  "texto": "muñeca y mono empiezan con mmmm."
+ },
+ {
+  "clave": "2e3iwhsr18i",
+  "texto": "muñeca y moto empiezan con mmmm."
  },
  {
   "clave": "fxa30oqjyu",
@@ -3106,6 +4446,10 @@
  {
   "clave": "s9c0aabnv9",
   "texto": "món:"
+ },
+ {
+  "clave": "257sgfskeci",
+  "texto": "n"
  },
  {
   "clave": "j7a1sgfn",
@@ -3332,6 +4676,10 @@
   "texto": "ojo tiene 2:"
  },
  {
+  "clave": "263vhec36qx",
+  "texto": "ojo y oso empiezan con oooo."
+ },
+ {
   "clave": "24vyompri9f",
   "texto": "ojo."
  },
@@ -3342,6 +4690,42 @@
  {
   "clave": "xqbis9c7gz",
   "texto": "oooo"
+ },
+ {
+  "clave": "18sgxegskki",
+  "texto": "oooo y aaaa suenan distinto."
+ },
+ {
+  "clave": "1kor66zooyg",
+  "texto": "oooo y eeee suenan distinto."
+ },
+ {
+  "clave": "l8k4lc8j2o",
+  "texto": "oooo y iiii suenan distinto."
+ },
+ {
+  "clave": "tqcz7tek4e",
+  "texto": "oooo y llll suenan distinto."
+ },
+ {
+  "clave": "1cee9pteqc8",
+  "texto": "oooo y mmmm suenan distinto."
+ },
+ {
+  "clave": "1ik2c7xpq0d",
+  "texto": "oooo y p suenan distinto."
+ },
+ {
+  "clave": "2fjxshxg6ib",
+  "texto": "oooo y ssss suenan distinto."
+ },
+ {
+  "clave": "e7k9e5mnvs",
+  "texto": "oooo y t suenan distinto."
+ },
+ {
+  "clave": "18h9kolbblm",
+  "texto": "oooo y uuuu suenan distinto."
  },
  {
   "clave": "gbqax4urjc",
@@ -3372,6 +4756,10 @@
   "texto": "oso tiene 2:"
  },
  {
+  "clave": "28s7bukjwj3",
+  "texto": "oso y ojo empiezan con oooo."
+ },
+ {
   "clave": "22eyykey4eu",
   "texto": "oso y queso terminan en so."
  },
@@ -3390,6 +4778,42 @@
  {
   "clave": "112izaeuwtx",
   "texto": "p"
+ },
+ {
+  "clave": "ma0fsg3ln7",
+  "texto": "p y aaaa suenan distinto."
+ },
+ {
+  "clave": "1i6b54abf88",
+  "texto": "p y eeee suenan distinto."
+ },
+ {
+  "clave": "1yxea1tncg5",
+  "texto": "p y iiii suenan distinto."
+ },
+ {
+  "clave": "1gs0jvrw80s",
+  "texto": "p y llll suenan distinto."
+ },
+ {
+  "clave": "1sosr3vlp3u",
+  "texto": "p y mmmm suenan distinto."
+ },
+ {
+  "clave": "yrlxrllvbq",
+  "texto": "p y oooo suenan distinto."
+ },
+ {
+  "clave": "v515w6br2l",
+  "texto": "p y ssss suenan distinto."
+ },
+ {
+  "clave": "v7vh1u5ids",
+  "texto": "p y t suenan distinto."
+ },
+ {
+  "clave": "xo8oslroci",
+  "texto": "p y uuuu suenan distinto."
  },
  {
   "clave": "1pe55x248d5",
@@ -3412,6 +4836,14 @@
   "texto": "pa"
  },
  {
+  "clave": "28354jmpl1k",
+  "texto": "pa, de papá."
+ },
+ {
+  "clave": "20eoxqlgxw9",
+  "texto": "pa, de pato."
+ },
+ {
   "clave": "1y74r8h9786",
   "texto": "pa."
  },
@@ -3430,6 +4862,42 @@
  {
   "clave": "1ncqykb7tkg",
   "texto": "pan tiene 1:"
+ },
+ {
+  "clave": "1044x3nc2ue",
+  "texto": "pan y papá empiezan con p."
+ },
+ {
+  "clave": "1upawy0rl9d",
+  "texto": "pan y parque empiezan con p."
+ },
+ {
+  "clave": "wus5xlk49l",
+  "texto": "pan y pato empiezan con p."
+ },
+ {
+  "clave": "1g655ee92u1",
+  "texto": "pan y pelota empiezan con p."
+ },
+ {
+  "clave": "1iqajmvsh8n",
+  "texto": "pan y pera empiezan con p."
+ },
+ {
+  "clave": "1c5hdz1fzzk",
+  "texto": "pan y perro empiezan con p."
+ },
+ {
+  "clave": "vkig144ucd",
+  "texto": "pan y playa empiezan con p."
+ },
+ {
+  "clave": "2dy6hmkxt07",
+  "texto": "pan y pollito empiezan con p."
+ },
+ {
+  "clave": "20ehm56juh0",
+  "texto": "pan y puma empiezan con p."
  },
  {
   "clave": "10nmdk1wb17",
@@ -3468,6 +4936,42 @@
   "texto": "papá y mapa terminan en pa."
  },
  {
+  "clave": "jgpoik2rw2",
+  "texto": "papá y pan empiezan con p."
+ },
+ {
+  "clave": "17m9hmz82yk",
+  "texto": "papá y parque empiezan con p."
+ },
+ {
+  "clave": "apuxok7dya",
+  "texto": "papá y pato empiezan con p."
+ },
+ {
+  "clave": "g9v5pd4yh",
+  "texto": "papá y pelota empiezan con p."
+ },
+ {
+  "clave": "19jt33yowg6",
+  "texto": "papá y pera empiezan con p."
+ },
+ {
+  "clave": "pklvvqsm7t",
+  "texto": "papá y perro empiezan con p."
+ },
+ {
+  "clave": "1dvidbn7xko",
+  "texto": "papá y playa empiezan con p."
+ },
+ {
+  "clave": "1x1mwt5ewrg",
+  "texto": "papá y pollito empiezan con p."
+ },
+ {
+  "clave": "tqg7ua9dys",
+  "texto": "papá y puma empiezan con p."
+ },
+ {
   "clave": "227gxo1jrfw",
   "texto": "papá y sopa terminan en pa."
  },
@@ -3490,6 +4994,42 @@
  {
   "clave": "kj9o6c2bap",
   "texto": "parque tiene 2:"
+ },
+ {
+  "clave": "34fxt57jy5",
+  "texto": "parque y pan empiezan con p."
+ },
+ {
+  "clave": "2pja36pzc2",
+  "texto": "parque y papá empiezan con p."
+ },
+ {
+  "clave": "c9n6xdchxd",
+  "texto": "parque y pato empiezan con p."
+ },
+ {
+  "clave": "1nzjpqrlabp",
+  "texto": "parque y pelota empiezan con p."
+ },
+ {
+  "clave": "12268iku0uh",
+  "texto": "parque y pera empiezan con p."
+ },
+ {
+  "clave": "23piw0mkti9",
+  "texto": "parque y perro empiezan con p."
+ },
+ {
+  "clave": "k3mygs5xb2",
+  "texto": "parque y playa empiezan con p."
+ },
+ {
+  "clave": "lt1u9ipc61",
+  "texto": "parque y pollito empiezan con p."
+ },
+ {
+  "clave": "2eu839jpzgm",
+  "texto": "parque y puma empiezan con p."
  },
  {
   "clave": "1l9s99mfwmp",
@@ -3528,8 +5068,44 @@
   "texto": "pato y moto terminan en to."
  },
  {
+  "clave": "257maqx0eiq",
+  "texto": "pato y pan empiezan con p."
+ },
+ {
+  "clave": "bjw6ok1txs",
+  "texto": "pato y papá empiezan con p."
+ },
+ {
+  "clave": "vaw867ufm",
+  "texto": "pato y parque empiezan con p."
+ },
+ {
+  "clave": "ubd1uzswij",
+  "texto": "pato y pelota empiezan con p."
+ },
+ {
+  "clave": "y2dunlp9za",
+  "texto": "pato y pera empiezan con p."
+ },
+ {
+  "clave": "1nrgwcrnx72",
+  "texto": "pato y perro empiezan con p."
+ },
+ {
+  "clave": "21f8mrmr6g6",
+  "texto": "pato y playa empiezan con p."
+ },
+ {
+  "clave": "28qqwwb23xb",
+  "texto": "pato y pollito empiezan con p."
+ },
+ {
   "clave": "3a9gemmjs4",
   "texto": "pato y pollito terminan en to."
+ },
+ {
+  "clave": "1bsod76mc45",
+  "texto": "pato y puma empiezan con p."
  },
  {
   "clave": "8oe7l8epgt",
@@ -3550,6 +5126,18 @@
  {
   "clave": "1nz1ubo7a3j",
   "texto": "pe"
+ },
+ {
+  "clave": "10nkvan441s",
+  "texto": "pe, de pelota."
+ },
+ {
+  "clave": "19e6cckh6qq",
+  "texto": "pe, de pera."
+ },
+ {
+  "clave": "1kb1v5nrt5t",
+  "texto": "pe, de perro."
  },
  {
   "clave": "1m0gvzyiswu",
@@ -3580,6 +5168,42 @@
   "texto": "pelota y maleta terminan en ta."
  },
  {
+  "clave": "hw89w351l0",
+  "texto": "pelota y pan empiezan con p."
+ },
+ {
+  "clave": "27q8hhcavyh",
+  "texto": "pelota y papá empiezan con p."
+ },
+ {
+  "clave": "drbaxkjitf",
+  "texto": "pelota y parque empiezan con p."
+ },
+ {
+  "clave": "18izl7uwb7v",
+  "texto": "pelota y pato empiezan con p."
+ },
+ {
+  "clave": "1gtf4c9s0zi",
+  "texto": "pelota y pera empiezan con p."
+ },
+ {
+  "clave": "11xzqc2j76k",
+  "texto": "pelota y perro empiezan con p."
+ },
+ {
+  "clave": "105uh0viqtr",
+  "texto": "pelota y playa empiezan con p."
+ },
+ {
+  "clave": "ofa4cv9hml",
+  "texto": "pelota y pollito empiezan con p."
+ },
+ {
+  "clave": "rwqsn1dhqc",
+  "texto": "pelota y puma empiezan con p."
+ },
+ {
   "clave": "1ebckezr59a",
   "texto": "pelota."
  },
@@ -3596,6 +5220,42 @@
   "texto": "pera tiene 2:"
  },
  {
+  "clave": "126zko9aclr",
+  "texto": "pera y pan empiezan con p."
+ },
+ {
+  "clave": "122pfzpzbx8",
+  "texto": "pera y papá empiezan con p."
+ },
+ {
+  "clave": "1611x1drh58",
+  "texto": "pera y parque empiezan con p."
+ },
+ {
+  "clave": "140hhjq2uok",
+  "texto": "pera y pato empiezan con p."
+ },
+ {
+  "clave": "gkc0nhw5q9",
+  "texto": "pera y pelota empiezan con p."
+ },
+ {
+  "clave": "2frxpxmg57y",
+  "texto": "pera y perro empiezan con p."
+ },
+ {
+  "clave": "1i3jd49yh0p",
+  "texto": "pera y playa empiezan con p."
+ },
+ {
+  "clave": "lg8iytoylw",
+  "texto": "pera y pollito empiezan con p."
+ },
+ {
+  "clave": "1y5ucd6jwg9",
+  "texto": "pera y puma empiezan con p."
+ },
+ {
   "clave": "2301axxeziv",
   "texto": "pera."
  },
@@ -3610,6 +5270,42 @@
  {
   "clave": "1onlglrubef",
   "texto": "perro tiene 2:"
+ },
+ {
+  "clave": "ud2dfzmybn",
+  "texto": "perro y pan empiezan con p."
+ },
+ {
+  "clave": "1oy9esbl2og",
+  "texto": "perro y papá empiezan con p."
+ },
+ {
+  "clave": "1vndz0p10tw",
+  "texto": "perro y parque empiezan con p."
+ },
+ {
+  "clave": "1nccql6cdp2",
+  "texto": "perro y pato empiezan con p."
+ },
+ {
+  "clave": "4fjl8bqbhc",
+  "texto": "perro y pelota empiezan con p."
+ },
+ {
+  "clave": "refoy1p5on",
+  "texto": "perro y pera empiezan con p."
+ },
+ {
+  "clave": "zhokgocd6r",
+  "texto": "perro y playa empiezan con p."
+ },
+ {
+  "clave": "1hvqe6drcp4",
+  "texto": "perro y pollito empiezan con p."
+ },
+ {
+  "clave": "1gphpuca1i8",
+  "texto": "perro y puma empiezan con p."
  },
  {
   "clave": "1q7a7n6uf9n",
@@ -3660,6 +5356,42 @@
   "texto": "playa tiene 2:"
  },
  {
+  "clave": "tlq6jt0ic7",
+  "texto": "playa y pan empiezan con p."
+ },
+ {
+  "clave": "10935dln3zt",
+  "texto": "playa y papá empiezan con p."
+ },
+ {
+  "clave": "20ks034e9oh",
+  "texto": "playa y parque empiezan con p."
+ },
+ {
+  "clave": "10ua42mhdl0",
+  "texto": "playa y pato empiezan con p."
+ },
+ {
+  "clave": "l61x71rngu",
+  "texto": "playa y pelota empiezan con p."
+ },
+ {
+  "clave": "f650zvdfro",
+  "texto": "playa y pera empiezan con p."
+ },
+ {
+  "clave": "2ahg2gm3rfq",
+  "texto": "playa y perro empiezan con p."
+ },
+ {
+  "clave": "1vocjqk8ac7",
+  "texto": "playa y pollito empiezan con p."
+ },
+ {
+  "clave": "xqr0bzurg3",
+  "texto": "playa y puma empiezan con p."
+ },
+ {
   "clave": "1z39odctz9r",
   "texto": "playa."
  },
@@ -3674,6 +5406,10 @@
  {
   "clave": "12nt86019fg",
   "texto": "po"
+ },
+ {
+  "clave": "8jt7jerw4s",
+  "texto": "po, de pollito."
  },
  {
   "clave": "23eyqaq3y4l",
@@ -3704,8 +5440,44 @@
   "texto": "pollito y moto terminan en to."
  },
  {
+  "clave": "260127bd6vx",
+  "texto": "pollito y pan empiezan con p."
+ },
+ {
+  "clave": "134tuz8y09w",
+  "texto": "pollito y papá empiezan con p."
+ },
+ {
+  "clave": "s3zjy3qbea",
+  "texto": "pollito y parque empiezan con p."
+ },
+ {
+  "clave": "1xmjud6z3rx",
+  "texto": "pollito y pato empiezan con p."
+ },
+ {
   "clave": "l9wd2cfnup",
   "texto": "pollito y pato terminan en to."
+ },
+ {
+  "clave": "14q4l5y1e2d",
+  "texto": "pollito y pelota empiezan con p."
+ },
+ {
+  "clave": "1qck55z522x",
+  "texto": "pollito y pera empiezan con p."
+ },
+ {
+  "clave": "2edrokfv83o",
+  "texto": "pollito y perro empiezan con p."
+ },
+ {
+  "clave": "ad1zc5brdq",
+  "texto": "pollito y playa empiezan con p."
+ },
+ {
+  "clave": "19lylwjx2gm",
+  "texto": "pollito y puma empiezan con p."
  },
  {
   "clave": "18won8wdybt",
@@ -3732,6 +5504,10 @@
   "texto": "pu"
  },
  {
+  "clave": "1xpqbysf00z",
+  "texto": "pu, de puma."
+ },
+ {
   "clave": "25vdzj95qyf",
   "texto": "pu."
  },
@@ -3754,6 +5530,42 @@
  {
   "clave": "21xp40bcvmr",
   "texto": "puma y mamá terminan en ma."
+ },
+ {
+  "clave": "ja2lh1ebr3",
+  "texto": "puma y pan empiezan con p."
+ },
+ {
+  "clave": "lcwe97et8t",
+  "texto": "puma y papá empiezan con p."
+ },
+ {
+  "clave": "1zr33wbwhxe",
+  "texto": "puma y parque empiezan con p."
+ },
+ {
+  "clave": "l6u30pywv1",
+  "texto": "puma y pato empiezan con p."
+ },
+ {
+  "clave": "cnj51nojrw",
+  "texto": "puma y pelota empiezan con p."
+ },
+ {
+  "clave": "1x1f8ugoop5",
+  "texto": "puma y pera empiezan con p."
+ },
+ {
+  "clave": "2f5x690a4sn",
+  "texto": "puma y perro empiezan con p."
+ },
+ {
+  "clave": "19o2jt3x0uj",
+  "texto": "puma y playa empiezan con p."
+ },
+ {
+  "clave": "ir4dutcqcl",
+  "texto": "puma y pollito empiezan con p."
  },
  {
   "clave": "190uv4k4ns",
@@ -3826,6 +5638,10 @@
  {
   "clave": "1sisc8pi3gb",
   "texto": "que…"
+ },
+ {
+  "clave": "w7tvnd14io",
+  "texto": "r"
  },
  {
   "clave": "190d1wvhwu8",
@@ -4156,6 +5972,10 @@
   "texto": "sa es más larga que ár…"
  },
  {
+  "clave": "1wfdccshji1",
+  "texto": "sa, de sapo."
+ },
+ {
   "clave": "2c3nzh3fzrf",
   "texto": "sa."
  },
@@ -4176,6 +5996,30 @@
   "texto": "sapo tiene 2:"
  },
  {
+  "clave": "25bj3mjkuyq",
+  "texto": "sapo y semilla empiezan con ssss."
+ },
+ {
+  "clave": "27gxnc8t0k",
+  "texto": "sapo y silla empiezan con ssss."
+ },
+ {
+  "clave": "2gbnf3x5l7o",
+  "texto": "sapo y sirena empiezan con ssss."
+ },
+ {
+  "clave": "114t660c0ja",
+  "texto": "sapo y sofá empiezan con ssss."
+ },
+ {
+  "clave": "1fvdeaf4tlw",
+  "texto": "sapo y sol empiezan con ssss."
+ },
+ {
+  "clave": "1pz77g88i77",
+  "texto": "sapo y sopa empiezan con ssss."
+ },
+ {
   "clave": "bidyycwmt7",
   "texto": "sapo."
  },
@@ -4190,6 +6034,10 @@
  {
   "clave": "16ke5zgkv0h",
   "texto": "se"
+ },
+ {
+  "clave": "cuy8tcrn9i",
+  "texto": "se, de semilla."
  },
  {
   "clave": "y85vrebn1p",
@@ -4212,8 +6060,32 @@
   "texto": "semilla y estrella terminan en lla."
  },
  {
+  "clave": "1w9ncquwy61",
+  "texto": "semilla y sapo empiezan con ssss."
+ },
+ {
+  "clave": "21jvnmmapbq",
+  "texto": "semilla y silla empiezan con ssss."
+ },
+ {
   "clave": "pzlfynrm3t",
   "texto": "semilla y silla terminan en lla."
+ },
+ {
+  "clave": "4m9ebyynqb",
+  "texto": "semilla y sirena empiezan con ssss."
+ },
+ {
+  "clave": "ky9dzcu6h1",
+  "texto": "semilla y sofá empiezan con ssss."
+ },
+ {
+  "clave": "1ouvhox932f",
+  "texto": "semilla y sol empiezan con ssss."
+ },
+ {
+  "clave": "1o58e7gomot",
+  "texto": "semilla y sopa empiezan con ssss."
  },
  {
   "clave": "1s9drsi1yen",
@@ -4230,6 +6102,14 @@
  {
   "clave": "4weofqfp1t",
   "texto": "si"
+ },
+ {
+  "clave": "kv4ke5g7mn",
+  "texto": "si, de silla."
+ },
+ {
+  "clave": "1k32mf34x53",
+  "texto": "si, de sirena."
  },
  {
   "clave": "ilumcn9mlc",
@@ -4272,8 +6152,32 @@
   "texto": "silla y estrella terminan en lla."
  },
  {
+  "clave": "cfed4nnmul",
+  "texto": "silla y sapo empiezan con ssss."
+ },
+ {
+  "clave": "rzoyes4jc8",
+  "texto": "silla y semilla empiezan con ssss."
+ },
+ {
   "clave": "240w7vd3my5",
   "texto": "silla y semilla terminan en lla."
+ },
+ {
+  "clave": "1ygpw6b9flp",
+  "texto": "silla y sirena empiezan con ssss."
+ },
+ {
+  "clave": "1wiojwprgiv",
+  "texto": "silla y sofá empiezan con ssss."
+ },
+ {
+  "clave": "1zv6xnurin3",
+  "texto": "silla y sol empiezan con ssss."
+ },
+ {
+  "clave": "qp7bfibxzc",
+  "texto": "silla y sopa empiezan con ssss."
  },
  {
   "clave": "183kou3qls1",
@@ -4304,6 +6208,30 @@
   "texto": "sirena y manzana terminan en na."
  },
  {
+  "clave": "172p1g08r2z",
+  "texto": "sirena y sapo empiezan con ssss."
+ },
+ {
+  "clave": "2etvhkywvf6",
+  "texto": "sirena y semilla empiezan con ssss."
+ },
+ {
+  "clave": "189oargp07g",
+  "texto": "sirena y silla empiezan con ssss."
+ },
+ {
+  "clave": "14qcdaz2lf5",
+  "texto": "sirena y sofá empiezan con ssss."
+ },
+ {
+  "clave": "2d7fngptpxo",
+  "texto": "sirena y sol empiezan con ssss."
+ },
+ {
+  "clave": "78esi7eedk",
+  "texto": "sirena y sopa empiezan con ssss."
+ },
+ {
   "clave": "4xd7ux33dv",
   "texto": "sirena."
  },
@@ -4318,6 +6246,14 @@
  {
   "clave": "6t14xvrn9y",
   "texto": "so"
+ },
+ {
+  "clave": "242sr782txj",
+  "texto": "so, de sofá."
+ },
+ {
+  "clave": "143li20jw54",
+  "texto": "so, de sopa."
  },
  {
   "clave": "8s5k7vz7ca",
@@ -4336,6 +6272,30 @@
   "texto": "sofá tiene 2:"
  },
  {
+  "clave": "22wth677jb1",
+  "texto": "sofá y sapo empiezan con ssss."
+ },
+ {
+  "clave": "2dzo21hyjyd",
+  "texto": "sofá y semilla empiezan con ssss."
+ },
+ {
+  "clave": "21fp61yfc99",
+  "texto": "sofá y silla empiezan con ssss."
+ },
+ {
+  "clave": "kp949euqoc",
+  "texto": "sofá y sirena empiezan con ssss."
+ },
+ {
+  "clave": "1u13vnfoa3c",
+  "texto": "sofá y sol empiezan con ssss."
+ },
+ {
+  "clave": "1a53bgetqtt",
+  "texto": "sofá y sopa empiezan con ssss."
+ },
+ {
   "clave": "1pcms14vmab",
   "texto": "sofá."
  },
@@ -4350,6 +6310,30 @@
  {
   "clave": "uy2knzqpd6",
   "texto": "sol tiene 1:"
+ },
+ {
+  "clave": "27tgufx2dgg",
+  "texto": "sol y sapo empiezan con ssss."
+ },
+ {
+  "clave": "17xarx4y634",
+  "texto": "sol y semilla empiezan con ssss."
+ },
+ {
+  "clave": "1l7xxee3tym",
+  "texto": "sol y silla empiezan con ssss."
+ },
+ {
+  "clave": "1y0ixygzmlm",
+  "texto": "sol y sirena empiezan con ssss."
+ },
+ {
+  "clave": "19ponuabghj",
+  "texto": "sol y sofá empiezan con ssss."
+ },
+ {
+  "clave": "2e5za1cnm8t",
+  "texto": "sol y sopa empiezan con ssss."
  },
  {
   "clave": "18yfhuc08ie",
@@ -4392,6 +6376,30 @@
   "texto": "sopa y papá terminan en pa."
  },
  {
+  "clave": "1pqyued12h8",
+  "texto": "sopa y sapo empiezan con ssss."
+ },
+ {
+  "clave": "2cuvp8sg3b0",
+  "texto": "sopa y semilla empiezan con ssss."
+ },
+ {
+  "clave": "1qkk2uqnrg9",
+  "texto": "sopa y silla empiezan con ssss."
+ },
+ {
+  "clave": "2e1k0lsbuzn",
+  "texto": "sopa y sirena empiezan con ssss."
+ },
+ {
+  "clave": "2depc7jtwla",
+  "texto": "sopa y sofá empiezan con ssss."
+ },
+ {
+  "clave": "1x4c8xu2qlg",
+  "texto": "sopa y sol empiezan con ssss."
+ },
+ {
   "clave": "sdysq40621",
   "texto": "sopa."
  },
@@ -4406,6 +6414,42 @@
  {
   "clave": "x3cqx8fli9",
   "texto": "ssss"
+ },
+ {
+  "clave": "1mjy63pdooo",
+  "texto": "ssss y aaaa suenan distinto."
+ },
+ {
+  "clave": "qjzd7x3g0v",
+  "texto": "ssss y eeee suenan distinto."
+ },
+ {
+  "clave": "18793in3q2e",
+  "texto": "ssss y iiii suenan distinto."
+ },
+ {
+  "clave": "1bajim3qsbz",
+  "texto": "ssss y llll suenan distinto."
+ },
+ {
+  "clave": "jnxry5873o",
+  "texto": "ssss y mmmm suenan distinto."
+ },
+ {
+  "clave": "1yuadvtj3i8",
+  "texto": "ssss y oooo suenan distinto."
+ },
+ {
+  "clave": "2oo20dr789",
+  "texto": "ssss y p suenan distinto."
+ },
+ {
+  "clave": "13m3661nlof",
+  "texto": "ssss y t suenan distinto."
+ },
+ {
+  "clave": "1xy1361em46",
+  "texto": "ssss y uuuu suenan distinto."
  },
  {
   "clave": "22l0nez1qfz",
@@ -4460,6 +6504,42 @@
   "texto": "t"
  },
  {
+  "clave": "agjms5hcmf",
+  "texto": "t y aaaa suenan distinto."
+ },
+ {
+  "clave": "sm7z9f3073",
+  "texto": "t y eeee suenan distinto."
+ },
+ {
+  "clave": "16tzlma6p8n",
+  "texto": "t y iiii suenan distinto."
+ },
+ {
+  "clave": "1eqrvm2ofb1",
+  "texto": "t y llll suenan distinto."
+ },
+ {
+  "clave": "1sgk44vc8et",
+  "texto": "t y mmmm suenan distinto."
+ },
+ {
+  "clave": "uk2n5p3wl5",
+  "texto": "t y oooo suenan distinto."
+ },
+ {
+  "clave": "1exx4sb9gdn",
+  "texto": "t y p suenan distinto."
+ },
+ {
+  "clave": "uht8m47avk",
+  "texto": "t y ssss suenan distinto."
+ },
+ {
+  "clave": "299ruufk1ch",
+  "texto": "t y uuuu suenan distinto."
+ },
+ {
   "clave": "1xeua6ht00h",
   "texto": "t, de taza."
  },
@@ -4506,6 +6586,14 @@
  {
   "clave": "24smci9uhcz",
   "texto": "taza tiene 2:"
+ },
+ {
+  "clave": "1snnemou44b",
+  "texto": "taza y tomate empiezan con t."
+ },
+ {
+  "clave": "1rfsgd25d5r",
+  "texto": "taza y tortuga empiezan con t."
  },
  {
   "clave": "1zgg7f9nuu3",
@@ -4692,6 +6780,14 @@
   "texto": "tomate y elefante terminan en te."
  },
  {
+  "clave": "6kxaarl5ts",
+  "texto": "tomate y taza empiezan con t."
+ },
+ {
+  "clave": "1b9hwmj2i5w",
+  "texto": "tomate y tortuga empiezan con t."
+ },
+ {
   "clave": "179923wd91",
   "texto": "tomate."
  },
@@ -4710,6 +6806,14 @@
  {
   "clave": "13tnt5bl9i7",
   "texto": "tortuga tiene 3:"
+ },
+ {
+  "clave": "uihec6cl40",
+  "texto": "tortuga y taza empiezan con t."
+ },
+ {
+  "clave": "2e70spra0na",
+  "texto": "tortuga y tomate empiezan con t."
  },
  {
   "clave": "1k2o2t7qwd8",
@@ -4776,6 +6880,10 @@
   "texto": "unicornio tiene 4:"
  },
  {
+  "clave": "2axr30psl3p",
+  "texto": "unicornio y uvas empiezan con uuuu."
+ },
+ {
   "clave": "bqm1fs9003",
   "texto": "unicornio."
  },
@@ -4786,6 +6894,42 @@
  {
   "clave": "1rqxzrt1mjn",
   "texto": "uuuu"
+ },
+ {
+  "clave": "t2yk2j1ud7",
+  "texto": "uuuu y aaaa suenan distinto."
+ },
+ {
+  "clave": "xdaioej77y",
+  "texto": "uuuu y eeee suenan distinto."
+ },
+ {
+  "clave": "293dz9k7ok8",
+  "texto": "uuuu y iiii suenan distinto."
+ },
+ {
+  "clave": "2bmcv8kluwd",
+  "texto": "uuuu y llll suenan distinto."
+ },
+ {
+  "clave": "bf4zw3paxm",
+  "texto": "uuuu y mmmm suenan distinto."
+ },
+ {
+  "clave": "1xmerjqqqfa",
+  "texto": "uuuu y oooo suenan distinto."
+ },
+ {
+  "clave": "vom1dasask",
+  "texto": "uuuu y p suenan distinto."
+ },
+ {
+  "clave": "1jpekmg5zvx",
+  "texto": "uuuu y ssss suenan distinto."
+ },
+ {
+  "clave": "1lyh2bd6by0",
+  "texto": "uuuu y t suenan distinto."
  },
  {
   "clave": "1vi02uhe00o",
@@ -4812,6 +6956,10 @@
   "texto": "uvas tiene 2:"
  },
  {
+  "clave": "8yb5dgq0bw",
+  "texto": "uvas y unicornio empiezan con uuuu."
+ },
+ {
   "clave": "tfu0pv7kxv",
   "texto": "uvas."
  },
@@ -4822,6 +6970,10 @@
  {
   "clave": "j26j9h9rva",
   "texto": "u…"
+ },
+ {
+  "clave": "26qpedcli9e",
+  "texto": "v"
  },
  {
   "clave": "2bdj5paskl8",
@@ -4858,6 +7010,10 @@
  {
   "clave": "1c8yalvd6zh",
   "texto": "ya:"
+ },
+ {
+  "clave": "2ebodv2t52",
+  "texto": "z"
  },
  {
   "clave": "hqhqxwowyw",
@@ -5092,6 +7248,10 @@
   "texto": "¡Bien!"
  },
  {
+  "clave": "1ijvow3tbp6",
+  "texto": "¡Busca ese globo!"
+ },
+ {
   "clave": "7ubtd4etye",
   "texto": "¡CASA!"
  },
@@ -5114,6 +7274,10 @@
  {
   "clave": "jq32onx0ju",
   "texto": "¡Empezar!"
+ },
+ {
+  "clave": "2es2pw2esb7",
+  "texto": "¡Es hora del recreo!"
  },
  {
   "clave": "1paq6k2uqi4",
@@ -5406,6 +7570,10 @@
  {
   "clave": "tcgl2ae59h",
   "texto": "¡LUPA!"
+ },
+ {
+  "clave": "1vksdabnu97",
+  "texto": "¡La formaste!"
  },
  {
   "clave": "l0j19xmjzd",
@@ -5762,6 +7930,10 @@
  {
   "clave": "2fa35cwqn30",
   "texto": "¿Con qué vocal empieza?."
+ },
+ {
+  "clave": "xrvy9qhglw",
+  "texto": "¿Cuál empieza igual?"
  },
  {
   "clave": "1hr9thc2qx4",
@@ -6168,8 +8340,20 @@
   "texto": "¿Cuántas sílabas tiene árbol?"
  },
  {
+  "clave": "14ev9ijlh12",
+  "texto": "¿Cómo se juega?"
+ },
+ {
   "clave": "16vn2ucj81w",
   "texto": "¿Cómo te sientes hoy?"
+ },
+ {
+  "clave": "4e0lg9363p",
+  "texto": "¿Empiezan con el mismo sonido?"
+ },
+ {
+  "clave": "rud3777sia",
+  "texto": "¿Empiezan con el mismo sonido?."
  },
  {
   "clave": "1pkxv5yw6yw",
@@ -6222,6 +8406,10 @@
  {
   "clave": "10yoxxj1vs0",
   "texto": "¿Qué comieron al final del día?"
+ },
+ {
+  "clave": "25fa7kh8o75",
+  "texto": "¿Qué palabra escuchaste?."
  },
  {
   "clave": "l8dg9ewcxr",
@@ -6300,6 +8488,14 @@
   "texto": "árbol tiene 2:"
  },
  {
+  "clave": "220ulgtu0vr",
+  "texto": "árbol y abeja empiezan con aaaa."
+ },
+ {
+  "clave": "tf1jrd1q7p",
+  "texto": "árbol y avión empiezan con aaaa."
+ },
+ {
   "clave": "va5bvmyb27",
   "texto": "árbol."
  },
@@ -6310,6 +8506,10 @@
  {
   "clave": "1273cglr09o",
   "texto": "ár…"
+ },
+ {
+  "clave": "22buclz4x0e",
+  "texto": "ñ"
  },
  {
   "clave": "1qs2vzj1py5",

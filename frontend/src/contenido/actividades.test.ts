@@ -57,8 +57,8 @@ describe('categorías', () => {
 })
 
 describe('juegos', () => {
-  it('por ahora solo se asignan el choque de sonidos y los aplausos silábicos', () => {
-    expect(JUEGOS.map((a) => a.id)).toEqual(['choque-sonidos', 'aplausos'])
+  it('se asignan el choque de sonidos, los aplausos silábicos y los globos de palabras', () => {
+    expect(JUEGOS.map((a) => a.id)).toEqual(['choque-sonidos', 'aplausos', 'globos-palabras'])
   })
 })
 

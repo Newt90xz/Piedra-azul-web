@@ -12,8 +12,8 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { ACTIVIDADES, type Ronda } from '../src/contenido/actividades.ts'
-import { fonemaDe } from '../src/contenido/banco.ts'
+import { ACTIVIDADES, COMO_SE_JUEGA, type Ronda } from '../src/contenido/actividades.ts'
+import { LETRAS as LETRAS_BANCO, fonemaDe } from '../src/contenido/banco.ts'
 import { CONTENIDOS } from '../src/contenido/contenidos.ts'
 import { COLORES, GROSORES, LETRAS } from '../src/contenido/dibujo.ts'
 import { PICTOS_MENSAJE } from '../src/contenido/mensajes.ts'
@@ -45,6 +45,13 @@ function deRonda(r: Ronda) {
     case 'explorar':
       agregar(r.fonema, r.ejemplo.texto)
       break
+    case 'escribir':
+      // Al teclear suena el fonema de cada letra (ver más abajo).
+      agregar(r.pista, r.audio)
+      break
+    case 'globos':
+      agregar(r.pista, ...r.fichas)
+      break
     case 'choque':
       agregar(`${fonemaDe(r.consonante)}${fonemaDe(r.vocal)}… ${r.consonante + r.vocal}`)
       break
@@ -55,6 +62,18 @@ const generadores = [...ACTIVIDADES.map((a) => a.generar), ...CONTENIDOS.flatMap
 for (const generar of generadores) for (let i = 0; i < VECES_POR_GENERADOR; i++) generar().forEach(deRonda)
 
 agregar('¡Mira! Es esta. ¡Tócala!', 'Escuchar otra vez', 'Volver a los juegos', 'Aplaudir', 'Juntar', 'Siguiente', '1', '2', '3', '4')
+
+// «¿Cómo se juega?» antes de cada actividad, y el teclado de las de escribir.
+agregar(
+  '¿Cómo se juega?',
+  '¡A jugar!',
+  'Borrar',
+  ...Object.values(COMO_SE_JUEGA),
+  ...ACTIVIDADES.map((a) => a.instrucciones),
+  ...CONTENIDOS.flatMap((c) => c.pasos.map((p) => p.instrucciones)),
+  ...[...'ABCDEFGHIJLMNÑOPRSTUVZ'].map((l) => fonemaDe(l.toLowerCase())),
+  ...LETRAS_BANCO.map((l) => l.fonema),
+)
 
 // Premio (Partida.tsx)
 for (let n = 0; n <= MAX_MONEDAS; n++) {
@@ -78,6 +97,7 @@ agregar(
   '¿Cómo te sientes hoy?',
   ...Object.values(EMOCIONES).map((e) => e.texto),
   'Mientras esperas a tu profe, ¡revienta los globos!',
+  '¡Es hora del recreo! Revienta los globos mientras tu profe te asigna una sala.',
   'Globos',
   'Tienda de avatares',
   'Apagar la música',

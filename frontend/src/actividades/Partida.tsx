@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { actividad, type Ronda } from '../contenido/actividades.ts'
+import { actividad, instruccionesDe, type Ronda } from '../contenido/actividades.ts'
+import { nivelDe } from '../contenido/exigencia.ts'
 import { guardarResultadoConRespaldo } from '../datos/pendientes.ts'
 import type { IntentoRonda } from '../dominio/tipos.ts'
 import { efecto, hablar } from '../lib/audio.ts'
@@ -42,11 +43,17 @@ export function Partida({
   alTerminar,
   alSalir,
   objetivo,
+  instrucciones,
+  icono,
 }: {
   actividadId: string
   rondas: Ronda[]
   alTerminar: (fin: FinPartida) => void
   objetivo?: string
+  // «¿Cómo se juega?»: si no viene, el de la actividad o el del tipo de ronda.
+  instrucciones?: string
+  // Ícono de la tarjeta de instrucciones (el del contenido); si no, el de la actividad.
+  icono?: string
   // Solo en los juegos: en los contenidos el niño sigue el camino que armó la docente.
   alSalir?: () => void
 }) {
@@ -60,12 +67,17 @@ export function Partida({
   const datosActividad = actividad(actividadId)
   const practica = datosActividad?.practica ?? false
   const tituloObjetivo = objetivo ?? datosActividad?.objetivo
+  const comoSeJuega = instruccionesDe(rondas, instrucciones ?? datosActividad?.instrucciones)
+  // Desafíos por nivel de exigencia: tras cuántos errores se ilumina la respuesta.
+  const { revelarTras } = nivelDe(estudiante.ajustes.exigencia)
+  // Antes de la primera ronda se muestra cómo se juega; el botón «?» la vuelve a abrir.
+  const [verInstrucciones, setVerInstrucciones] = useState(Boolean(comoSeJuega))
 
   const ronda = rondas[estado.indice]
 
   useEffect(() => {
-    if (ronda) hablar(ronda.instruccion)
-  }, [ronda])
+    if (ronda && !verInstrucciones) hablar(ronda.instruccion)
+  }, [ronda, verInstrucciones])
 
   // Fin: RF-12, se guarda fecha, intentos por ronda y tiempo empleado. El id se
   // genera una sola vez para que los reintentos no dupliquen el resultado.
@@ -75,7 +87,8 @@ export function Partida({
     const promedio = registro.reduce((s, r) => s + r.estrellas, 0) / Math.max(1, registro.length)
     const fin: FinPartida = {
       resultadoId: crypto.randomUUID(),
-      rondas: registro.map((r) => ({ item: r.item, intentos: r.intentos, acertada: r.intentos < 3, error: r.error })),
+      // Acertada = resuelta antes de que se iluminara la respuesta.
+      rondas: registro.map((r) => ({ item: r.item, intentos: r.intentos, acertada: r.intentos <= revelarTras, error: r.error })),
       estrellas: promedio >= 2.5 ? 3 : promedio >= 1.75 ? 2 : 1,
       monedas: registro.reduce((s, r) => s + r.monedas, 0),
     }
@@ -90,7 +103,7 @@ export function Partida({
       monedas: fin.monedas,
     }).then(recargar)
     alTerminar(fin)
-  }, [ronda, registro, actividadId, estudiante.id, inicio, recargar, alTerminar])
+  }, [ronda, registro, actividadId, estudiante.id, inicio, recargar, alTerminar, revelarTras])
 
   const avanzar = (desde: number) =>
     setEstado((e) => (e.indice === desde ? { indice: desde + 1, intentos: 0, resuelta: false } : e))
@@ -102,7 +115,7 @@ export function Partida({
       setEstado({ ...estado, intentos, error: respuesta ?? estado.error })
       setRacha(0)
       efecto('intento', silenciado)
-      if ('pista' in ronda) hablar(intentos === 1 ? ronda.pista : '¡Mira! Es esta. ¡Tócala!')
+      if ('pista' in ronda) hablar(intentos < revelarTras ? ronda.pista : '¡Mira! Es esta. ¡Tócala!')
       return
     }
     const p = practica ? PRACTICA : PUNTAJE[Math.min(intentos, 3) - 1]
@@ -124,9 +137,21 @@ export function Partida({
 
   if (!ronda) return null
 
+  if (verInstrucciones)
+    return (
+      <Instrucciones
+        icono={icono ?? datosActividad?.icono}
+        titulo={tituloObjetivo}
+        texto={comoSeJuega}
+        alEmpezar={() => setVerInstrucciones(false)}
+        alSalir={alSalir}
+      />
+    )
+
   return (
-    <main className="animate-pantalla mx-auto flex h-full max-w-5xl flex-col px-6 py-5">
-      <div className="mb-4 flex shrink-0 items-center gap-4">
+    <main className="animate-pantalla mx-auto flex h-full max-w-5xl flex-col px-6 py-4">
+      {/* El objetivo va en la misma fila que los botones: así la ronda tiene todo el alto. */}
+      <div className="mb-3 flex shrink-0 items-center gap-4">
         {alSalir && (
           <BotonNino voz="Volver a los juegos" onClick={alSalir} className="grid size-20 place-items-center bg-nino-lila">
             <Icono nombre="izquierda" className="size-9" />
@@ -135,7 +160,16 @@ export function Partida({
         <BotonNino voz="Escuchar otra vez" onClick={() => hablar(ronda.instruccion)} className="grid size-20 place-items-center border-nino-ok bg-nino-menta">
           <Icono nombre="altavoz" className="size-10" />
         </BotonNino>
-        <span className="flex-1" />
+        {comoSeJuega && (
+          <BotonNino voz="¿Cómo se juega?" onClick={() => setVerInstrucciones(true)} className="grid size-20 place-items-center bg-nino-amarillo text-[1.6em] font-bold">
+            <span aria-hidden="true">?</span>
+          </BotonNino>
+        )}
+        {tituloObjetivo ? (
+          <h1 className="line-clamp-2 min-w-0 flex-1 text-center text-[1.15em] leading-tight font-bold text-tinta">{tituloObjetivo}</h1>
+        ) : (
+          <span className="flex-1" />
+        )}
         {racha >= 2 && (
           <span className="animate-pop rounded-full bg-nino-amarillo px-4 py-1 text-[0.8em] font-bold" aria-label={`Racha de ${racha}`}>
             🔥 {racha}
@@ -150,20 +184,60 @@ export function Partida({
           ))}
         </ol>
       </div>
-      {tituloObjetivo && (
-        <h1 className="mx-auto mb-3 max-w-3xl shrink-0 text-center text-[1.55em] font-bold text-tinta">
-          {tituloObjetivo}
-        </h1>
-      )}
-      <div key={estado.indice} className="animate-pantalla grid min-h-0 flex-1 content-center">
+      {/* «safe»: si una ronda no cabe, se corre hacia abajo en vez de tapar el título. */}
+      <div key={estado.indice} className="animate-pantalla grid min-h-0 flex-1 [align-content:safe_center]">
         <RondaActual
           ronda={ronda}
           resuelta={estado.resuelta}
-          revelar={!estado.resuelta && estado.intentos >= 2}
+          revelar={!estado.resuelta && estado.intentos >= revelarTras}
           errores={Math.max(0, estado.intentos - (estado.resuelta ? 1 : 0))}
           alIntentar={intentar}
         />
       </div>
+    </main>
+  )
+}
+
+// «¿Cómo se juega?»: antes de la primera ronda (y con el botón «?»). Una mano
+// que toca muestra que se juega tocando; el texto va en mayúscula para que la
+// docente lo lea o el niño lo reconozca, y la voz lo dice si está activada.
+function Instrucciones({
+  icono,
+  titulo,
+  texto,
+  alEmpezar,
+  alSalir,
+}: {
+  icono?: string
+  titulo?: string
+  texto: string
+  alEmpezar: () => void
+  alSalir?: () => void
+}) {
+  useEffect(() => hablar(texto), [texto])
+  return (
+    <main className="animate-pantalla mx-auto grid h-full max-w-3xl content-center justify-items-center gap-5 px-6 py-4 text-center">
+      <div className="tarjeta-nino grid w-full justify-items-center gap-3 rounded-[2rem] border-3 border-nino-azul bg-white px-8 py-5">
+        <span aria-hidden="true" className="relative text-[2.6em] leading-none">
+          {icono ?? '🎯'}
+          <span className="instrucciones-mano absolute -right-6 -bottom-4 text-[0.6em]">👆</span>
+        </span>
+        {titulo && <h1 className="text-[1.1em] leading-tight font-bold">{titulo.toUpperCase()}</h1>}
+        <p className="max-w-xl text-[0.85em] leading-snug font-bold text-nino-tinta/80">{texto.toUpperCase()}</p>
+        <div className="flex gap-4">
+          <BotonNino voz="Escuchar otra vez" onClick={() => hablar(texto)} className="grid size-20 place-items-center border-nino-ok bg-nino-menta">
+            <Icono nombre="altavoz" className="size-10" />
+          </BotonNino>
+          {alSalir && (
+            <BotonNino voz="Volver a los juegos" onClick={alSalir} className="grid size-20 place-items-center bg-nino-lila">
+              <Icono nombre="izquierda" className="size-9" />
+            </BotonNino>
+          )}
+        </div>
+      </div>
+      <BotonNino voz="¡A jugar!" onClick={alEmpezar} className="grid size-24 place-items-center rounded-full border-nino-ok bg-nino-menta">
+        <span aria-hidden="true" className="text-[2em]">▶</span>
+      </BotonNino>
     </main>
   )
 }

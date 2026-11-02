@@ -1,12 +1,24 @@
 import type { IntentoRonda, Palabra } from '../dominio/tipos.ts'
-import { actividad, mezclar, ordenarSilabas, tomar, type Categoria, type Opcion, type Ronda } from './actividades.ts'
-import { CONSONANTES_SILABAS, LETRAS, PALABRAS, VOCALES, fonemaDe, quitarTildes } from './banco.ts'
+import {
+  actividad,
+  completaLaSilaba,
+  constructorDePalabras,
+  globosDePalabras,
+  mezclar,
+  ordenarSilabas,
+  tomar,
+  type Categoria,
+  type Opcion,
+  type Ronda,
+} from './actividades.ts'
+import { CONSONANTES_SILABAS, LETRAS, PALABRAS, PALABRAS_NIVEL_3, VOCALES, fonemaDe, palabra, quitarTildes } from './banco.ts'
 
 // Contenidos de las Bases Curriculares de la Educación Parvularia (MINEDUC,
 // 2018), núcleo Lenguaje Verbal, Tercer Nivel (Transición):
 //   OA 3: descubrir atributos fonológicos de palabras conocidas (conteo y
 //         segmentación de sílabas, sonidos iniciales y finales).
 //   OA 7: reconocer palabras asociando algunos fonemas a sus grafemas.
+//   OA 8: representar gráficamente letras y palabras significativas.
 // La docente asigna contenidos a una sala; cada uno trae 3 actividades
 // preordenadas de dificultad creciente. Cada partida se arma al azar desde el
 // pool del contenido, así repetir una actividad nunca es igual a la anterior.
@@ -14,13 +26,28 @@ import { CONSONANTES_SILABAS, LETRAS, PALABRAS, VOCALES, fonemaDe, quitarTildes 
 export const OA = {
   'OA 3': 'Descubrir en contextos lúdicos atributos fonológicos de palabras conocidas: conteo y segmentación de sílabas, sonidos iniciales y finales.',
   'OA 7': 'Reconocer palabras asociando algunos fonemas a sus correspondientes grafemas.',
+  'OA 8': 'Representar gráficamente algunos trazos, letras, signos, palabras significativas y mensajes simples legibles.',
 } as const
+
+// Áreas en que se agrupan los contenidos al armar el plan: las actividades
+// auditivas (solo escuchar, sin letras) van aparte de las de sílabas.
+export const AREAS = {
+  auditiva: { nombre: 'Escuchar', icono: '👂', descripcion: 'Distinguir palabras y sonidos de oído, sin letras.' },
+  letras: { nombre: 'Vocales y letras', icono: '🔤', descripcion: 'Sonido de cada letra y su forma.' },
+  silabas: { nombre: 'Sílabas', icono: '👏', descripcion: 'Reconocer, contar y comparar sílabas.' },
+  palabras: { nombre: 'Palabras', icono: '🧩', descripcion: 'Formar y completar palabras con sílabas.' },
+  escritura: { nombre: 'Escritura', icono: '✏️', descripcion: 'Escribir letras y palabras, siempre en mayúscula.' },
+} as const
+
+export type Area = keyof typeof AREAS
 
 export type CodigoOA = keyof typeof OA
 
 interface Paso {
   titulo: string
   generar: () => Ronda[]
+  // «¿Cómo se juega?»; sin esto se usa el del tipo de ronda (COMO_SE_JUEGA).
+  instrucciones?: string
 }
 
 export interface Contenido {
@@ -29,6 +56,7 @@ export interface Contenido {
   titulo: string
   descripcion: string
   categoria: Categoria
+  area: Area
   // Lo que ve el niño en su camino: sin texto.
   icono: string
   color: string
@@ -37,7 +65,8 @@ export interface Contenido {
 
 // Rondas por partida (regla de oro 4: micro-partidas de 4 a 5 rondas).
 const RONDAS = 5
-// Logrado si al menos el 60 % de las rondas se resolvió sin revelar la respuesta.
+// Logrado si al menos el 60 % de las rondas se resolvió sin revelar la respuesta
+// (nivel intermedio; cada nivel de exigencia tiene el suyo).
 export const UMBRAL_APROBAR = 0.6
 
 const MAYUS = (s: string) => s.toUpperCase()
@@ -189,6 +218,7 @@ function contenidoSilabas(c: (typeof CONSONANTES_SILABAS)[number]): Contenido {
     id: `silabas-${c}`,
     oa: ['OA 7', 'OA 3'],
     titulo: `Sílabas con ${MAYUS(c)}`,
+    area: 'silabas',
     descripcion: `Sílabas directas ${silabas}: escucharlas, reconocerlas al inicio de palabras e identificarlas frente a otras parecidas.`,
     categoria: 'silabas',
     ...NOMBRE_SILABAS[c],
@@ -265,13 +295,154 @@ function cualTerminaIgual(opciones: number): () => Ronda[] {
     })
 }
 
+// ---------- Escuchar: discriminación auditiva, sin letras (OA 3) ----------
+
+// Palabras que empiezan con una letra del banco (vocal o M, P, L, S, T): su
+// primer sonido se puede decir solo («mmm…») en las pistas.
+const inicial = (w: Palabra) => quitarTildes(w.texto)[0]
+const conSonidoInicial = BANCO.filter((w) => LETRAS.some((l) => l.id === inicial(w)))
+
+function palabraEscuchada(): Ronda[] {
+  return tomar(BANCO, RONDAS).map((w) => {
+    const distractores = tomar(BANCO.filter((x) => x.id !== w.id && inicial(x) !== inicial(w)), 2)
+    return {
+      tipo: 'elegir',
+      item: w.texto,
+      estimulo: { audio: w.texto },
+      opciones: mezclar([w, ...distractores]).map(opcionPalabra),
+      correctaId: w.id,
+      instruccion: `Escucha: ${w.texto}. Toca el dibujo que escuchaste.`,
+      pista: `¡Casi! Escucha otra vez: ${w.texto}.`,
+      refuerzo: `¡Muy bien! ${w.texto}.`,
+    }
+  })
+}
+
+const SI_NO: Opcion[] = [
+  { id: 'si', texto: '👍', audio: 'Sí' },
+  { id: 'no', texto: '👎', audio: 'No' },
+]
+
+function empiezanIgual(): Ronda[] {
+  return Array.from({ length: RONDAS }, () => {
+    const a = tomar(conSonidoInicial, 1)[0]
+    const igual = Math.random() < 0.5
+    const b = tomar(conSonidoInicial.filter((x) => x.id !== a.id && (inicial(x) === inicial(a)) === igual), 1)[0]
+    const [ia, ib] = [inicial(a), inicial(b)]
+    return {
+      tipo: 'elegir',
+      item: `${MAYUS(ia)} y ${MAYUS(ib)}`,
+      estimulo: { audio: `${a.texto}… ${b.texto}` },
+      opciones: SI_NO,
+      correctaId: igual ? 'si' : 'no',
+      instruccion: `Escucha: ${a.texto}… ${b.texto}. ¿Empiezan con el mismo sonido?`,
+      pista: `¡Casi! ${fonemaDe(ia)}… ${a.texto}. ${fonemaDe(ib)}… ${b.texto}. ¡Otra vez!`,
+      refuerzo: igual ? `¡Sí! Las dos empiezan con ${fonemaDe(ia)}.` : `¡Muy bien! ${fonemaDe(ia)} y ${fonemaDe(ib)} suenan distinto.`,
+    }
+  })
+}
+
+function mismoSonidoInicial(): Ronda[] {
+  const conPareja = conSonidoInicial.filter((w) => conSonidoInicial.some((x) => x.id !== w.id && inicial(x) === inicial(w)))
+  return tomar(conPareja, RONDAS).map((w) => {
+    const correcta = tomar(conSonidoInicial.filter((x) => x.id !== w.id && inicial(x) === inicial(w)), 1)[0]
+    const distractores = tomar(BANCO.filter((x) => inicial(x) !== inicial(w)), 2)
+    return {
+      tipo: 'elegir',
+      item: MAYUS(inicial(w)),
+      estimulo: { audio: w.texto },
+      opciones: mezclar([correcta, ...distractores]).map(opcionPalabra),
+      correctaId: correcta.id,
+      instruccion: `Escucha: ${w.texto}. Toca el dibujo que empieza con el mismo sonido.`,
+      pista: `¡Casi! ${fonemaDe(inicial(w))}… ${w.texto}. ¿Cuál empieza igual?`,
+      refuerzo: `¡Sí! ${w.texto} y ${correcta.texto} empiezan con ${fonemaDe(inicial(w))}.`,
+    }
+  })
+}
+
+// ---------- Escritura: respuestas escritas SIEMPRE en mayúscula (OA 8) ----------
+
+// La respuesta va en mayúscula y sin tildes: el teclado en pantalla no las tiene.
+const paraEscribir = (s: string) => quitarTildes(s).toUpperCase()
+
+function rondaEscribir(w: Palabra, respuesta: string, instruccion: string, pista: string, refuerzo: string, relleno = 'AEIOUMPLST'): Ronda {
+  // Teclas: las de la respuesta y algunas más (de `relleno`); el nivel de exigencia ajusta cuántas.
+  const extra = tomar([...relleno].filter((l) => !respuesta.includes(l)), 3)
+  return {
+    tipo: 'escribir',
+    item: respuesta,
+    respuesta,
+    imagen: w.imagen,
+    audio: w.texto,
+    letras: [...new Set([...respuesta, ...extra])].sort((a, b) => a.localeCompare(b, 'es')),
+    instruccion,
+    pista,
+    refuerzo,
+  }
+}
+
+function escribeVocal(): Ronda[] {
+  return tomar(conVocalInicial, RONDAS).map((w) => {
+    const v = paraEscribir(w.texto[0])
+    return rondaEscribir(
+      w,
+      v,
+      `${w.texto}. Escribe la vocal con que empieza ${w.texto}.`,
+      `¡Casi! ${fonemaDe(v.toLowerCase())}… ${w.texto}. ¡Otra vez!`,
+      `¡Sí! ${v}, de ${w.texto}.`,
+      'AEIOU',
+    )
+  })
+}
+
+function escribeSilaba(): Ronda[] {
+  const conSilaba = BANCO.filter((w) => CONSONANTES_SILABAS.some((c) => silabaInicialCV(w)?.[0] === c))
+  return tomar(conSilaba, RONDAS).map((w) => {
+    const s = paraEscribir(silabaInicialCV(w)!)
+    return rondaEscribir(
+      w,
+      s,
+      `${w.texto}. Escribe la sílaba con que empieza ${w.texto}.`,
+      `¡Casi! Empieza con ${s.toLowerCase()}… ${w.texto}. ¡Otra vez!`,
+      `¡Muy bien! ${s.toLowerCase()}, de ${w.texto}.`,
+    )
+  })
+}
+
+function escribePalabra(): Ronda[] {
+  return tomar(PALABRAS_NIVEL_3.map(palabra), RONDAS).map((w) => {
+    const p = paraEscribir(w.texto)
+    return rondaEscribir(w, p, `Escribe ${w.texto}.`, `¡Casi! ${w.silabas.join('… ')}. ¡Otra vez!`, `¡Excelente! Escribiste ${w.texto}.`)
+  })
+}
+
 // ---------- Catálogo ----------
 
 export const CONTENIDOS: Contenido[] = [
   {
+    id: 'escucho',
+    oa: ['OA 3'],
+    titulo: 'Escucho y reconozco',
+    area: 'auditiva',
+    descripcion: 'Discriminación auditiva sin letras: reconocer la palabra escuchada y comparar sonidos iniciales de oído.',
+    categoria: 'auditiva',
+    icono: '👂',
+    color: 'var(--color-nino-azul)',
+    pasos: [
+      { titulo: '¿Qué palabra escuchaste?', generar: palabraEscuchada, instrucciones: 'Escucha la palabra y toca su dibujo.' },
+      {
+        titulo: '¿Empiezan con el mismo sonido?',
+        generar: empiezanIgual,
+        instrucciones: 'Escucha dos palabras. Si empiezan igual toca el pulgar arriba; si no, el pulgar abajo.',
+      },
+      { titulo: 'Busca el dibujo que empieza igual', generar: mismoSonidoInicial, instrucciones: 'Escucha la palabra y toca el dibujo que empieza con el mismo sonido.' },
+    ],
+  },
+  {
     id: 'vocales',
     oa: ['OA 7', 'OA 3'],
     titulo: 'Las vocales',
+    area: 'letras',
     descripcion: 'Sonido de las vocales A, E, I, O, U, su letra imprenta y palabras que empiezan con cada una.',
     categoria: 'letras',
     icono: '🐝',
@@ -287,6 +458,7 @@ export const CONTENIDOS: Contenido[] = [
     id: 'largas-cortas',
     oa: ['OA 3'],
     titulo: 'Palabras largas y cortas',
+    area: 'silabas',
     descripcion: 'Comparar palabras por su cantidad de sílabas, de diferencias evidentes (SOL / MARIPOSA) a más finas.',
     categoria: 'conteo',
     icono: '🐘',
@@ -301,6 +473,7 @@ export const CONTENIDOS: Contenido[] = [
     id: 'rimas',
     oa: ['OA 3'],
     titulo: 'Rimas: ¿cuál termina igual?',
+    area: 'auditiva',
     descripcion: 'Identificar la sílaba final de palabras conocidas (GATO / PATO), con cada vez más opciones.',
     categoria: 'rimas',
     icono: '🐱',
@@ -309,6 +482,36 @@ export const CONTENIDOS: Contenido[] = [
       { titulo: 'Encuentra la rima entre dos palabras', generar: cualTerminaIgual(2) },
       { titulo: 'Encuentra la rima entre tres palabras', generar: cualTerminaIgual(3) },
       { titulo: 'Encuentra la rima entre cuatro palabras', generar: cualTerminaIgual(4) },
+    ],
+  },
+  {
+    id: 'formo-palabras',
+    oa: ['OA 7', 'OA 3'],
+    titulo: 'Formo palabras',
+    area: 'palabras',
+    descripcion: 'Formar palabras de dos sílabas: armarlas con fichas, reventar globos en orden y completar la sílaba que falta.',
+    categoria: 'palabras',
+    icono: '🎈',
+    color: 'var(--color-nino-lila)',
+    pasos: [
+      { titulo: 'Arma la palabra con sílabas', generar: constructorDePalabras },
+      { titulo: 'Revienta los globos y forma la palabra', generar: globosDePalabras },
+      { titulo: 'Completa la sílaba que falta', generar: completaLaSilaba },
+    ],
+  },
+  {
+    id: 'escribo',
+    oa: ['OA 8', 'OA 7'],
+    titulo: 'Escribo',
+    area: 'escritura',
+    descripcion: 'Responder por escrito con un teclado en pantalla de letras mayúsculas: la vocal, la sílaba y la palabra completa.',
+    categoria: 'escritura',
+    icono: '✏️',
+    color: 'var(--color-nino-amarillo)',
+    pasos: [
+      { titulo: 'Escribe la vocal con que empieza', generar: escribeVocal, instrucciones: 'Mira el dibujo y escribe la vocal con que empieza.' },
+      { titulo: 'Escribe la sílaba con que empieza', generar: escribeSilaba, instrucciones: 'Mira el dibujo y escribe la sílaba con que empieza.' },
+      { titulo: 'Escribe la palabra', generar: escribePalabra, instrucciones: 'Mira el dibujo y escribe la palabra completa, letra por letra.' },
     ],
   },
 ]
@@ -325,6 +528,7 @@ export interface PasoPlan {
   // Con el que se guarda el resultado: «silabas-m-2».
   actividadId: string
   generar: () => Ronda[]
+  instrucciones?: string
 }
 
 // Los contenidos de la sala, en orden, desplegados en sus 3 actividades.
@@ -332,12 +536,18 @@ export function planDe(contenidos: string[]): PasoPlan[] {
   return contenidos.flatMap((id) => {
     const c = contenido(id)
     if (!c) return []
-    return c.pasos.map((p, i) => ({ contenido: c, numero: (i + 1) as 1 | 2 | 3, actividadId: `${c.id}-${i + 1}`, generar: p.generar }))
+    return c.pasos.map((p, i) => ({
+      contenido: c,
+      numero: (i + 1) as 1 | 2 | 3,
+      actividadId: `${c.id}-${i + 1}`,
+      generar: p.generar,
+      instrucciones: p.instrucciones,
+    }))
   })
 }
 
-export function aprobo(rondas: Pick<IntentoRonda, 'acertada'>[]) {
-  return rondas.length > 0 && rondas.filter((r) => r.acertada).length / rondas.length >= UMBRAL_APROBAR
+export function aprobo(rondas: Pick<IntentoRonda, 'acertada'>[], umbral = UMBRAL_APROBAR) {
+  return rondas.length > 0 && rondas.filter((r) => r.acertada).length / rondas.length >= umbral
 }
 
 // Una actividad de contenido se guarda como «silabas-m-2»: contenido y número.

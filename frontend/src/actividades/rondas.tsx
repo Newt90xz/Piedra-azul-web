@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import type { Opcion, Ronda } from '../contenido/actividades.ts'
 import { fonemaDe } from '../contenido/banco.ts'
 import { hablar } from '../lib/audio.ts'
@@ -26,6 +26,10 @@ export function RondaActual({ ronda, ...resto }: Omit<PropsRonda<Ronda['tipo']>,
       return <RondaExplorar ronda={ronda} {...resto} />
     case 'choque':
       return <RondaChoque ronda={ronda} {...resto} />
+    case 'escribir':
+      return <RondaEscribir ronda={ronda} {...resto} />
+    case 'globos':
+      return <RondaGlobos ronda={ronda} {...resto} />
   }
 }
 
@@ -97,7 +101,14 @@ function RondaElegir({ ronda, resuelta, revelar, errores, alIntentar }: PropsRon
                   sacudir === o.id ? 'animate-sacudir' : ''
                 } ${resuelta && correcta ? 'animate-pop border-nino-ok bg-nino-menta' : ''} ${revelar && correcta ? 'revelada border-[#e6c84d] bg-nino-amarillo' : ''}`}
               >
-                {o.imagen ? <ImagenNino imagen={o.imagen} className="text-[3.4em]" /> : <span className="text-[2em] font-bold">{o.texto}</span>}
+                {o.imagen ? (
+                  <span className="grid justify-items-center gap-1">
+                    <ImagenNino imagen={o.imagen} className="text-[3.4em]" />
+                    {palabraVisible && <span className="animate-aparecer text-[0.8em] leading-tight font-bold">{MAYUS(o.audio)}</span>}
+                  </span>
+                ) : (
+                  <span className="text-[2em] font-bold">{o.texto}</span>
+                )}
               </BotonNino>
               {resuelta && correcta && (
                 <span aria-hidden="true" className="chispas pointer-events-none absolute inset-0">
@@ -207,7 +218,7 @@ function RondaConstruir({ ronda, resuelta, revelar, errores, alIntentar }: Props
   }
 
   return (
-    <div className="grid justify-items-center gap-8">
+    <div className="grid justify-items-center gap-4">
       <span className="tarjeta-nino flex min-w-0 items-center justify-center rounded-3xl border-3 border-nino-azul bg-white px-4 py-2">
         <PictogramaPalabra
           imagen={palabra.imagen}
@@ -217,19 +228,19 @@ function RondaConstruir({ ronda, resuelta, revelar, errores, alIntentar }: Props
       </span>
       <div className={`flex gap-3 rounded-3xl p-2 ${resuelta ? 'animate-pop bg-nino-menta' : ''}`}>
         {palabra.silabas.map((_, i) => (
-          <span key={i} className={`${tile} min-h-[2.4em] min-w-[3.2em] px-4 text-[1.6em] ${colocadas[i] ? 'border-nino-ok bg-nino-menta' : 'border-dashed border-nino-borde bg-white'}`}>
+          <span key={i} className={`${tile} min-h-[2.1em] min-w-[3.2em] px-4 text-[1.6em] ${colocadas[i] ? 'border-nino-ok bg-nino-menta' : 'border-dashed border-nino-borde bg-white'}`}>
             {colocadas[i] ? MAYUS(colocadas[i]) : ''}
           </span>
         ))}
       </div>
-      <div className="flex flex-wrap justify-center gap-5 rounded-3xl bg-nino-lila p-5">
+      <div className="flex flex-wrap justify-center gap-4 rounded-3xl bg-nino-lila p-4">
         {ronda.fichas.map((f, i) => (
           <BotonNino
             key={i}
             voz={f}
             disabled={usadas.includes(i) || resuelta}
             onClick={() => tocar(f, i)}
-            className={`min-h-[2.4em] min-w-[3.4em] px-5 text-[1.6em] font-bold ${usadas.includes(i) ? 'invisible' : ''} ${sacudir === i ? 'animate-sacudir' : ''} ${
+            className={`min-h-[2.1em] min-w-[3.4em] px-5 text-[1.6em] font-bold ${usadas.includes(i) ? 'invisible' : ''} ${sacudir === i ? 'animate-sacudir' : ''} ${
               revelar && f === siguiente ? 'border-[#e6c84d] bg-nino-amarillo' : ''
             }`}
           >
@@ -263,7 +274,7 @@ function RondaAplausos({ ronda, resuelta, revelar, errores, alIntentar }: PropsR
   }
 
   return (
-    <div className="grid justify-items-center gap-8">
+    <div className="grid justify-items-center gap-5">
       <span className="tarjeta-nino flex min-w-0 items-center justify-center rounded-3xl border-3 border-nino-azul bg-white px-4 py-2">
         <PictogramaPalabra
           imagen={palabra.imagen}
@@ -375,6 +386,208 @@ function RondaChoque({ ronda, resuelta, alIntentar }: PropsRonda<'choque'>) {
         </BotonNino>
       )}
       {fase === 'unidas' && !resuelta && <Siguiente alTocar={() => alIntentar(true)} />}
+    </div>
+  )
+}
+
+// ---------- Escribir la respuesta (SIEMPRE en mayúscula) ----------
+
+// Teclado grande en pantalla con solo las letras de la ronda (el nivel de
+// exigencia decide cuántas sobran). También acepta el teclado físico, siempre
+// en mayúscula. Al completar los casilleros se revisa sola.
+function RondaEscribir({ ronda, resuelta, revelar, alIntentar }: PropsRonda<'escribir'>) {
+  const [escrito, setEscrito] = useState('')
+  const [revisando, setRevisando] = useState(false)
+  const largo = ronda.respuesta.length
+  const siguiente = ronda.respuesta[escrito.length]
+  const voz = useVozAlApuntar(ronda.audio)
+
+  const teclear = (l: string) => {
+    if (resuelta || revisando || escrito.length >= largo) return
+    const nuevo = escrito + l
+    hablar(fonemaDe(l.toLowerCase()))
+    setEscrito(nuevo)
+    if (nuevo.length < largo) return
+    setRevisando(true)
+    window.setTimeout(() => {
+      if (nuevo === ronda.respuesta) {
+        alIntentar(true)
+        return
+      }
+      alIntentar(false, nuevo)
+      // Se muestra el intento un momento y se borra para escribir de nuevo.
+      window.setTimeout(() => {
+        setEscrito('')
+        setRevisando(false)
+      }, 700)
+    }, 300)
+  }
+  const borrar = () => !resuelta && !revisando && setEscrito((e) => e.slice(0, -1))
+
+  useEffect(() => {
+    const alTeclear = (e: KeyboardEvent) => {
+      if (e.key === 'Backspace') return borrar()
+      const k = e.key.toUpperCase()
+      // Siempre mayúscula y sin tildes (la Ñ se conserva).
+      const l = k === 'Ñ' ? k : k.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      if (/^[A-ZÑ]$/.test(l)) teclear(l)
+    }
+    window.addEventListener('keydown', alTeclear)
+    return () => window.removeEventListener('keydown', alTeclear)
+  })
+
+  const mal = revisando && escrito.length === largo && escrito !== ronda.respuesta
+
+  return (
+    <div className="grid justify-items-center gap-4">
+      {ronda.imagen && (
+        <button
+          {...voz}
+          onClick={() => hablar(ronda.audio)}
+          aria-label={`Escuchar: ${ronda.audio}`}
+          className={`${tile} ${resuelta ? 'animate-pop border-nino-ok bg-nino-menta' : normal} relative px-5 py-2 hover:-translate-y-1`}
+        >
+          <ImagenNino imagen={ronda.imagen} className="escribir-pictograma" />
+          <span aria-hidden="true" className="absolute -right-3 -bottom-3 grid size-12 place-items-center rounded-full border-3 border-nino-ok bg-nino-menta text-[0.6em]">
+            🔊
+          </span>
+        </button>
+      )}
+      <div className={`flex gap-2 ${mal ? 'animate-sacudir' : ''}`} aria-label={`Escribe ${largo} ${largo === 1 ? 'letra' : 'letras'}`}>
+        {[...ronda.respuesta].map((_, i) => {
+          const letra = escrito[i]
+          const pista = !letra && revelar && i === escrito.length
+          return (
+            <span
+              key={i}
+              className={`${tile} grid h-[1.7em] w-[1.45em] text-[1.7em] ${
+                resuelta ? 'border-nino-ok bg-nino-menta' : mal ? 'border-[#e8a35c] bg-[#fdf1e4]' : letra ? 'border-nino-azul bg-white' : 'border-dashed border-nino-borde bg-white'
+              }`}
+            >
+              {letra ?? (pista ? <span className="opacity-35">{siguiente}</span> : '')}
+            </span>
+          )
+        })}
+      </div>
+      <div className="flex max-w-4xl flex-wrap justify-center gap-2.5 rounded-3xl bg-nino-lila p-3" role="group" aria-label="Teclado">
+        {ronda.letras.map((l) => (
+          <BotonNino
+            key={l}
+            voz={fonemaDe(l.toLowerCase())}
+            disabled={resuelta || revisando}
+            onClick={() => teclear(l)}
+            className={`grid size-[2em] place-items-center text-[1.4em] font-bold ${revelar && l === siguiente ? 'revelada border-[#e6c84d] bg-nino-amarillo' : ''}`}
+          >
+            {l}
+          </BotonNino>
+        ))}
+        <BotonNino voz="Borrar" disabled={resuelta || revisando || !escrito} onClick={borrar} className="grid h-[2em] min-w-[2.4em] place-items-center bg-[#f6d1d1] px-3 text-[1.4em] disabled:opacity-40">
+          <span aria-hidden="true">⌫</span>
+        </BotonNino>
+      </div>
+    </div>
+  )
+}
+
+// ---------- Globos de palabras ----------
+
+interface GloboSilaba {
+  id: number
+  ficha: string
+  izq: number
+  duracion: number
+  color: string
+  estado?: 'bien' | 'mal'
+}
+
+const COLORES_GLOBO = ['#ffe58a', '#bfe8d2', '#bcd8f5', '#f6c6d8', '#e4dcf7', '#fde2c8']
+const MAX_GLOBOS = 5
+let siguienteGlobo = 0
+
+// Las sílabas suben en globos; se revientan en orden para formar la palabra.
+// La sílaba que toca aparece seguido para que nunca haya que esperar mucho.
+// Con movimiento reducido los globos quedan quietos.
+function RondaGlobos({ ronda, resuelta, revelar, errores, alIntentar }: PropsRonda<'globos'>) {
+  const { palabra } = ronda
+  const [quieto] = useState(() => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false)
+  const [colocadas, setColocadas] = useState(0)
+  const [globos, setGlobos] = useState<GloboSilaba[]>(() => (quieto ? ronda.fichas.map((f, i) => nuevoGlobo(f, i, ronda.fichas.length)) : []))
+  const siguiente = palabra.silabas[colocadas]
+
+  function nuevoGlobo(ficha: string, i?: number, total?: number): GloboSilaba {
+    const izq = i !== undefined && total ? 6 + (i * 82) / Math.max(1, total - 1) : 4 + Math.random() * 80
+    return { id: siguienteGlobo++, ficha, izq, duracion: 6.5 + Math.random() * 2.5, color: COLORES_GLOBO[Math.floor(Math.random() * COLORES_GLOBO.length)] }
+  }
+
+  useEffect(() => {
+    if (quieto || resuelta) return
+    const t = window.setInterval(() => {
+      setGlobos((g) => {
+        if (g.filter((x) => !x.estado).length >= MAX_GLOBOS) return g
+        const enPantalla = g.filter((x) => !x.estado && x.ficha === siguiente).length
+        const ficha = siguiente && enPantalla === 0 && Math.random() < 0.6 ? siguiente : ronda.fichas[Math.floor(Math.random() * ronda.fichas.length)]
+        return [...g, nuevoGlobo(ficha)]
+      })
+    }, 1000)
+    return () => window.clearInterval(t)
+  }, [quieto, resuelta, siguiente, ronda.fichas])
+
+  const quitar = (id: number) => setGlobos((g) => g.filter((x) => x.id !== id))
+
+  const reventar = (g: GloboSilaba) => {
+    if (resuelta || g.estado) return
+    hablar(g.ficha)
+    const bien = g.ficha === siguiente
+    setGlobos((lista) => lista.map((x) => (x.id === g.id ? { ...x, estado: bien ? 'bien' : 'mal' } : x)))
+    window.setTimeout(() => {
+      // Quietos: el globo vuelve a aparecer para poder usarlo de nuevo.
+      setGlobos((lista) => (quieto ? lista.map((x) => (x.id === g.id ? { ...nuevoGlobo(g.ficha), izq: g.izq } : x)) : lista.filter((x) => x.id !== g.id)))
+    }, 400)
+    if (!bien) return alIntentar(false, MAYUS(g.ficha))
+    const n = colocadas + 1
+    setColocadas(n)
+    if (n === palabra.silabas.length) alIntentar(true)
+  }
+
+  return (
+    <div className="grid w-full justify-items-center gap-4">
+      <div className="flex flex-wrap items-center justify-center gap-4">
+        <span className="tarjeta-nino flex min-w-0 items-center justify-center rounded-3xl border-3 border-nino-azul bg-white px-4 py-2">
+          <PictogramaPalabra imagen={palabra.imagen} palabraVisible={errores > 0} className={`estimulo-imagen-pictograma ${resuelta ? 'animate-pop' : ''}`} />
+        </span>
+        <div className={`flex gap-3 rounded-3xl p-2 ${resuelta ? 'animate-pop bg-nino-menta' : ''}`}>
+          {palabra.silabas.map((sil, i) => (
+            <span key={i} className={`${tile} min-h-[2.2em] min-w-[3em] px-4 text-[1.5em] ${i < colocadas ? 'animate-pop border-nino-ok bg-nino-menta' : 'border-dashed border-nino-borde bg-white'}`}>
+              {i < colocadas ? MAYUS(sil) : ''}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="minijuego relative h-[min(36dvh,20rem)] w-full max-w-4xl overflow-hidden rounded-[2rem] border-3 border-nino-azul bg-white/50">
+        {globos.map((g) => (
+          <button
+            key={g.id}
+            aria-label={`Globo ${g.ficha}`}
+            disabled={!!g.estado || resuelta}
+            onPointerDown={() => reventar(g)}
+            onAnimationEnd={(e) => e.animationName === 'elevar' && quitar(g.id)}
+            className={`globo absolute grid size-[3.6em] place-items-center rounded-full text-[1.2em] leading-none font-bold select-none ${quieto ? '' : 'elevando'} ${
+              g.estado === 'mal' ? 'animate-sacudir' : ''
+            } ${revelar && !g.estado && g.ficha === siguiente ? 'ring-6 ring-[#e6c84d]' : ''}`}
+            style={{
+              left: `${g.izq}%`,
+              top: quieto ? '30%' : '100%',
+              background: g.color,
+              animationDuration: quieto ? undefined : `${g.duracion}s`,
+            }}
+          >
+            <span aria-hidden="true" className={g.estado ? 'animate-pop' : ''}>
+              {g.estado === 'bien' ? '💥' : MAYUS(g.ficha)}
+            </span>
+            {!g.estado && <span aria-hidden="true" className="hilo" />}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

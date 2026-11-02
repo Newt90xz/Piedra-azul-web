@@ -1,12 +1,17 @@
-"""Genera los audios de la voz de la app con Qwen3-TTS (voz «Serena»).
+"""Genera los audios de la voz de la app con Pocket-TTS de Kyutai (voz «Lola», español).
 
 Lee scripts/voz/trozos.json (lo escribe scripts/frasesVoz.ts) y deja un MP3 por
 trozo en public/voz/<clave>.mp3, más public/voz/indice.json con las claves
 disponibles. Retoma donde quedó: lo que ya existe no se vuelve a generar. Un
 audio grabado por una persona con el mismo nombre de archivo nunca se pisa.
 
-    python scripts/voz/generar.py            # todo lo que falte
-    python scripts/voz/generar.py --max 20   # solo unos pocos, para probar
+    python scripts/voz/generar.py                  # todo lo que falte
+    python scripts/voz/generar.py --max 20         # solo unos pocos, para probar
+    python scripts/voz/generar.py --calidad alta   # modelo de 24 capas: mejor voz, ~3 veces más lento
+    python scripts/voz/generar.py --voz ref.wav    # imita la voz de una grabación (ver README)
+
+Pocket-TTS corre en el procesador, sin GPU: en un i5 de escritorio el modelo
+normal genera ~2,5 veces más rápido que el tiempo real.
 
 Ver scripts/voz/README.md para instalar el entorno.
 """
@@ -21,17 +26,15 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 import torch
-from qwen_tts import Qwen3TTSModel
+from pocket_tts import TTSModel
 
 AQUI = Path(__file__).resolve().parent
 SALIDA = AQUI.parent.parent / "public" / "voz"
 
-MODELO = "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice"
-VOZ = "Serena"
-ESTILO = (
-    "Habla en español latinoamericano como una educadora de párvulos: cálida, alegre y cariñosa, "
-    "despacio y muy clara, para niños de cinco años."
-)
+# Modelo en español: «spanish» (rápido) o «spanish_24l» (más natural, más lento).
+MODELOS = {"normal": "spanish", "alta": "spanish_24l"}
+# Voz española del catálogo de Kyutai. Otra voz: --voz con un .wav limpio de ~5-10 s.
+VOZ = "lola"
 # Silencio que se deja al inicio y al final de cada trozo (la app los encadena).
 MARGEN_S = 0.04
 UMBRAL_SILENCIO = 0.01
@@ -89,6 +92,8 @@ def escribir_indice() -> int:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--max", type=int, default=0, help="generar como mucho N trozos")
+    parser.add_argument("--calidad", choices=list(MODELOS), default="normal", help="modelo normal o de alta calidad")
+    parser.add_argument("--voz", default=VOZ, help="voz del catálogo (lola) o un .wav para imitar")
     args = parser.parse_args()
 
     trozos = json.loads((AQUI / "trozos.json").read_text(encoding="utf-8"))
@@ -102,12 +107,9 @@ def main() -> None:
         return
 
     torch.set_num_threads(os.cpu_count() or 4)
-    usar_gpu = torch.cuda.is_available()
-    modelo = Qwen3TTSModel.from_pretrained(
-        MODELO,
-        device_map="cuda:0" if usar_gpu else "cpu",
-        dtype=torch.bfloat16 if usar_gpu else torch.float32,
-    )
+    modelo = TTSModel.load_model(language=MODELOS[args.calidad])
+    voz = modelo.get_state_for_audio_prompt(args.voz)
+    sr = modelo.sample_rate
 
     inicio = time.time()
     descartados = []
@@ -116,8 +118,8 @@ def main() -> None:
         maximo = SEGUNDOS_BASE + SEGUNDOS_POR_LETRA * len(texto)
         audio = None
         for _ in range(INTENTOS):
-            wavs, sr = modelo.generate_custom_voice(text=texto, language="Spanish", speaker=VOZ, instruct=ESTILO)
-            candidato = recortar(np.asarray(wavs[0], dtype=np.float32), sr)
+            generado = modelo.generate_audio(voz, texto).numpy().astype(np.float32)
+            candidato = recortar(generado, sr)
             if len(candidato) / sr <= maximo:
                 audio = normalizar(candidato)
                 break

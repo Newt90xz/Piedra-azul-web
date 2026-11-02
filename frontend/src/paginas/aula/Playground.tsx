@@ -56,8 +56,9 @@ export default function Playground() {
       </ol>
       <div className="grid shrink-0 grid-cols-4 gap-4 sm:grid-cols-8" role="group" aria-label="Enviar un mensaje">
         {PICTOS_MENSAJE.map((p) => (
-          <BotonNino key={p.id} voz={p.voz} onClick={() => void enviar(p)} className="grid aspect-square place-items-center text-[1.8em]">
+          <BotonNino key={p.id} voz={p.voz} onClick={() => void enviar(p)} className="grid aspect-square place-content-center justify-items-center gap-1 text-[1.8em]">
             <span aria-hidden="true">{p.emoji}</span>
+            <span aria-hidden="true" className="text-[0.32em] leading-none font-bold">{palabraPicto(p.voz)}</span>
           </BotonNino>
         ))}
       </div>
@@ -79,7 +80,13 @@ function Burbuja({ mensaje, mio }: { mensaje: MensajeSala; mio: boolean }) {
         className={`rounded-3xl border-3 px-5 py-2 text-[1.8em] leading-none ${mio ? 'rounded-br-md border-nino-ok bg-nino-menta' : 'rounded-bl-md border-nino-azul bg-white'}`}
       >
         <span aria-hidden="true">{picto?.emoji ?? '❔'}</span>
+        {picto && <span aria-hidden="true" className="ml-2 align-middle text-[0.45em] font-bold">{palabraPicto(picto.voz)}</span>}
       </button>
     </li>
   )
+}
+
+// La palabra del pictograma, en mayúscula y sin signos: «¡Te quiero!» → «TE QUIERO».
+function palabraPicto(voz: string) {
+  return voz.replace(/[¡!¿?,]/g, '').toUpperCase()
 }

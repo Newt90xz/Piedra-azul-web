@@ -127,12 +127,19 @@ body {
   max-width: max(0px, calc(100vw - 7rem - clamp(7rem, 38vw, 11rem) - 0.5em));
   opacity: 1;
 }
+/* Escribir: el teclado ocupa espacio, así que el dibujo se limita también por el alto. */
+.nino .escribir-pictograma {
+  width: clamp(5rem, 22dvh, 9rem);
+  height: clamp(5rem, 22dvh, 9rem);
+  font-size: clamp(5rem, 22dvh, 9rem);
+}
 .nino .estimulo-imagen-pictograma {
-  width: clamp(7rem, 38vw, 11rem);
-  height: clamp(7rem, 38vw, 11rem);
+  /* También limitado por el alto: en pantallas bajas no empuja ni tapa el título. */
+  width: clamp(5rem, min(38vw, 18dvh), 11rem);
+  height: clamp(5rem, min(38vw, 18dvh), 11rem);
   max-width: 100%;
   flex: 0 0 auto;
-  font-size: clamp(7rem, 38vw, 11rem);
+  font-size: clamp(5rem, min(38vw, 18dvh), 11rem);
 }
 @media (prefers-reduced-motion: reduce) {
   .nino .estimulo-imagen,
@@ -154,6 +161,13 @@ body {
   100% { opacity: 1; transform: none; }
 }
 .caja-entra { animation: caja-entra 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.2) backwards; }
+
+/* «¿Cómo se juega?» (actividades/Partida.tsx): una mano que toca, para mostrar que se juega tocando. */
+@keyframes instrucciones-tocar {
+  0%, 60%, 100% { transform: translate(0, 0) scale(1); }
+  30% { transform: translate(-0.25em, -0.25em) scale(0.85); }
+}
+.instrucciones-mano { animation: instrucciones-tocar 1.4s ease-in-out infinite; }
 
 /* Saludo al elegir perfil (paginas/alumno/Entrada.tsx). */
 .saludo-velo { background: rgb(36 52 71 / 0.35); animation: pantalla 0.3s ease-out; }

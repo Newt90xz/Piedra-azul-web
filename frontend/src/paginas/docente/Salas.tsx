@@ -1,7 +1,7 @@
 import { createContext, use, useEffect, useState, type DragEvent, type FormEvent, type ReactNode } from 'react'
 import { useSesion } from '../../app/Sesion.tsx'
 import { JUEGOS } from '../../contenido/actividades.ts'
-import { CONTENIDOS, contenido, planDe, type Contenido } from '../../contenido/contenidos.ts'
+import { AREAS, CONTENIDOS, contenido, planDe, type Area, type Contenido } from '../../contenido/contenidos.ts'
 import { pictoMensaje } from '../../contenido/mensajes.ts'
 import { repo } from '../../datos/index.ts'
 import type { Conectado, Emocion, Estudiante, MiembroSala, ProgresoSala, ResultadoActividad, Sala, TipoSala } from '../../dominio/tipos.ts'
@@ -20,7 +20,7 @@ const TIPOS: Record<TipoSala, { nombre: string; icono: string; color: string; ay
   playground: { nombre: 'Playground', icono: '🎈', color: 'text-[#7a5b00]', ayuda: 'Espacio común con mensajes de pictogramas.' },
   dibujo: { nombre: 'Dibujo', icono: '🎨', color: 'text-[#7b3fa0]', ayuda: 'Dibujo libre y repasar letras.' },
 }
-// Destino «sin sala»: soltar ahí saca al niño de su sala y vuelve a la espera.
+// Destino «Recreo» (sin sala): soltar ahí saca al niño de su sala y lo manda al recreo.
 const ESPERA = ''
 // Si el servidor nunca confirma un movimiento, el aviso «Conectándolo…» se quita igual.
 const OLVIDAR_PENDIENTE_MS = 20_000
@@ -166,7 +166,7 @@ export default function Salas() {
           datos && (
             <p className="flex items-center gap-2 text-sm font-semibold text-tinta">
               <span className={`size-2.5 rounded-full ${enEspera.length + enSalas ? 'bg-menta' : 'bg-borde'}`} aria-hidden="true" />
-              {[...datos.conectados.values()].filter(enLinea).length} con dispositivo · {enEspera.length} en espera · {enSalas} en salas
+              {[...datos.conectados.values()].filter(enLinea).length} con dispositivo · {enEspera.length} en recreo · {enSalas} en salas
             </p>
           )
         }
@@ -243,7 +243,7 @@ function Avisos({ datos, ejecutar }: { datos: Datos; ejecutar: Ejecutar }) {
   )
 }
 
-// Caja donde se suelta a un niño: una sala o «Sin sala». Resalta al arrastrar
+// Caja donde se suelta a un niño: una sala o el «Recreo». Resalta al arrastrar
 // encima y, si hay un niño elegido con un toque, ofrece moverlo aquí.
 function ZonaSoltar({ destino, nombre, className = '', children }: { destino: string; nombre: string; className?: string; children: ReactNode }) {
   const { elegido, salaDe, mover } = useMover()
@@ -320,7 +320,7 @@ function Conectando({ destino }: { destino: string }) {
   return (
     <span role="status" className="flex items-center gap-1.5 text-xs font-semibold text-menta-oscuro">
       <span aria-hidden="true" className="size-3 animate-spin rounded-full border-2 border-menta border-t-transparent" />
-      {destino === ESPERA ? 'Sacándolo de la sala…' : 'Conectándolo…'}
+      {destino === ESPERA ? 'Enviándolo al recreo…' : 'Conectándolo…'}
     </span>
   )
 }
@@ -330,13 +330,13 @@ function Conectando({ destino }: { destino: string }) {
 function SinSala({ ninos, datos }: { ninos: Estudiante[]; datos: Datos }) {
   const ordenados = [...ninos].sort((a, b) => Number(enLinea(datos.conectados.get(b.id))) - Number(enLinea(datos.conectados.get(a.id))))
   return (
-    <ZonaSoltar destino={ESPERA} nombre="Sin sala" className="sticky top-2 z-20 mb-5 grid gap-3 px-4 py-3">
+    <ZonaSoltar destino={ESPERA} nombre="Recreo" className="sticky top-2 z-20 mb-5 grid gap-3 px-4 py-3">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <h2 className="shrink-0 font-bold text-tinta">
-          Sin sala <span className="text-tinta-suave">({ninos.length})</span>
+          <span aria-hidden="true">🎠</span> Recreo <span className="text-tinta-suave">({ninos.length})</span>
         </h2>
         {ninos.length === 0 ? (
-          <p className="text-sm text-tinta-suave">Todos están en una sala. Arrastra aquí para sacar a alguien.</p>
+          <p className="text-sm text-tinta-suave">Nadie en recreo: todos están en una sala. Arrastra aquí a quien termine.</p>
         ) : (
           <ul className="flex flex-wrap gap-2">
             {ordenados.map((e) => (
@@ -362,7 +362,7 @@ function FichaSinSala({ e, online }: { e: Estudiante; online: boolean }) {
       <EnLinea e={e} online={online} className="size-8 text-lg" />
       <span className="leading-tight">
         <span className="block font-semibold text-tinta">{e.nombre}</span>
-        {destino !== undefined ? <Conectando destino={destino} /> : <span className="block text-xs text-tinta-suave">{online ? 'Esperando' : 'Sin conectar'}</span>}
+        {destino !== undefined ? <Conectando destino={destino} /> : <span className="block text-xs text-tinta-suave">{online ? 'En recreo' : 'Sin conectar'}</span>}
       </span>
     </li>
   )
@@ -570,9 +570,9 @@ function ListaNinos({
         type="button"
         onClick={() => dentro.forEach((e) => mover(e.id, ESPERA))}
         className="justify-self-end text-xs font-semibold text-tinta-suave underline hover:text-tinta"
-        aria-label={`Sacar a todos de ${sala.nombre}`}
+        aria-label={`Enviar a todos los de ${sala.nombre} al recreo`}
       >
-        Sacar a todos
+        Todos al recreo
       </button>
     </div>
   )
@@ -707,23 +707,36 @@ function EditorPlan({ sala, conAvance, ejecutar, alCerrar }: { sala: Sala; conAv
         )}
 
         {disponibles.length > 0 && (
-          <div>
-            <h3 className="mb-2 text-xs font-bold text-tinta-suave">Toca para agregar</h3>
-            <ul className="grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-2">
-              {disponibles.map((c) => (
-                <li key={c.id}>
-                  <button
-                    type="button"
-                    title={c.descripcion}
-                    onClick={() => setContenidos((x) => [...x, c.id])}
-                    className="grid h-full w-full justify-items-center gap-1.5 rounded-xl border border-borde bg-white px-2 py-3 text-center text-sm font-semibold text-tinta transition-colors hover:border-menta hover:bg-menta-fondo"
-                  >
-                    <IconoContenido c={c} className="size-11 text-2xl" />
-                    {c.titulo}
-                  </button>
-                </li>
-              ))}
-            </ul>
+          <div className="grid gap-4">
+            <h3 className="text-xs font-bold text-tinta-suave">Toca para agregar</h3>
+            {/* Por área: las actividades auditivas (solo escuchar) aparte de las de sílabas. */}
+            {(Object.keys(AREAS) as Area[]).map((area) => {
+              const delArea = disponibles.filter((c) => c.area === area)
+              if (delArea.length === 0) return null
+              return (
+                <section key={area} aria-label={AREAS[area].nombre}>
+                  <h4 className="mb-1.5 flex items-baseline gap-2 text-sm font-bold text-tinta">
+                    <span aria-hidden="true">{AREAS[area].icono}</span> {AREAS[area].nombre}
+                    <span className="text-xs font-normal text-tinta-suave">{AREAS[area].descripcion}</span>
+                  </h4>
+                  <ul className="grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-2">
+                    {delArea.map((c) => (
+                      <li key={c.id}>
+                        <button
+                          type="button"
+                          title={`${c.descripcion}\n${c.pasos.map((p, k) => `${k + 1}. ${p.titulo}`).join('\n')}`}
+                          onClick={() => setContenidos((x) => [...x, c.id])}
+                          className="grid h-full w-full justify-items-center gap-1.5 rounded-xl border border-borde bg-white px-2 py-3 text-center text-sm font-semibold text-tinta transition-colors hover:border-menta hover:bg-menta-fondo"
+                        >
+                          <IconoContenido c={c} className="size-11 text-2xl" />
+                          {c.titulo}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )
+            })}
           </div>
         )}
 

@@ -4,6 +4,9 @@ export type ModoImagen = 'foto' | 'picto' | 'mixto'
 export type TamanoLetra = 'normal' | 'grande' | 'muy-grande'
 export type Emocion = 'alegria' | 'calma' | 'tristeza' | 'enojo'
 export type Tematica = 'animales' | 'dinosaurios' | 'futbol' | 'oceano' | 'vehiculos' | 'piratas'
+// Nivel de exigencia de los desafíos (contenido/exigencia.ts): cuántas opciones,
+// rondas y ayudas tiene cada actividad, y cuánto hay que lograr para pasar.
+export type Exigencia = 'inicial' | 'intermedio' | 'avanzado'
 export type Nivel = 1 | 2 | 3
 
 export interface Docente {
@@ -26,6 +29,7 @@ export interface Ajustes {
   reducirAnimaciones: boolean
   silenciarEfectos: boolean
   tematica: Tematica
+  exigencia: Exigencia
 }
 
 // RNF-09: datos mínimos. Solo nombre de pila, sin RUT ni fecha de nacimiento.

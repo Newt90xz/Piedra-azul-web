@@ -37,13 +37,13 @@ function nuevoGlobo(): Globo {
 
 const sinMovimiento = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 
-export function MiniJuego() {
+export function MiniJuego({ saludo = 'Mientras esperas a tu profe, ¡revienta los globos!' }: { saludo?: string }) {
   const [quieto] = useState(sinMovimiento)
   const [globos, setGlobos] = useState<Globo[]>(() => (quieto ? Array.from({ length: 4 }, nuevoGlobo) : []))
   const [puntos, setPuntos] = useState(0)
   const anunciado = useRef(0)
 
-  useEffect(() => hablar('Mientras esperas a tu profe, ¡revienta los globos!'), [])
+  useEffect(() => hablar(saludo), [saludo])
 
   // Van saliendo globos de abajo, sin pasar de unos pocos a la vez.
   useEffect(() => {
