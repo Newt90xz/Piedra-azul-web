@@ -58,11 +58,39 @@ export function EnlaceNino({ to, voz, className = '', children }: { to: string; 
 }
 
 // RF-08: muestra foto real, pictograma o el marcador provisional según el perfil.
+function rutaImagenLocal(alt: string) {
+  const nombre = alt
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+  return `${import.meta.env.BASE_URL}imagenes/${nombre}.png`
+}
+
 export function ImagenNino({ imagen, className = '' }: { imagen: Imagen; className?: string }) {
   const { estudiante } = useNino()
   const modo = estudiante.ajustes.modoImagen
-  const src = modo === 'picto' ? imagen.pictoUrl ?? imagen.fotoUrl : imagen.fotoUrl ?? imagen.pictoUrl
-  if (src) return <img src={src} alt={imagen.alt} className={`object-contain ${className}`} />
+  const fuentes = modo === 'picto'
+    ? [imagen.pictoUrl, imagen.fotoUrl, rutaImagenLocal(imagen.alt)]
+    : [imagen.fotoUrl, imagen.pictoUrl, rutaImagenLocal(imagen.alt)]
+  const candidatas = [...new Set(fuentes.filter((src): src is string => Boolean(src)))]
+  const clave = candidatas.join('\0')
+  const [error, setError] = useState<{ clave: string; indice: number } | null>(null)
+  const indice = error?.clave === clave ? error.indice : 0
+  const src = candidatas[indice]
+
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt={imagen.alt}
+        className={`object-contain ${className}`}
+        onError={() => setError({ clave, indice: indice + 1 })}
+      />
+    )
+  }
+
   return (
     <span role="img" aria-label={imagen.alt} className={`inline-block leading-none ${className}`}>
       {imagen.emoji}
