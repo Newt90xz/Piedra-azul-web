@@ -35,7 +35,7 @@ const MAYUS = (s: string) => s.toUpperCase()
 
 // ---------- Elegir una opción (sonido inicial, caza de letras, sílaba inicial, ¿qué dice?, completar) ----------
 
-function RondaElegir({ ronda, resuelta, revelar, alIntentar }: PropsRonda<'elegir'>) {
+function RondaElegir({ ronda, resuelta, revelar, errores, alIntentar }: PropsRonda<'elegir'>) {
   const [descartadas, setDescartadas] = useState<string[]>([])
   const [sacudir, setSacudir] = useState<string | null>(null)
   const { estimulo } = ronda
@@ -50,7 +50,7 @@ function RondaElegir({ ronda, resuelta, revelar, alIntentar }: PropsRonda<'elegi
   }
 
   const conImagen = ronda.opciones.some((o) => o.imagen)
-  const palabraVisible = descartadas.length > 0
+  const palabraVisible = errores > 0
 
   return (
     <div className="grid justify-items-center gap-10">
@@ -64,7 +64,7 @@ function RondaElegir({ ronda, resuelta, revelar, alIntentar }: PropsRonda<'elegi
               <PictogramaPalabra
                 imagen={estimulo.imagen}
                 palabraVisible={palabraVisible}
-                className="size-[4em] text-[4em]"
+                className="estimulo-imagen-pictograma"
               />
             </span>
           )}
@@ -134,7 +134,7 @@ function Estimulo({
     <PictogramaPalabra
       imagen={estimulo.imagen}
       palabraVisible={palabraVisible}
-      className="size-[4em] text-[4em]"
+      className="estimulo-imagen-pictograma"
     />
   ) : estimulo.texto ? (
     <span className="text-[3em] font-bold">{estimulo.texto}</span>
@@ -165,11 +165,12 @@ function PictogramaPalabra({
   return (
     <span className={`estimulo-imagen ${palabraVisible ? 'estimulo-imagen-expandido' : 'estimulo-imagen-compacto'}`}>
       <ImagenNino imagen={imagen} className={`shrink-0 object-contain ${className}`} />
-      {palabraVisible && (
-        <span className="animate-aparecer min-w-0 text-center text-[1.4em] leading-tight font-bold [overflow-wrap:anywhere]">
-          {MAYUS(imagen.alt)}
-        </span>
-      )}
+      <span
+        aria-hidden={!palabraVisible}
+        className={`estimulo-palabra min-w-0 text-center text-[1.2em] leading-tight font-bold [overflow-wrap:anywhere] ${palabraVisible ? 'estimulo-palabra-visible' : ''}`}
+      >
+        {MAYUS(imagen.alt)}
+      </span>
     </span>
   )
 }
@@ -211,7 +212,7 @@ function RondaConstruir({ ronda, resuelta, revelar, errores, alIntentar }: Props
         <PictogramaPalabra
           imagen={palabra.imagen}
           palabraVisible={errores > 0}
-          className={`size-[3.6em] text-[3.6em] ${resuelta ? 'animate-pop' : ''}`}
+          className={`estimulo-imagen-pictograma ${resuelta ? 'animate-pop' : ''}`}
         />
       </span>
       <div className={`flex gap-3 rounded-3xl p-2 ${resuelta ? 'animate-pop bg-nino-menta' : ''}`}>
@@ -267,7 +268,7 @@ function RondaAplausos({ ronda, resuelta, revelar, errores, alIntentar }: PropsR
         <PictogramaPalabra
           imagen={palabra.imagen}
           palabraVisible={errores > 0}
-          className="size-[3.6em] text-[3.6em]"
+          className="estimulo-imagen-pictograma"
         />
       </span>
       <div className="flex gap-4">
