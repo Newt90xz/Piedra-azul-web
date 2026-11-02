@@ -1,5 +1,5 @@
 import type { IntentoRonda, Palabra } from '../dominio/tipos.ts'
-import { actividad, mezclar, tomar, type Categoria, type Opcion, type Ronda } from './actividades.ts'
+import { actividad, mezclar, ordenarSilabas, tomar, type Categoria, type Opcion, type Ronda } from './actividades.ts'
 import { CONSONANTES_SILABAS, LETRAS, PALABRAS, VOCALES, fonemaDe, quitarTildes } from './banco.ts'
 
 // Contenidos de las Bases Curriculares de la Educación Parvularia (MINEDUC,
@@ -129,11 +129,11 @@ function escucharSilaba(c: string): Ronda[] {
     tipo: 'elegir',
     item: MAYUS(s),
     estimulo: { audio: s },
-    opciones: mezclar([s, ...tomar(silabas.filter((x) => x !== s), 2)]).map((x) => opcionTexto(x, MAYUS(x), x)),
+    opciones: ordenarSilabas(mezclar([s, ...tomar(silabas.filter((x) => x !== s), 2)]))
+      .map((x) => opcionTexto(x, MAYUS(x), x)),
     correctaId: s,
     instruccion: `Toca la sílaba ${s}.`,
     pista: `¡Casi! Escucha: ${fonemaDe(c)}${fonemaDe(s[1])}… ${s}. ¡Otra vez!`,
-    refuerzo: `¡Muy bien! ${fonemaDe(c)}${fonemaDe(s[1])}… ¡${s}!`,
   }))
 }
 
@@ -145,7 +145,8 @@ function silabaDeLaImagen(c: string): Ronda[] {
       tipo: 'elegir',
       item: MAYUS(s),
       estimulo: { imagen: w.imagen, audio: w.texto },
-      opciones: mezclar([s, ...tomar(silabas.filter((x) => x !== s), 2)]).map((x) => opcionTexto(x, MAYUS(x), x)),
+      opciones: ordenarSilabas(mezclar([s, ...tomar(silabas.filter((x) => x !== s), 2)]))
+        .map((x) => opcionTexto(x, MAYUS(x), x)),
       correctaId: s,
       instruccion: `${w.texto}. ¿Con qué sílaba empieza ${w.texto}?`,
       pista: `¡Casi! ${s}… ${w.texto}. ¡Otra vez!`,
@@ -293,7 +294,7 @@ export const CONTENIDOS: Contenido[] = [
     pasos: [
       { titulo: '¿Cuál es más larga?', generar: () => compararLargo(true, [[1, 4], [1, 3]]) },
       { titulo: '¿Cuál es más corta?', generar: () => compararLargo(false, [[2, 4], [1, 3]]) },
-      { titulo: 'La más larga de tres', generar: laMasLarga },
+      { titulo: 'Encuentra la palabra más larga de tres', generar: laMasLarga },
     ],
   },
   {
@@ -305,9 +306,9 @@ export const CONTENIDOS: Contenido[] = [
     icono: '🐱',
     color: 'var(--color-nino-menta)',
     pasos: [
-      { titulo: 'Rima entre dos', generar: cualTerminaIgual(2) },
-      { titulo: 'Rima entre tres', generar: cualTerminaIgual(3) },
-      { titulo: 'Rima entre cuatro', generar: cualTerminaIgual(4) },
+      { titulo: 'Encuentra la rima entre dos palabras', generar: cualTerminaIgual(2) },
+      { titulo: 'Encuentra la rima entre tres palabras', generar: cualTerminaIgual(3) },
+      { titulo: 'Encuentra la rima entre cuatro palabras', generar: cualTerminaIgual(4) },
     ],
   },
 ]

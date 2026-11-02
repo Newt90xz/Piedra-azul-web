@@ -9,6 +9,7 @@ interface PropsRonda<T extends Ronda['tipo']> {
   ronda: Extract<Ronda, { tipo: T }>
   resuelta: boolean
   revelar: boolean
+  errores: number
   // `respuesta`: lo que eligió si se equivocó, para el registro de errores.
   alIntentar: (correcto: boolean, respuesta?: string) => void
 }
@@ -49,18 +50,29 @@ function RondaElegir({ ronda, resuelta, revelar, alIntentar }: PropsRonda<'elegi
   }
 
   const conImagen = ronda.opciones.some((o) => o.imagen)
+  const palabraVisible = descartadas.length > 0
 
   return (
     <div className="grid justify-items-center gap-10">
-      {!estimulo.silabas && (estimulo.audio || estimulo.texto || estimulo.imagen) && <Estimulo ronda={ronda} resuelta={resuelta} />}
+      {!estimulo.silabas && (estimulo.audio || estimulo.texto || estimulo.imagen) && (
+        <Estimulo ronda={ronda} resuelta={resuelta} palabraVisible={palabraVisible} />
+      )}
       {estimulo.silabas && (
         <div className="flex flex-wrap items-center justify-center gap-6">
-          {estimulo.imagen && <ImagenNino imagen={estimulo.imagen} className="size-[3.2em] text-[3.2em]" />}
+          {estimulo.imagen && (
+            <span className="tarjeta-nino flex min-w-0 items-center justify-center rounded-3xl border-3 border-nino-azul bg-white px-4 py-2">
+              <PictogramaPalabra
+                imagen={estimulo.imagen}
+                palabraVisible={palabraVisible}
+                className="size-[4em] text-[4em]"
+              />
+            </span>
+          )}
           {estimulo.texto && <span className={`${tile} ${normal} min-w-[2.6em] px-6 py-2 text-[3em]`}>{estimulo.texto}</span>}
           {estimulo.silabas.map((s, i) =>
             i === estimulo.hueco ? (
-              <span key={i} className={`${tile} min-h-[2.4em] min-w-[3em] px-4 text-[1.6em] ${resuelta ? 'animate-pop border-nino-ok bg-nino-menta' : 'border-dashed border-nino-borde bg-white'}`}>
-                {resuelta ? s : ''}
+              <span key={i} className={`${tile} min-h-[2.4em] min-w-[3em] px-4 text-[1.6em] ${resuelta ? 'animate-pop border-nino-ok bg-nino-menta' : revelar ? 'border-[#e6c84d] bg-nino-amarillo' : 'border-dashed border-nino-borde bg-white'}`}>
+                {resuelta || revelar ? s : ''}
               </span>
             ) : (
               <SilabaTocable key={i} silaba={s} />
@@ -106,18 +118,30 @@ function RondaElegir({ ronda, resuelta, revelar, alIntentar }: PropsRonda<'elegi
 
 // Lo que se pregunta: una imagen, una letra o sílaba, o solo un sonido. Se toca
 // para escucharlo otra vez (sin depender de la lectura).
-function Estimulo({ ronda, resuelta }: { ronda: Extract<Ronda, { tipo: 'elegir' }>; resuelta: boolean }) {
+function Estimulo({
+  ronda,
+  resuelta,
+  palabraVisible,
+}: {
+  ronda: Extract<Ronda, { tipo: 'elegir' }>
+  resuelta: boolean
+  palabraVisible: boolean
+}) {
   const { estimulo } = ronda
   const voz = useVozAlApuntar(estimulo.audio ?? '')
   const soloAudio = !estimulo.imagen && !estimulo.texto
   const contenido = estimulo.imagen ? (
-    <ImagenNino imagen={estimulo.imagen} className="size-[3.36em] text-[3.36em]" />
+    <PictogramaPalabra
+      imagen={estimulo.imagen}
+      palabraVisible={palabraVisible}
+      className="size-[4em] text-[4em]"
+    />
   ) : estimulo.texto ? (
     <span className="text-[3em] font-bold">{estimulo.texto}</span>
   ) : (
-    <img src={`${import.meta.env.BASE_URL}imagenes/escuchar.png`} alt="Escuchar" className="size-[2.4em] object-contain" />
+    <img src={`${import.meta.env.BASE_URL}imagenes/escuchar.png`} alt="Escuchar" className="size-[7.4em] object-contain" />
   )
-  const clase = `${tile} relative ${soloAudio ? 'min-h-[2.8em] min-w-[2.8em] px-4 py-2' : 'min-h-[3.4em] min-w-[3.4em] px-8 py-4'} ${resuelta ? 'animate-pop border-nino-ok bg-nino-menta' : 'border-nino-azul bg-white'}`
+  const clase = `${tile} relative ${soloAudio ? 'min-h-[3.6em] min-w-[3.6em] px-2 py-2' : 'min-h-[3.4em] min-w-[3.4em] px-8 py-4'} ${resuelta ? 'animate-pop border-nino-ok bg-nino-menta' : 'border-nino-azul bg-white'}`
   if (!estimulo.audio) return <span className={clase}>{contenido}</span>
   return (
     <button {...voz} onClick={() => hablar(estimulo.audio!)} aria-label={`Escuchar: ${estimulo.audio}`} className={`${clase} hover:-translate-y-1`}>
@@ -126,6 +150,27 @@ function Estimulo({ ronda, resuelta }: { ronda: Extract<Ronda, { tipo: 'elegir' 
         🔊
       </span>
     </button>
+  )
+}
+
+function PictogramaPalabra({
+  imagen,
+  palabraVisible,
+  className,
+}: {
+  imagen: NonNullable<Extract<Ronda, { tipo: 'elegir' }>['estimulo']['imagen']>
+  palabraVisible: boolean
+  className: string
+}) {
+  return (
+    <span className={`estimulo-imagen ${palabraVisible ? 'estimulo-imagen-expandido' : 'estimulo-imagen-compacto'}`}>
+      <ImagenNino imagen={imagen} className={`shrink-0 object-contain ${className}`} />
+      {palabraVisible && (
+        <span className="animate-aparecer min-w-0 text-center text-[1.4em] leading-tight font-bold [overflow-wrap:anywhere]">
+          {MAYUS(imagen.alt)}
+        </span>
+      )}
+    </span>
   )
 }
 
@@ -140,7 +185,7 @@ function SilabaTocable({ silaba }: { silaba: string }) {
 
 // ---------- Constructor de palabras ----------
 
-function RondaConstruir({ ronda, resuelta, revelar, alIntentar }: PropsRonda<'construir'>) {
+function RondaConstruir({ ronda, resuelta, revelar, errores, alIntentar }: PropsRonda<'construir'>) {
   const { palabra } = ronda
   const [usadas, setUsadas] = useState<number[]>([])
   const [sacudir, setSacudir] = useState<number | null>(null)
@@ -162,7 +207,13 @@ function RondaConstruir({ ronda, resuelta, revelar, alIntentar }: PropsRonda<'co
 
   return (
     <div className="grid justify-items-center gap-8">
-      <ImagenNino imagen={palabra.imagen} className={`size-[3.6em] text-[3.6em] ${resuelta ? 'animate-pop' : ''}`} />
+      <span className="tarjeta-nino flex min-w-0 items-center justify-center rounded-3xl border-3 border-nino-azul bg-white px-4 py-2">
+        <PictogramaPalabra
+          imagen={palabra.imagen}
+          palabraVisible={errores > 0}
+          className={`size-[3.6em] text-[3.6em] ${resuelta ? 'animate-pop' : ''}`}
+        />
+      </span>
       <div className={`flex gap-3 rounded-3xl p-2 ${resuelta ? 'animate-pop bg-nino-menta' : ''}`}>
         {palabra.silabas.map((_, i) => (
           <span key={i} className={`${tile} min-h-[2.4em] min-w-[3.2em] px-4 text-[1.6em] ${colocadas[i] ? 'border-nino-ok bg-nino-menta' : 'border-dashed border-nino-borde bg-white'}`}>
@@ -191,7 +242,7 @@ function RondaConstruir({ ronda, resuelta, revelar, alIntentar }: PropsRonda<'co
 
 // ---------- Aplausos silábicos ----------
 
-function RondaAplausos({ ronda, resuelta, revelar, alIntentar }: PropsRonda<'aplausos'>) {
+function RondaAplausos({ ronda, resuelta, revelar, errores, alIntentar }: PropsRonda<'aplausos'>) {
   const { palabra } = ronda
   const [encendidas, setEncendidas] = useState(0)
   const [descartadas, setDescartadas] = useState<number[]>([])
@@ -212,7 +263,13 @@ function RondaAplausos({ ronda, resuelta, revelar, alIntentar }: PropsRonda<'apl
 
   return (
     <div className="grid justify-items-center gap-8">
-      <ImagenNino imagen={palabra.imagen} className="size-[3.6em] text-[3.6em]" />
+      <span className="tarjeta-nino flex min-w-0 items-center justify-center rounded-3xl border-3 border-nino-azul bg-white px-4 py-2">
+        <PictogramaPalabra
+          imagen={palabra.imagen}
+          palabraVisible={errores > 0}
+          className="size-[3.6em] text-[3.6em]"
+        />
+      </span>
       <div className="flex gap-4">
         {palabra.silabas.map((s, i) => (
           <BotonNino

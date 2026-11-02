@@ -83,7 +83,7 @@ function ElegirPerfil() {
             {/* Evita que dos niños usen el mismo perfil (el servidor también lo
                 rechaza). Si quedó tomado por error, la docente lo libera. */}
             <BotonNino
-              voz={p.ocupado ? `${p.nombre} ya entró` : p.nombre}
+              voz={p.ocupado ? `${p.nombre.toUpperCase()} ya entró` : p.nombre.toUpperCase()}
               disabled={p.ocupado || !!saludo}
               onClick={(e) => void entrar(p, e.currentTarget)}
               className={`relative flex w-full flex-col items-center gap-3 p-5 disabled:opacity-50 ${rechazado === p.id ? 'animate-sacudir' : ''} ${
@@ -93,7 +93,7 @@ function ElegirPerfil() {
               <span data-avatar>
                 <Avatar estudiante={p} className="size-28 text-7xl" />
               </span>
-              <span className="text-[0.85em] font-bold">{p.nombre}</span>
+              <span className="text-[0.85em] font-bold">{p.nombre.toUpperCase()}</span>
               {p.ocupado && (
                 <span aria-hidden="true" className="absolute top-3 right-3 text-[1.2em]">
                   🔒
@@ -132,7 +132,7 @@ function Saludo({ perfil, desde }: { perfil: PerfilAlumno; desde: DOMRect }) {
           <Avatar estudiante={perfil} className="size-[min(16rem,45vh)] text-[min(10rem,28vh)] shadow-[0_0_0_6px_#fff,0_14px_0_6px_var(--color-contorno)]" />
         </span>
         <p className="saludo-texto rounded-full bg-white px-10 py-3 text-[1.6em] font-bold shadow-[0_0_0_4px_var(--color-contorno)]">
-          ¡Hola, {perfil.nombre}!
+          ¡Hola, {perfil.nombre.toUpperCase()}!
         </p>
       </div>
     </div>

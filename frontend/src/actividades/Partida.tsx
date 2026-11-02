@@ -41,10 +41,12 @@ export function Partida({
   rondas,
   alTerminar,
   alSalir,
+  objetivo,
 }: {
   actividadId: string
   rondas: Ronda[]
   alTerminar: (fin: FinPartida) => void
+  objetivo?: string
   // Solo en los juegos: en los contenidos el niño sigue el camino que armó la docente.
   alSalir?: () => void
 }) {
@@ -55,7 +57,9 @@ export function Partida({
   const [racha, setRacha] = useState(0)
   const [inicio] = useState(() => Date.now())
   const terminada = useRef(false)
-  const practica = actividad(actividadId)?.practica ?? false
+  const datosActividad = actividad(actividadId)
+  const practica = datosActividad?.practica ?? false
+  const tituloObjetivo = objetivo ?? datosActividad?.objetivo
 
   const ronda = rondas[estado.indice]
 
@@ -109,7 +113,11 @@ export function Partida({
     setEstado({ ...estado, intentos, resuelta: true })
     efecto('acierto', silenciado)
     const desde = estado.indice
-    hablar(ronda.refuerzo, { alTerminar: () => window.setTimeout(() => avanzar(desde), 500) })
+    if (ronda.refuerzo) {
+      hablar(ronda.refuerzo, { alTerminar: () => window.setTimeout(() => avanzar(desde), 500) })
+    } else {
+      window.setTimeout(() => avanzar(desde), 500)
+    }
     // Respaldo por si el audio no avisa que terminó.
     window.setTimeout(() => avanzar(desde), 6000)
   }
@@ -142,8 +150,19 @@ export function Partida({
           ))}
         </ol>
       </div>
+      {tituloObjetivo && (
+        <h1 className="mx-auto mb-3 max-w-3xl shrink-0 text-center text-[1.55em] font-bold text-tinta">
+          {tituloObjetivo}
+        </h1>
+      )}
       <div key={estado.indice} className="animate-pantalla grid min-h-0 flex-1 content-center">
-        <RondaActual ronda={ronda} resuelta={estado.resuelta} revelar={!estado.resuelta && estado.intentos >= 2} alIntentar={intentar} />
+        <RondaActual
+          ronda={ronda}
+          resuelta={estado.resuelta}
+          revelar={!estado.resuelta && estado.intentos >= 2}
+          errores={Math.max(0, estado.intentos - (estado.resuelta ? 1 : 0))}
+          alIntentar={intentar}
+        />
       </div>
     </main>
   )

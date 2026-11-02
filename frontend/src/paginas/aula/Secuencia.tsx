@@ -57,7 +57,15 @@ export default function Secuencia({ sala }: { sala: SalaTrabajo }) {
   if (plan.length === 0) return <SinPlan />
 
   if (fase === 'jugando' && actual) {
-    return <Partida key={intento} actividadId={actual.actividadId} rondas={rondas} alTerminar={terminar} />
+    return (
+      <Partida
+        key={intento}
+        actividadId={actual.actividadId}
+        rondas={rondas}
+        alTerminar={terminar}
+        objetivo={actual.contenido.pasos[actual.numero - 1].titulo}
+      />
+    )
   }
 
   if (fase === 'premio' && ultimo) {

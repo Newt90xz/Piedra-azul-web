@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_OPCIONES, type Ronda } from './actividades.ts'
+import { MAX_OPCIONES, ordenarSilabas, type Ronda } from './actividades.ts'
 import { PALABRAS, quitarTildes } from './banco.ts'
 import { CONTENIDOS, UMBRAL_APROBAR, aprobo, nombreActividad, planDe } from './contenidos.ts'
 
@@ -113,5 +113,30 @@ describe('plan de una sala', () => {
     expect(nombreActividad('silabas-m-2')).toBe('Sílabas con M · Actividad 2')
     expect(nombreActividad('aplausos')).toBe('Aplausos silábicos')
     expect(nombreActividad('desconocida')).toBe('desconocida')
+  })
+})
+
+describe('orden de sílabas', () => {
+  it('ordena las opciones por vocal, de la A a la U', () => {
+    expect(ordenarSilabas(['mu', 'ma', 'mi', 'me', 'mo'])).toEqual(['ma', 'me', 'mi', 'mo', 'mu'])
+  })
+
+  it('mantiene las opciones de sílabas en orden en sus actividades', () => {
+    const silabasM = CONTENIDOS.find((c) => c.id === 'silabas-m')!
+    for (const paso of [silabasM.pasos[0], silabasM.pasos[1]]) {
+      for (const ronda of paso.generar().map(elegir)) {
+        const audios = ronda.opciones.map((opcion) => opcion.audio)
+        expect(audios).toEqual(ordenarSilabas(audios))
+      }
+    }
+  })
+})
+
+describe('refuerzo de las sílabas', () => {
+  it('no reproduce una frase cuando acierta al reconocer la sílaba', () => {
+    const silabasM = CONTENIDOS.find((c) => c.id === 'silabas-m')!
+    for (const ronda of silabasM.pasos[0].generar()) {
+      expect(ronda.refuerzo).toBeUndefined()
+    }
   })
 })

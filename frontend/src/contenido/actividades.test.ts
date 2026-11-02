@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ACTIVIDADES, CANCION_RATON, JUEGOS, MAX_OPCIONES, actividad } from './actividades.ts'
+import { ACTIVIDADES, CANCION_RATON, JUEGOS, MAX_OPCIONES, actividad, ordenarSilabas } from './actividades.ts'
 import { quitarTildes } from './banco.ts'
 
 // Las rondas se arman al azar: se generan varias veces para cubrir combinaciones.
@@ -7,6 +7,7 @@ const VECES = 30
 
 describe.each(ACTIVIDADES.filter((a) => a.id !== CANCION_RATON.id))('$id', (a) => {
   it('genera una micro-partida válida', () => {
+    expect(a.objetivo.trim()).not.toBe('')
     for (let n = 0; n < VECES; n++) {
       const rondas = a.generar()
       expect(rondas.length).toBeGreaterThanOrEqual(4)
@@ -58,5 +59,16 @@ describe('categorías', () => {
 describe('juegos', () => {
   it('por ahora solo se asignan el choque de sonidos y los aplausos silábicos', () => {
     expect(JUEGOS.map((a) => a.id)).toEqual(['choque-sonidos', 'aplausos'])
+  })
+})
+
+describe('sílabas con opciones', () => {
+  it('ordena de la A a la U las opciones para completar palabras', () => {
+    const rondas = actividad('falta-silaba')!.generar()
+    for (const ronda of rondas) {
+      if (ronda.tipo !== 'elegir') throw new Error('se esperaba una ronda de elegir')
+      const opciones = ronda.opciones.map((opcion) => opcion.audio)
+      expect(opciones).toEqual(ordenarSilabas(opciones))
+    }
   })
 })
