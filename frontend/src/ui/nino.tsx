@@ -7,6 +7,7 @@ import { fijarMudo } from '../lib/audio.ts'
 import { useConsulta } from '../lib/useConsulta.ts'
 import { Avatar } from './Avatar.tsx'
 import { FondoNino, ProtectorPantalla } from './fondoNino.tsx'
+import { Moneda } from './Dibujos.tsx'
 import { Icono } from './Icono.tsx'
 import { useVozAlApuntar } from './voz.ts'
 
@@ -24,6 +25,8 @@ interface ValorNino {
   // Cómo dijo sentirse al abrir su perfil; null hasta que lo elige.
   emocion: Emocion | null
   cambiarEmocion: (e: Emocion) => Promise<void>
+  // Título al centro de la barra superior (p. ej. «RECREO»); cada vista pone el suyo.
+  fijarTitulo: (titulo: ReactNode) => void
 }
 
 const NinoContexto = createContext<ValorNino | null>(null)
@@ -138,6 +141,7 @@ export function NinoShell() {
   const { datos: estado, error, recargar } = useConsulta(async () => (conectado ? repo.estadoAlumno() : null), [id, conectado])
   // La voz parte apagada; el niño la enciende con el altavoz. Al salir de la vista vuelve a apagarse.
   const [mudo, setMudo] = useState(true)
+  const [titulo, fijarTitulo] = useState<ReactNode>(null)
   const [emocion, setEmocion] = useState<Emocion | null>(() => emocionGuardada(id))
 
   useEffect(() => {
@@ -193,7 +197,7 @@ export function NinoShell() {
   const silenciado = a.silenciarEfectos
 
   return (
-    <NinoContexto value={{ estudiante, estado, silenciado, recargar, emocion, cambiarEmocion }}>
+    <NinoContexto value={{ estudiante, estado, silenciado, recargar, emocion, cambiarEmocion, fijarTitulo }}>
       <PantallaNino
         data-tamano={a.tamanoLetra}
         data-contraste={a.altoContraste ? 'alto' : undefined}
@@ -213,8 +217,14 @@ export function NinoShell() {
               <span className="text-[0.85em] font-bold">{estudiante.nombre}</span>
             </EnlaceNino>
             <span className="flex-1" />
+            {titulo && (
+              // Centrado en la barra, sin importar el ancho de lo que hay a los lados.
+              <h1 className="pointer-events-none absolute left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border-3 border-nino-borde bg-white/90 px-6 py-1.5 text-[1.1em] leading-none font-bold">
+                {titulo}
+              </h1>
+            )}
             <span className="flex items-center gap-2 rounded-full border-3 border-[#e6c84d] bg-nino-amarillo px-4 py-1.5 text-[0.85em] font-bold" aria-label={`${estudiante.monedas} monedas`}>
-              <span aria-hidden="true">🪙</span>
+              <Moneda className="text-[1.15em]" />
               {estudiante.monedas}
             </span>
             <BotonNino

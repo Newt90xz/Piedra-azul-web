@@ -4,6 +4,7 @@ import { articulosDe, faltanMonedas, type Articulo, type EspacioOpcional } from 
 import { repo } from '../../datos/index.ts'
 import type { Personaje } from '../../dominio/tipos.ts'
 import { efecto, hablar } from '../../lib/audio.ts'
+import { Moneda } from '../../ui/Dibujos.tsx'
 import { Icono } from '../../ui/Icono.tsx'
 import { DibujoPersonaje } from '../../ui/Personaje.tsx'
 import { BotonNino, useNino } from '../../ui/nino.tsx'
@@ -211,7 +212,7 @@ export function Tienda({ alCerrar }: { alCerrar?: () => void }) {
         {probando ? (
           <div className="flex shrink-0 items-center gap-4" role="group" aria-label={`Comprar ${probando.voz}`}>
             <span className="flex items-center gap-2 rounded-full border-3 border-[#e6c84d] bg-nino-amarillo px-4 py-1 text-[0.9em] font-bold">
-              <span aria-hidden="true">🪙</span> {probando.articulo!.precio}
+              <Moneda /> {probando.articulo!.precio}
             </span>
             <BotonNino voz="No, gracias" disabled={ocupado} onClick={() => setProbando(null)} className="grid size-20 place-items-center bg-[#f6d1d1]">
               <span aria-hidden="true" className="text-[1.3em]">✖️</span>
@@ -264,7 +265,7 @@ export function Tienda({ alCerrar }: { alCerrar?: () => void }) {
                   <DibujoPersonaje personaje={o.aplicar(guardado)} color={estudiante.color} vista={seccion.vista} className={`size-full min-h-0 ${!propio && estudiante.monedas < precio ? 'opacity-50 grayscale' : ''}`} />
                   {!propio && (
                     <span className="absolute right-1.5 bottom-1.5 flex items-center gap-1 rounded-full border-3 border-[#e6c84d] bg-nino-amarillo px-2.5 text-[0.75em] font-bold">
-                      <span aria-hidden="true">{estudiante.monedas < precio ? '🔒' : '🪙'}</span> {precio}
+                      {estudiante.monedas < precio ? <span aria-hidden="true">🔒</span> : <Moneda />} {precio}
                     </span>
                   )}
                 </BotonNino>

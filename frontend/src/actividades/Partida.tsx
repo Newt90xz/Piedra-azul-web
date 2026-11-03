@@ -5,6 +5,7 @@ import { nivelDe } from '../contenido/exigencia.ts'
 import { guardarResultadoConRespaldo } from '../datos/pendientes.ts'
 import type { ContextoPartida, IntentoRonda } from '../dominio/tipos.ts'
 import { efecto, hablar } from '../lib/audio.ts'
+import { Moneda } from '../ui/Dibujos.tsx'
 import { Icono } from '../ui/Icono.tsx'
 import { BotonNino, useNino } from '../ui/nino.tsx'
 import { RondaActual } from './rondas.tsx'
@@ -290,7 +291,9 @@ export function Premio({
     <main className="animate-pantalla mx-auto grid h-full max-w-3xl content-center justify-items-center gap-8 px-6 py-6 text-center">
       <div className="relative grid place-items-center">
         <span aria-hidden="true" className="premio-brillo absolute size-[7em] rounded-full" />
-        <span aria-hidden="true" className="premio-moneda relative text-[5em] leading-none">🪙</span>
+        <span aria-hidden="true" className="premio-moneda relative text-[5em] leading-none">
+          <Moneda />
+        </span>
       </div>
       <p
         className="animate-pop inline-flex items-center gap-3 rounded-full border-3 border-[#e6c84d] bg-nino-amarillo px-10 py-3 text-[2em] font-bold"

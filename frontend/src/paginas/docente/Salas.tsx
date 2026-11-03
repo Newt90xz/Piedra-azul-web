@@ -10,6 +10,7 @@ import { EMOCIONES, inicioDia, minutos } from '../../lib/avance.ts'
 import { capitalizar } from '../../lib/texto.ts'
 import { useConsulta } from '../../lib/useConsulta.ts'
 import { Avatar } from '../../ui/Avatar.tsx'
+import { IconoParque } from '../../ui/Dibujos.tsx'
 import { Icono } from '../../ui/Icono.tsx'
 import { AvisoError, Boton, Encabezado, claseEntrada, claseTarjeta } from '../../ui/aula.tsx'
 import { ConfigurarActividad } from './ConfigurarActividad.tsx'
@@ -21,8 +22,8 @@ const TIPOS: Record<TipoSala, { nombre: string; icono: string; color: string }> 
   trabajo: { nombre: 'Actividades', icono: '📚', color: 'text-menta-oscuro' },
   recreo: { nombre: 'Recreo', icono: '🌳', color: 'text-[#7a5b00]' },
 }
-const ACTIVIDADES_RECREO: Record<ActividadRecreo, { nombre: string; icono: string; ayuda: string; estado: string }> = {
-  parque: { nombre: 'Parque', icono: '🛝', ayuda: 'Caminan con su personaje, se ven en vivo y se saludan.', estado: 'En el parque' },
+const ACTIVIDADES_RECREO: Record<ActividadRecreo, { nombre: string; icono: ReactNode; ayuda: string; estado: string }> = {
+  parque: { nombre: 'Parque', icono: <IconoParque className="size-[1.25em]" />, ayuda: 'Caminan con su personaje, se ven en vivo y se saludan.', estado: 'En el parque' },
   dibujo: { nombre: 'Dibujo', icono: '🎨', ayuda: 'Dibujo libre, sellos y letras para repasar.', estado: 'Dibujando' },
   globos: { nombre: 'Globos', icono: '🎈', ayuda: 'Revientan globos y pueden ir a la tienda.', estado: 'Con los globos' },
   juegos: { nombre: 'Juegos', icono: '🎲', ayuda: 'Los juegos que elijas, las veces que quieran.', estado: 'Jugando' },

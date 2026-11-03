@@ -9,7 +9,17 @@ import { Tienda } from './Tienda.tsx'
 // esta vista sola en cuanto la docente lo asigna (y la música se apaga).
 export default function Espera({ voz }: { voz?: string }) {
   const [vista, setVista] = useState<'globos' | 'tienda'>('globos')
-  const { silenciado } = useNino()
+  const { silenciado, fijarTitulo } = useNino()
+
+  // «RECREO» va al centro de la barra superior mientras el niño está aquí.
+  useEffect(() => {
+    fijarTitulo(
+      <>
+        <span aria-hidden="true">🎠</span> RECREO
+      </>,
+    )
+    return () => fijarTitulo(null)
+  }, [fijarTitulo])
   const [musica, setMusica] = useState(musicaGuardada)
 
   // Si la docente silenció los efectos del niño, tampoco hay música.
@@ -32,9 +42,6 @@ export default function Espera({ voz }: { voz?: string }) {
   return (
     <div className="flex h-full flex-col">
       <nav aria-label="Recreo" className="mx-auto flex max-w-5xl shrink-0 flex-wrap items-center justify-center gap-6 px-6 pt-4">
-        <h1 className="flex items-center gap-2 rounded-full border-3 border-nino-borde bg-white/85 px-5 py-2 text-[1.2em] leading-none font-bold">
-          <span aria-hidden="true">🎠</span> RECREO
-        </h1>
         <Pestana activa={vista === 'globos'} voz="Globos" icono="🎈" alTocar={() => setVista('globos')} />
         <Pestana activa={vista === 'tienda'} voz="Tienda" icono="🛍️" alTocar={() => setVista('tienda')} />
         {!silenciado && (
