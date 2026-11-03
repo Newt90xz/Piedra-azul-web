@@ -2,8 +2,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import type { InputHTMLAttributes, ReactNode } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
+import { EXIGENCIAS } from '../../contenido/exigencia.ts'
 import { PERSONAJES_BASE, personajeDesdeBase } from '../../contenido/personaje.ts'
-import type { Estudiante, Personaje } from '../../dominio/tipos.ts'
+import type { Estudiante, Exigencia, Personaje } from '../../dominio/tipos.ts'
 import { capitalizar } from '../../lib/texto.ts'
 import { AJUSTES_POR_DEFECTO, type NuevoEstudiante } from '../../datos/repositorio.ts'
 import { Boton, Campo, Tarjeta, claseEntrada } from '../../ui/aula.tsx'
@@ -26,6 +27,7 @@ const esquema = z.object({
     reducirAnimaciones: z.boolean(),
     silenciarEfectos: z.boolean(),
     tematica: z.enum(['animales', 'dinosaurios', 'futbol', 'oceano', 'vehiculos', 'piratas']),
+    exigencia: z.enum(['inicial', 'intermedio', 'avanzado']),
   }),
 })
 
@@ -41,6 +43,7 @@ export function FormEstudiante({ inicial, cursoId, alGuardar }: { inicial?: Estu
   })
   const personaje = watch('personaje') as Personaje
   const color = watch('color')
+  const exigencia = watch('ajustes.exigencia')
 
   const enviar = handleSubmit(async (v) => {
     try {
@@ -106,6 +109,17 @@ export function FormEstudiante({ inicial, cursoId, alGuardar }: { inicial?: Estu
             <option value="2">Nivel 2 · Sílabas</option>
             <option value="3">Nivel 3 · Palabras</option>
           </select>
+        </Campo>
+
+        <Campo etiqueta="Nivel de exigencia de los desafíos">
+          <select className={claseEntrada} {...register('ajustes.exigencia')}>
+            {(Object.keys(EXIGENCIAS) as Exigencia[]).map((e) => (
+              <option key={e} value={e}>
+                {EXIGENCIAS[e].nombre}
+              </option>
+            ))}
+          </select>
+          <span className="mt-1 block text-sm text-tinta-suave">{EXIGENCIAS[exigencia ?? 'intermedio'].descripcion}</span>
         </Campo>
 
         <Interruptor etiqueta="Perfil activo" descripcion="Un perfil desactivado no aparece en la sala." {...register('activo')} />

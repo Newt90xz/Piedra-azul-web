@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_OPCIONES, type Ronda } from './actividades.ts'
+import { MAX_OPCIONES, ordenarSilabas, type Ronda } from './actividades.ts'
 import { PALABRAS, quitarTildes } from './banco.ts'
 import { CONTENIDOS, UMBRAL_APROBAR, aprobo, nombreActividad, planDe } from './contenidos.ts'
+import { EXIGENCIAS, partidaConExigencia } from './exigencia.ts'
 
 // Las rondas se arman al azar desde el pool: se generan varias veces para cubrir combinaciones.
 const VECES = 40
@@ -18,8 +19,12 @@ describe.each(CONTENIDOS.flatMap((c) => c.pasos.map((p, i) => ({ id: `${c.id}-${
       const rondas = generar()
       expect(rondas.length).toBeGreaterThanOrEqual(4)
       expect(rondas.length).toBeLessThanOrEqual(5)
-      for (const r of rondas.map(elegir)) {
+      for (const r of rondas) {
         // Mismo límite que rondas_resultado.item en la base de datos.
+        expect(r.item.length).toBeGreaterThan(0)
+        expect(r.item.length).toBeLessThanOrEqual(20)
+      }
+      for (const r of rondas.filter((x) => x.tipo === 'elegir').map(elegir)) {
         expect(r.item.length).toBeGreaterThan(0)
         expect(r.item.length).toBeLessThanOrEqual(20)
         const ids = r.opciones.map((o) => o.id)
@@ -113,5 +118,81 @@ describe('plan de una sala', () => {
     expect(nombreActividad('silabas-m-2')).toBe('Sílabas con M · Actividad 2')
     expect(nombreActividad('aplausos')).toBe('Aplausos silábicos')
     expect(nombreActividad('desconocida')).toBe('desconocida')
+  })
+})
+
+describe('orden de sílabas', () => {
+  it('ordena las opciones por vocal, de la A a la U', () => {
+    expect(ordenarSilabas(['mu', 'ma', 'mi', 'me', 'mo'])).toEqual(['ma', 'me', 'mi', 'mo', 'mu'])
+  })
+
+  it('mantiene las opciones de sílabas en orden en sus actividades', () => {
+    const silabasM = CONTENIDOS.find((c) => c.id === 'silabas-m')!
+    for (const paso of [silabasM.pasos[0], silabasM.pasos[1]]) {
+      for (const ronda of paso.generar().map(elegir)) {
+        const audios = ronda.opciones.map((opcion) => opcion.audio)
+        expect(audios).toEqual(ordenarSilabas(audios))
+      }
+    }
+  })
+})
+
+describe('refuerzo de las sílabas', () => {
+  it('no reproduce una frase cuando acierta al reconocer la sílaba', () => {
+    const silabasM = CONTENIDOS.find((c) => c.id === 'silabas-m')!
+    for (const ronda of silabasM.pasos[0].generar()) {
+      expect(ronda.refuerzo).toBeUndefined()
+    }
+  })
+})
+
+describe('escritura: siempre en mayúscula', () => {
+  const escribo = CONTENIDOS.find((c) => c.id === 'escribo')!
+  it('la respuesta va en mayúscula, sin tildes, y el teclado tiene todas sus letras', () => {
+    for (const paso of escribo.pasos) {
+      for (let n = 0; n < VECES; n++) {
+        for (const r of paso.generar()) {
+          if (r.tipo !== 'escribir') throw new Error('se esperaba una ronda de escribir')
+          expect(r.respuesta).toMatch(/^[A-ZÑ]+$/)
+          for (const l of r.respuesta) expect(r.letras).toContain(l)
+          expect(r.letras.every((l) => /^[A-ZÑ]$/.test(l))).toBe(true)
+        }
+      }
+    }
+  })
+})
+
+describe('globos de palabras', () => {
+  it('trae todas las sílabas de la palabra entre los globos', () => {
+    const formo = CONTENIDOS.find((c) => c.id === 'formo-palabras')!
+    for (let n = 0; n < VECES; n++) {
+      for (const r of formo.pasos[1].generar()) {
+        if (r.tipo !== 'globos') throw new Error('se esperaba una ronda de globos')
+        for (const s of r.palabra.silabas) expect(r.fichas).toContain(s)
+      }
+    }
+  })
+})
+
+describe('niveles de exigencia', () => {
+  it('ajusta opciones y rondas sin perder la respuesta correcta', () => {
+    const silabas = CONTENIDOS.find((c) => c.id === 'silabas-m')!
+    for (const e of ['inicial', 'intermedio', 'avanzado'] as const) {
+      const nivel = EXIGENCIAS[e]
+      for (let n = 0; n < VECES; n++) {
+        const rondas = partidaConExigencia(silabas.pasos[2].generar, e)
+        expect(rondas.length).toBeLessThanOrEqual(nivel.rondas)
+        for (const r of rondas.map(elegir)) {
+          expect(r.opciones.length).toBeLessThanOrEqual(nivel.maxOpciones)
+          expect(r.opciones.map((o) => o.id)).toContain(r.correctaId)
+        }
+      }
+    }
+  })
+
+  it('cada nivel pide un porcentaje distinto para pasar', () => {
+    const tres = [{ acertada: true }, { acertada: true }, { acertada: true }, { acertada: false }, { acertada: false }]
+    expect(aprobo(tres, EXIGENCIAS.intermedio.umbral)).toBe(true)
+    expect(aprobo(tres, EXIGENCIAS.avanzado.umbral)).toBe(false)
   })
 })

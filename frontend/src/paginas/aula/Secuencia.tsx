@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Partida, Premio, type FinPartida } from '../../actividades/Partida.tsx'
 import { JUEGOS, type Actividad, type Ronda } from '../../contenido/actividades.ts'
 import { aprobo, planDe, type PasoPlan } from '../../contenido/contenidos.ts'
+import { nivelDe, partidaConExigencia } from '../../contenido/exigencia.ts'
 import { repo } from '../../datos/index.ts'
 import type { EstadoAlumno } from '../../dominio/tipos.ts'
 import { hablar } from '../../lib/audio.ts'
@@ -33,7 +34,8 @@ export default function Secuencia({ sala }: { sala: SalaTrabajo }) {
 
   const empezar = () => {
     if (!actual) return
-    setRondas(actual.generar())
+    // Desafío al nivel de exigencia del niño: opciones, rondas y ayudas.
+    setRondas(partidaConExigencia(actual.generar, estado.estudiante.ajustes.exigencia))
     setIntento((n) => n + 1)
     setFase('jugando')
   }
@@ -41,7 +43,7 @@ export default function Secuencia({ sala }: { sala: SalaTrabajo }) {
   const terminar = useCallback(
     (fin: FinPartida) => {
       if (!actual) return
-      const logrado = aprobo(fin.rondas)
+      const logrado = aprobo(fin.rondas, nivelDe(estado.estudiante.ajustes.exigencia).umbral)
       setUltimo({ monedas: fin.monedas, logrado })
       setFase('premio')
       if (logrado) {
@@ -51,13 +53,23 @@ export default function Secuencia({ sala }: { sala: SalaTrabajo }) {
       }
       void registrar(sala.asignacion, paso, logrado, fin.resultadoId).then(recargar)
     },
-    [actual, paso, plan.length, sala.asignacion, recargar],
+    [actual, paso, plan.length, sala.asignacion, recargar, estado.estudiante.ajustes.exigencia],
   )
 
   if (plan.length === 0) return <SinPlan />
 
   if (fase === 'jugando' && actual) {
-    return <Partida key={intento} actividadId={actual.actividadId} rondas={rondas} alTerminar={terminar} />
+    return (
+      <Partida
+        key={intento}
+        actividadId={actual.actividadId}
+        rondas={rondas}
+        alTerminar={terminar}
+        objetivo={actual.contenido.pasos[actual.numero - 1].titulo}
+        instrucciones={actual.instrucciones}
+        icono={actual.contenido.icono}
+      />
+    )
   }
 
   if (fase === 'premio' && ultimo) {
@@ -226,6 +238,7 @@ function PasarDeSala({ recreo, avanceGuardado }: { recreo: boolean; avanceGuarda
 // Juegos del recreo: se juegan las veces que quiera, siempre con rondas nuevas
 // del pool, hasta que la docente lo mueva de sala.
 export function Juegos({ ids }: { ids: string[] }) {
+  const { estudiante } = useNino()
   const juegos = JUEGOS.filter((j) => ids.includes(j.id))
   const [jugando, setJugando] = useState<{ juego: Actividad; rondas: Ronda[]; n: number } | null>(null)
   const [premio, setPremio] = useState<number | null>(null)
@@ -233,7 +246,7 @@ export function Juegos({ ids }: { ids: string[] }) {
 
   const jugar = (juego: Actividad) => {
     setPremio(null)
-    setJugando((j) => ({ juego, rondas: juego.generar(), n: (j?.n ?? 0) + 1 }))
+    setJugando((j) => ({ juego, rondas: partidaConExigencia(juego.generar, estudiante.ajustes.exigencia), n: (j?.n ?? 0) + 1 }))
   }
 
   useEffect(() => {
@@ -243,7 +256,7 @@ export function Juegos({ ids }: { ids: string[] }) {
   const terminar = useCallback((fin: FinPartida) => setPremio(fin.monedas), [])
 
   // La docente aún no elige juegos para este recreo.
-  if (juegos.length === 0) return <MiniJuego voz="¡Es hora de recreo! ¡Revienta los globos!" />
+  if (juegos.length === 0) return <MiniJuego saludo="¡Es hora de recreo! ¡Revienta los globos!" />
 
   if (jugando && premio !== null) {
     return (

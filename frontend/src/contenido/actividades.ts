@@ -24,7 +24,7 @@ interface RondaBase {
   // Letra, sílaba o palabra trabajada; alimenta el panel de avance (RF-13).
   item: string
   instruccion: string
-  refuerzo: string
+  refuerzo?: string
 }
 
 export type Ronda =
@@ -40,17 +40,24 @@ export type Ronda =
   | (RondaBase & { tipo: 'aplausos'; palabra: Palabra; pista: string })
   | (RondaBase & { tipo: 'explorar'; grafema: string; fonema: string; apoyo: string; ejemplo: Palabra })
   | (RondaBase & { tipo: 'choque'; consonante: string; vocal: string })
+  // Respuesta escrita con el teclado en pantalla, SIEMPRE en mayúscula y sin tildes.
+  // `letras`: las teclas que se muestran (las de la respuesta y algunas más).
+  | (RondaBase & { tipo: 'escribir'; respuesta: string; imagen?: Imagen; audio: string; letras: string[]; pista: string })
+  // Globos con sílabas que suben: se revientan en orden para formar la palabra.
+  | (RondaBase & { tipo: 'globos'; palabra: Palabra; fichas: string[]; pista: string })
 
 export type GrupoActividad = Nivel | 'cuentos'
 
 // Qué mide una actividad, para los reportes de la docente: así una letra no se
 // compara con una sílaba, una rima o una palabra. Orden = orden en pantalla.
 export const CATEGORIAS = {
+  auditiva: 'Discriminación auditiva',
   letras: 'Vocales y letras',
   silabas: 'Sílabas',
   conteo: 'Conteo de sílabas',
   rimas: 'Rimas',
   palabras: 'Palabras',
+  escritura: 'Escritura',
 } as const
 
 export type Categoria = keyof typeof CATEGORIAS
@@ -59,6 +66,7 @@ export interface Actividad {
   id: string
   grupo: GrupoActividad
   titulo: string
+  objetivo: string
   icono: string
   // Sin categoría no entra al avance (cuentos y canciones: no miden una letra o sílaba).
   categoria?: Categoria
@@ -68,7 +76,23 @@ export interface Actividad {
   // Juego que la docente puede asignar a una sala. Las demás mecánicas quedan
   // deshabilitadas hasta que estén terminadas.
   juego?: boolean
+  // «¿Cómo se juega?» antes de empezar; sin esto se usa el del tipo de ronda.
+  instrucciones?: string
 }
+
+// Cómo se juega cada tipo de ronda: lo dice la tarjeta de instrucciones antes de
+// empezar (y el botón «?» durante la partida). Corto y sin tecnicismos.
+export const COMO_SE_JUEGA: Record<Ronda['tipo'], string> = {
+  elegir: 'Escucha con atención y toca la respuesta correcta.',
+  construir: 'Toca las sílabas en orden para armar la palabra.',
+  aplausos: 'Toca las palmas para contar las sílabas. Después toca el número.',
+  explorar: 'Toca la letra para escuchar cómo suena.',
+  choque: 'Toca el botón y mira cómo se juntan los sonidos.',
+  escribir: 'Mira el dibujo y escribe con las letras grandes de abajo.',
+  globos: 'Revienta los globos con las sílabas en orden para formar la palabra.',
+}
+
+export const instruccionesDe = (rondas: Ronda[], propias?: string) => propias ?? (rondas[0] ? COMO_SE_JUEGA[rondas[0].tipo] : '')
 
 export const GRUPOS: { id: GrupoActividad; titulo: string; icono: string; color: string; audio: string }[] = [
   { id: 1, titulo: 'Sonidos', icono: '👂', color: 'var(--color-nino-azul)', audio: 'Sonidos' },
@@ -90,6 +114,14 @@ export function mezclar<T>(a: readonly T[]) {
 export const tomar = <T,>(a: readonly T[], n: number) => mezclar(a).slice(0, n)
 const MAYUS = (s: string) => s.toUpperCase()
 const opcionPalabra = (w: Palabra): Opcion => ({ id: w.id, imagen: w.imagen, audio: w.texto })
+
+export function ordenarSilabas(silabas: readonly string[]) {
+  const ordenVocal = (silaba: string) => {
+    const vocal = [...quitarTildes(silaba).toLowerCase()].find((caracter) => VOCALES.some((v) => v === caracter))
+    return vocal ? VOCALES.findIndex((v) => v === vocal) : VOCALES.length
+  }
+  return [...silabas].sort((a, b) => ordenVocal(a) - ordenVocal(b) || a.localeCompare(b, 'es'))
+}
 
 function empiezaCon(w: Palabra, prefijo: string) {
   return quitarTildes(w.texto).startsWith(quitarTildes(prefijo))
@@ -192,7 +224,7 @@ function silabaInicial(): Ronda[] {
 
 const nivel3 = () => PALABRAS_NIVEL_3.map(palabra)
 
-function constructorDePalabras(): Ronda[] {
+export function constructorDePalabras(): Ronda[] {
   return tomar(nivel3(), 5).map((w) => {
     const otras = nivel3().flatMap((x) => x.silabas).filter((s) => !w.silabas.includes(s))
     return {
@@ -203,6 +235,23 @@ function constructorDePalabras(): Ronda[] {
       instruccion: `Junta las sílabas para formar ${w.texto}.`,
       pista: `¡Casi! ${w.texto} empieza con ${w.silabas[0]}. ¡Otra vez!`,
       refuerzo: `¡${MAYUS(w.texto)}! ¡Lo armaste!`,
+    }
+  })
+}
+
+// Globos de palabras: las sílabas de la palabra (y una o dos que no van) suben
+// en globos; se revientan en orden. Mismo pool que el constructor.
+export function globosDePalabras(): Ronda[] {
+  return tomar(nivel3(), 5).map((w) => {
+    const otras = [...new Set(nivel3().flatMap((x) => x.silabas))].filter((s) => !w.silabas.includes(s))
+    return {
+      tipo: 'globos',
+      item: w.texto,
+      palabra: w,
+      fichas: mezclar([...w.silabas, ...tomar(otras, 2)]),
+      instruccion: `Revienta los globos en orden para formar ${w.texto}.`,
+      pista: `¡Casi! ${w.texto} empieza con ${w.silabas[0]}. ¡Busca ese globo!`,
+      refuerzo: `¡${MAYUS(w.texto)}! ¡La formaste!`,
     }
   })
 }
@@ -223,7 +272,7 @@ function queDiceAqui(): Ronda[] {
   })
 }
 
-function completaLaSilaba(): Ronda[] {
+export function completaLaSilaba(): Ronda[] {
   return tomar(nivel3(), 5).map((w) => {
     const falta = w.silabas[1]
     const otras = tomar([...new Set(nivel3().flatMap((x) => x.silabas))].filter((s) => quitarTildes(s) !== quitarTildes(falta)), 2)
@@ -231,7 +280,7 @@ function completaLaSilaba(): Ronda[] {
       tipo: 'elegir',
       item: w.texto,
       estimulo: { imagen: w.imagen, silabas: w.silabas.map(MAYUS), hueco: 1 },
-      opciones: mezclar([falta, ...otras]).map((s) => ({ id: s, texto: MAYUS(s), audio: s })),
+      opciones: ordenarSilabas([falta, ...otras]).map((s) => ({ id: s, texto: MAYUS(s), audio: s })),
       correctaId: falta,
       instruccion: `¿Qué sílaba falta para completar ${w.texto}?`,
       pista: `¡Casi! ${w.silabas[0]}… ¿qué suena después? ¡Otra vez!`,
@@ -297,17 +346,18 @@ export const CANCION_RATON: { id: string; titulo: string; versos: Trozo[][] } = 
 // ---------- Catálogo ----------
 
 export const ACTIVIDADES: Actividad[] = [
-  { id: 'explorar-sonido', grupo: 1, titulo: 'Explorar el sonido', icono: '👄', categoria: 'letras', generar: explorarSonido, practica: true },
-  { id: 'sonido-inicial', grupo: 1, titulo: '¿Qué empieza con este sonido?', icono: '🔎', categoria: 'letras', generar: sonidoInicial },
-  { id: 'caza-letras', grupo: 1, titulo: 'Caza de letras', icono: '🫧', categoria: 'letras', generar: cazaDeLetras },
-  { id: 'choque-sonidos', grupo: 2, titulo: 'El choque de sonidos', icono: '💥', categoria: 'silabas', generar: choqueDeSonidos, practica: true, juego: true },
-  { id: 'aplausos', grupo: 2, titulo: 'Aplausos silábicos', icono: '👏', categoria: 'conteo', generar: aplausosSilabicos, juego: true },
-  { id: 'silaba-inicial', grupo: 2, titulo: '¿Con qué sílaba empieza?', icono: '🔤', categoria: 'silabas', generar: silabaInicial },
-  { id: 'constructor', grupo: 3, titulo: 'Constructor de palabras', icono: '🧱', categoria: 'palabras', generar: constructorDePalabras },
-  { id: 'que-dice', grupo: 3, titulo: '¿Qué dice aquí?', icono: '🖼️', categoria: 'palabras', generar: queDiceAqui },
-  { id: 'falta-silaba', grupo: 3, titulo: 'Completa la sílaba', icono: '🧩', categoria: 'palabras', generar: completaLaSilaba },
-  { id: CUENTO_TITO.id, grupo: 'cuentos', titulo: CUENTO_TITO.titulo, icono: '🐢', generar: () => CUENTO_TITO.preguntas },
-  { id: CANCION_RATON.id, grupo: 'cuentos', titulo: CANCION_RATON.titulo, icono: '🎵', generar: () => [] },
+  { id: 'explorar-sonido', grupo: 1, titulo: 'Explorar el sonido', objetivo: 'Explora el sonido de las letras', icono: '👄', categoria: 'letras', generar: explorarSonido, practica: true },
+  { id: 'sonido-inicial', grupo: 1, titulo: '¿Qué empieza con este sonido?', objetivo: 'Encuentra el dibujo que empieza con este sonido', icono: '🔎', categoria: 'letras', generar: sonidoInicial },
+  { id: 'caza-letras', grupo: 1, titulo: 'Caza de letras', objetivo: 'Encuentra la letra que suena', icono: '🫧', categoria: 'letras', generar: cazaDeLetras },
+  { id: 'choque-sonidos', grupo: 2, titulo: 'El choque de sonidos', objetivo: 'Une los sonidos para formar sílabas', icono: '💥', categoria: 'silabas', generar: choqueDeSonidos, practica: true, juego: true },
+  { id: 'aplausos', grupo: 2, titulo: 'Aplausos silábicos', objetivo: 'Cuenta las sílabas con palmadas', icono: '👏', categoria: 'conteo', generar: aplausosSilabicos, juego: true },
+  { id: 'globos-palabras', grupo: 3, titulo: 'Globos de palabras', objetivo: 'Revienta los globos y forma la palabra', icono: '🎈', categoria: 'palabras', generar: globosDePalabras, juego: true },
+  { id: 'silaba-inicial', grupo: 2, titulo: '¿Con qué sílaba empieza?', objetivo: 'Encuentra la palabra que empieza con esta sílaba', icono: '🔤', categoria: 'silabas', generar: silabaInicial },
+  { id: 'constructor', grupo: 3, titulo: 'Constructor de palabras', objetivo: 'Une las sílabas para formar una palabra', icono: '🧱', categoria: 'palabras', generar: constructorDePalabras },
+  { id: 'que-dice', grupo: 3, titulo: '¿Qué dice aquí?', objetivo: 'Une las sílabas y encuentra la palabra', icono: '🖼️', categoria: 'palabras', generar: queDiceAqui },
+  { id: 'falta-silaba', grupo: 3, titulo: 'Completa la sílaba', objetivo: 'Encuentra la sílaba que falta', icono: '🧩', categoria: 'palabras', generar: completaLaSilaba },
+  { id: CUENTO_TITO.id, grupo: 'cuentos', titulo: CUENTO_TITO.titulo, objetivo: 'Escucha el cuento y responde las preguntas', icono: '🐢', generar: () => CUENTO_TITO.preguntas },
+  { id: CANCION_RATON.id, grupo: 'cuentos', titulo: CANCION_RATON.titulo, objetivo: 'Escucha la canción y sigue la letra', icono: '🎵', generar: () => [] },
 ]
 
 export function actividad(id: string) {

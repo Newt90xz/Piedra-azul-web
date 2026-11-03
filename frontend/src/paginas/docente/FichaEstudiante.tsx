@@ -77,7 +77,7 @@ export default function FichaEstudiante() {
                   recargarSala()
                 }}
               >
-                Sacar de la sala
+                Enviar al recreo
               </Boton>
               {falloSala && <span role="alert" className="text-[#b42318]">No se pudo sacar. Intenta otra vez.</span>}
             </p>

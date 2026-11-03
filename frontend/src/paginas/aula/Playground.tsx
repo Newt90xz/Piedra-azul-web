@@ -179,8 +179,9 @@ export default function Playground() {
           <img src={imagen('primer_plano')} alt="" className="pointer-events-none absolute right-0 bottom-0 w-[20%] -scale-x-100" style={{ zIndex: SOBRE_TODO }} />
           <div className="absolute inset-x-0 bottom-2 flex items-center justify-center gap-2" style={{ zIndex: SOBRE_TODO + 1 }} role="group" aria-label="Saludar">
             {pictos.map((p) => (
-              <BotonNino key={p.id} voz={p.voz} onClick={() => enviar(p)} className="centro-emoji h-16 w-20 text-[1.3em]">
+              <BotonNino key={p.id} voz={p.voz} onClick={() => enviar(p)} className="grid h-16 w-24 place-content-center justify-items-center gap-0.5 text-[1.1em] leading-none">
                 <span aria-hidden="true">{p.emoji}</span>
+                <span aria-hidden="true" className="text-[0.42em] leading-none font-bold">{palabraPicto(p.voz)}</span>
               </BotonNino>
             ))}
             <BotonNino voz="Otros dibujos" onClick={() => setPaginaPictos((paginaPictos + 1) % paginasPictos)} className="centro-emoji size-16 bg-nino-lila text-[1em]">
@@ -191,6 +192,11 @@ export default function Playground() {
       </div>
     </main>
   )
+}
+
+// La palabra del pictograma, en mayúscula y sin signos: «¡Te quiero!» → «TE QUIERO».
+function palabraPicto(voz: string) {
+  return voz.replace(/[¡!¿?,]/g, '').toUpperCase()
 }
 
 function Juego({ juego, alTocar }: { juego: JuegoParque; alTocar: () => void }) {

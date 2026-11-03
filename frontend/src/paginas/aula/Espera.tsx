@@ -4,7 +4,7 @@ import { BotonNino, useNino } from '../../ui/nino.tsx'
 import { MiniJuego } from '../alumno/MiniJuego.tsx'
 import { Tienda } from './Tienda.tsx'
 
-// Sala de espera: el niño todavía no tiene sala. Juega con los globos o gasta
+// Recreo (la sala de espera): el niño todavía no tiene sala. Juega con los globos o gasta
 // sus monedas en la tienda mientras suena una música suave; la sala reemplaza
 // esta vista sola en cuanto la docente lo asigna (y la música se apaga).
 export default function Espera({ voz }: { voz?: string }) {
@@ -31,7 +31,10 @@ export default function Espera({ voz }: { voz?: string }) {
 
   return (
     <div className="flex h-full flex-col">
-      <nav aria-label="Sala de espera" className="mx-auto flex max-w-5xl shrink-0 justify-center gap-6 px-6 pt-4">
+      <nav aria-label="Recreo" className="mx-auto flex max-w-5xl shrink-0 flex-wrap items-center justify-center gap-6 px-6 pt-4">
+        <h1 className="flex items-center gap-2 rounded-full border-3 border-nino-borde bg-white/85 px-5 py-2 text-[1.2em] leading-none font-bold">
+          <span aria-hidden="true">🎠</span> RECREO
+        </h1>
         <Pestana activa={vista === 'globos'} voz="Globos" icono="🎈" alTocar={() => setVista('globos')} />
         <Pestana activa={vista === 'tienda'} voz="Tienda" icono="🛍️" alTocar={() => setVista('tienda')} />
         {!silenciado && (
@@ -49,7 +52,7 @@ export default function Espera({ voz }: { voz?: string }) {
         )}
       </nav>
       <div key={vista} className="animate-pantalla min-h-0 flex-1">
-        {vista === 'globos' ? <MiniJuego voz={voz} /> : <Tienda />}
+        {vista === 'globos' ? <MiniJuego saludo={voz ?? '¡Es hora del recreo! Revienta los globos mientras tu profe te asigna una sala.'} /> : <Tienda />}
       </div>
     </div>
   )
