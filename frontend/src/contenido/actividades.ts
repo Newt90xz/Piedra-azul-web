@@ -1,5 +1,6 @@
 import type { Imagen, Nivel, Palabra } from '../dominio/tipos.ts'
 import {
+  ALFABETO,
   CONSONANTES_SILABAS,
   LETRAS,
   PALABRAS,
@@ -220,6 +221,30 @@ function silabaInicial(): Ronda[] {
   })
 }
 
+// Actividad configurable (contenido/plantillas.ts): suena una letra y se toca cuál
+// es, entre las que eligió la docente. Con pocas letras, se repiten hasta completar.
+const RONDAS_ESCUCHA_LETRA = 5
+export function escuchaLaLetra(ids: readonly string[] = ALFABETO.map((l) => l.id)): Ronda[] {
+  const letras = ALFABETO.filter((l) => ids.includes(l.id))
+  if (letras.length === 0) return []
+  const turnos = Array.from({ length: Math.ceil(RONDAS_ESCUCHA_LETRA / letras.length) }, () => mezclar(letras)).flat().slice(0, RONDAS_ESCUCHA_LETRA)
+  return turnos.map((l) => {
+    // Sin letras que suenen igual a la correcta, ni iguales entre sí: de oído no se distinguirían.
+    const otras = mezclar(letras.filter((x) => x.sonido !== l.sonido))
+    const distractores = otras.filter((x, i) => otras.findIndex((y) => y.sonido === x.sonido) === i).slice(0, MAX_OPCIONES - 1)
+    return {
+      tipo: 'elegir',
+      item: l.grafema,
+      estimulo: { audio: l.fonema },
+      opciones: mezclar([l, ...distractores]).map((x) => ({ id: x.id, texto: x.grafema, audio: x.fonema })),
+      correctaId: l.id,
+      instruccion: `Escucha: ${l.fonema}. Toca la letra que suena ${l.fonema}.`,
+      pista: `¡Casi! Escucha otra vez: ${l.fonema}.`,
+      refuerzo: `¡Muy bien! ${l.fonema}.`,
+    }
+  })
+}
+
 // ---------- Nivel 3: palabras ----------
 
 const nivel3 = () => PALABRAS_NIVEL_3.map(palabra)
@@ -348,6 +373,7 @@ export const CANCION_RATON: { id: string; titulo: string; versos: Trozo[][] } = 
 export const ACTIVIDADES: Actividad[] = [
   { id: 'explorar-sonido', grupo: 1, titulo: 'Explorar el sonido', objetivo: 'Explora el sonido de las letras', icono: '👄', categoria: 'letras', generar: explorarSonido, practica: true },
   { id: 'sonido-inicial', grupo: 1, titulo: '¿Qué empieza con este sonido?', objetivo: 'Encuentra el dibujo que empieza con este sonido', icono: '🔎', categoria: 'letras', generar: sonidoInicial },
+  { id: 'escucha-letra', grupo: 1, titulo: 'Escucha y toca la letra', objetivo: 'Escucha y toca la letra', icono: '🔤', categoria: 'letras', generar: () => escuchaLaLetra(), instrucciones: 'Escucha el sonido y toca la letra.' },
   { id: 'caza-letras', grupo: 1, titulo: 'Caza de letras', objetivo: 'Encuentra la letra que suena', icono: '🫧', categoria: 'letras', generar: cazaDeLetras },
   { id: 'choque-sonidos', grupo: 2, titulo: 'El choque de sonidos', objetivo: 'Une los sonidos para formar sílabas', icono: '💥', categoria: 'silabas', generar: choqueDeSonidos, practica: true, juego: true },
   { id: 'aplausos', grupo: 2, titulo: 'Aplausos silábicos', objetivo: 'Cuenta las sílabas con palmadas', icono: '👏', categoria: 'conteo', generar: aplausosSilabicos, juego: true },

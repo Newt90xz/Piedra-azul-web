@@ -1,5 +1,6 @@
 // Modelo de dominio. Cada interfaz corresponde a una tabla futura en Supabase.
 
+import type { Categoria } from '../contenido/actividades.ts'
 import type { EspacioOpcional } from '../contenido/tienda.ts'
 
 export type ModoImagen = 'foto' | 'picto' | 'mixto'
@@ -105,6 +106,30 @@ export interface IntentoRonda {
   // Última respuesta equivocada de la ronda (sílaba, letra, palabra o número).
   // Solo la última: tocar muchas veces por desesperación no llena el registro.
   error?: string
+  // Qué mide esta ronda: un mismo juego puede medir cosas distintas.
+  categoria?: Categoria
+  // Desde que aparece hasta que se resuelve.
+  tiempoMs?: number
+  // Se le iluminó la respuesta correcta.
+  revelada?: boolean
+  // Métricas propias de cada juego (acotadas).
+  detalle?: Record<string, unknown>
+}
+
+// Foto de la partida al jugarla (nulo lo que no aplica): si el catálogo cambia o
+// una actividad se borra, sus partidas no desaparecen del avance.
+export interface ContextoPartida {
+  // Tipo de ronda: elegir, construir, escribir…
+  mecanica?: string
+  contenidoId?: string
+  paso?: number
+  nivel?: Nivel
+  oa?: string[]
+  salaId?: string
+  asignacion?: string
+  practica?: boolean
+  parametros?: ParametrosJuego
+  version?: number
 }
 
 export interface ResultadoActividad {
@@ -116,6 +141,7 @@ export interface ResultadoActividad {
   rondas: IntentoRonda[]
   estrellas: number
   monedas: number
+  contexto?: ContextoPartida
 }
 
 export interface Observacion {
@@ -132,11 +158,36 @@ export interface Observacion {
 export type TipoSala = 'trabajo' | 'recreo'
 export type ActividadRecreo = 'parque' | 'dibujo' | 'globos' | 'juegos'
 
+// Con qué se juega una actividad configurable: «{ letras: ['m', 'p', 's'] }».
+export type ParametrosJuego = Record<string, unknown>
+
+// Un paso del plan de la sala. `juego` es una actividad de un contenido
+// («silabas-m-2») o una configurable («escucha-letra») con sus parámetros.
+export interface PasoSala {
+  juego: string
+  parametros?: ParametrosJuego
+  // Nombre de la plantilla de la que salió, para reconocerla en el plan.
+  titulo?: string
+}
+
+// Una configuración guardada para reutilizarla (RF-15). Al agregarla a un plan se
+// copia: editarla después no le cambia la actividad a quien ya la está jugando.
+export interface PlantillaActividad {
+  id: string
+  nombre: string
+  juegoId: string
+  parametros: ParametrosJuego
+  // Viene con la app: no se edita ni se borra.
+  sistema?: boolean
+}
+
 export interface Sala {
   id: string
   cursoId: string
   nombre: string
   tipo: TipoSala
+  // Solo trabajo: los pasos, en orden. `contenidos` queda para versiones anteriores de la app.
+  plan: PasoSala[]
   contenidos: string[]
   // Solo recreo: qué se hace ahí, y los juegos si la actividad es 'juegos'.
   actividad: ActividadRecreo
@@ -189,7 +240,7 @@ export interface ProgresoSala extends Progreso {
 // Estado del alumno conectado: dónde está y cómo va.
 export interface EstadoAlumno {
   estudiante: Estudiante
-  sala: (Pick<Sala, 'id' | 'nombre' | 'tipo' | 'actividad' | 'contenidos' | 'juegos' | 'siguienteSala' | 'asignacion'> & { siguienteTipo?: TipoSala }) | null
+  sala: (Pick<Sala, 'id' | 'nombre' | 'tipo' | 'actividad' | 'plan' | 'contenidos' | 'juegos' | 'siguienteSala' | 'asignacion'> & { siguienteTipo?: TipoSala }) | null
   progreso: Progreso
   articulosComprados: string[]
 }

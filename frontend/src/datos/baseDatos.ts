@@ -1,6 +1,6 @@
 // Generado desde Supabase (MCP generate_typescript_types). No editar a mano:
 // regenerar después de cada migración.
-// PENDIENTE: ajustado a mano para 20261103120000_salas_conectadas_recreo; regenerar al aplicarla.
+// PENDIENTE: ajustado a mano para 20261103180000_metricas_banco_plan; regenerar al aplicarla.
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -118,8 +118,42 @@ export type Database = {
           },
         ]
       }
+      palabras: {
+        Row: { activa: boolean; emoji: string; foto_url: string | null; id: string; picto_url: string | null; silabas: string[]; texto: string }
+        Insert: { activa?: boolean; emoji: string; foto_url?: string | null; id: string; picto_url?: string | null; silabas: string[]; texto: string }
+        Update: { activa?: boolean; emoji?: string; foto_url?: string | null; id?: string; picto_url?: string | null; silabas?: string[]; texto?: string }
+        Relationships: []
+      }
+      letras: {
+        Row: { apoyo_articulatorio: string; fonema: string; grafema: string; id: string; orden: number; sonido: string }
+        Insert: { apoyo_articulatorio: string; fonema: string; grafema: string; id: string; orden: number; sonido: string }
+        Update: { apoyo_articulatorio?: string; fonema?: string; grafema?: string; id?: string; orden?: number; sonido?: string }
+        Relationships: []
+      }
+      plantillas_actividad: {
+        Row: { creado_en: string; docente_id: string; id: string; juego_id: string; nombre: string; parametros: Json }
+        Insert: { creado_en?: string; docente_id?: string; id?: string; juego_id: string; nombre: string; parametros: Json }
+        Update: { creado_en?: string; docente_id?: string; id?: string; juego_id?: string; nombre?: string; parametros?: Json }
+        Relationships: []
+      }
+      sesiones_registro: {
+        Row: { estudiante_id: string; fin: string | null; id: number; inicio: string; visto_en: string }
+        Insert: { estudiante_id: string; fin?: string | null; id?: number; inicio?: string; visto_en?: string }
+        Update: { estudiante_id?: string; fin?: string | null; id?: number; inicio?: string; visto_en?: string }
+        Relationships: []
+      }
       resultados_actividad: {
         Row: {
+          asignacion: string | null
+          contenido_id: string | null
+          mecanica: string | null
+          nivel: number | null
+          oa: string[] | null
+          parametros: Json | null
+          paso: number | null
+          practica: boolean
+          sala_id: string | null
+          version: number
           actividad_id: string
           duracion_ms: number
           estrellas: number
@@ -287,10 +321,12 @@ export type Database = {
           actividad: string
           siguiente_sala: string | null
           canal_parque: string
+          plan: Json
         }
         Insert: {
           actividad?: string
           siguiente_sala?: string | null
+          plan?: Json
           asignacion?: string
           contenidos?: string[]
           creado_en?: string
@@ -301,6 +337,7 @@ export type Database = {
           tipo?: string
         }
         Update: {
+          plan?: Json
           actividad?: string
           siguiente_sala?: string | null
           asignacion?: string
@@ -323,7 +360,18 @@ export type Database = {
         ]
       }
       rondas_resultado: {
-        Row: { acertada: boolean; error: string | null; intentos: number; item: string; orden: number; resultado_id: string }
+        Row: {
+          acertada: boolean
+          categoria: string | null
+          detalle: Json | null
+          error: string | null
+          intentos: number
+          item: string
+          orden: number
+          resultado_id: string
+          revelada: boolean
+          tiempo_ms: number | null
+        }
         Insert: { acertada: boolean; error?: string | null; intentos: number; item: string; orden: number; resultado_id: string }
         Update: { acertada?: boolean; error?: string | null; intentos?: number; item?: string; orden?: number; resultado_id?: string }
         Relationships: [
@@ -373,6 +421,7 @@ export type Database = {
           repeticiones: number
           sala_id: string | null
           sala_nombre: string | null
+          plan: Json | null
           sala_actividad: string | null
           sala_tipo: string | null
           siguiente_sala: string | null
@@ -394,6 +443,7 @@ export type Database = {
           p_monedas: number
           p_rondas: Json
           p_token: string
+          p_contexto?: Json
         }
         Returns: undefined
       }
@@ -432,6 +482,7 @@ export type Database = {
           p_id: string
           p_monedas: number
           p_rondas: Json
+          p_contexto?: Json
         }
         Returns: undefined
       }

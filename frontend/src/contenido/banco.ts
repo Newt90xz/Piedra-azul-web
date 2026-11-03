@@ -90,6 +90,49 @@ export const LETRAS: Letra[] = [
   { id: 't', grafema: 'T', fonema: 't', ejemplos: ['taza', 'tomate', 'tortuga'], apoyoArticulatorio: 'La lengua toca los dientes y se suelta.' },
 ]
 
+// El alfabeto completo, para las actividades de letras que configura la docente.
+// LETRAS sigue siendo el pool de las actividades que ya existían, para no cambiarlas.
+// `fonema`: lo que suena (RF-04: el sonido, no el nombre). La H no suena y la W es
+// muy poco usada: se dice su nombre. Lo debe validar la educadora (RNF-04).
+// `sonido`: las letras que suenan igual en español de Chile lo comparten. Nunca
+// pueden ser opciones de una misma ronda, porque de oído no se distinguen.
+export interface LetraAlfabeto extends Letra {
+  sonido: string
+}
+
+const de = (id: string, fonema: string, apoyoArticulatorio: string, sonido = id): LetraAlfabeto => ({ id, grafema: id.toUpperCase(), fonema, ejemplos: [], apoyoArticulatorio, sonido })
+const conocida = (id: string): LetraAlfabeto => ({ ...LETRAS.find((l) => l.id === id)!, sonido: id })
+
+export const ALFABETO: LetraAlfabeto[] = [
+  conocida('a'),
+  de('b', 'b', 'Labios juntos y se sueltan suave.'),
+  de('c', 'k', 'La parte de atrás de la lengua sube y se suelta.', 'k'),
+  de('d', 'd', 'La lengua toca los dientes de arriba.'),
+  conocida('e'),
+  de('f', 'ffff', 'Dientes de arriba sobre el labio de abajo y sale aire.'),
+  de('g', 'g', 'La parte de atrás de la lengua sube; la garganta vibra.'),
+  de('h', 'hache', 'No suena: se dice su nombre.'),
+  conocida('i'),
+  de('j', 'jjjj', 'Sale aire desde la garganta.'),
+  de('k', 'k', 'La parte de atrás de la lengua sube y se suelta.'),
+  conocida('l'),
+  conocida('m'),
+  de('n', 'nnnn', 'La lengua toca detrás de los dientes; la nariz vibra.'),
+  de('ñ', 'ññññ', 'La lengua toca el paladar; la nariz vibra.'),
+  conocida('o'),
+  conocida('p'),
+  de('q', 'k', 'La parte de atrás de la lengua sube y se suelta.', 'k'),
+  de('r', 'rrrr', 'La punta de la lengua vibra.'),
+  conocida('s'),
+  conocida('t'),
+  conocida('u'),
+  de('v', 'b', 'Labios juntos y se sueltan suave.', 'b'),
+  de('w', 'doble ve', 'Se dice su nombre.'),
+  de('x', 'ks', 'Dos sonidos seguidos: k y s.'),
+  de('y', 'yyyy', 'La lengua sube al paladar.'),
+  de('z', 'ssss', 'Dientes juntos, sale aire como una serpiente.', 's'),
+]
+
 // Nivel 2: sílabas directas con las consonantes vistas.
 export const CONSONANTES_SILABAS = ['m', 'p', 'l', 's'] as const
 export const VOCALES = ['a', 'e', 'i', 'o', 'u'] as const
@@ -115,4 +158,29 @@ export function letra(id: string): Letra {
 
 export function fonemaDe(l: string) {
   return LETRAS.find((x) => x.id === l)?.fonema ?? l
+}
+
+// Lo que llega de la base (datos/bancoGuardado.ts). Agrega y actualiza, y nunca
+// quita: las actividades piden palabras por id y fallarían si una desaparece.
+export interface BancoRemoto {
+  palabras: { id: string; texto: string; silabas: string[]; emoji: string; fotoUrl?: string; pictoUrl?: string }[]
+  letras: { id: string; fonema: string; apoyoArticulatorio?: string }[]
+}
+
+export function aplicarBanco(banco: BancoRemoto) {
+  for (const f of banco.palabras ?? []) {
+    if (!f.id || !f.texto || !f.emoji || !f.silabas?.length) continue
+    const nueva: Palabra = { id: f.id, texto: f.texto, silabas: f.silabas, imagen: { alt: f.texto, emoji: f.emoji, fotoUrl: f.fotoUrl, pictoUrl: f.pictoUrl } }
+    const i = PALABRAS.findIndex((w) => w.id === f.id)
+    if (i >= 0) PALABRAS[i] = nueva
+    else PALABRAS.push(nueva)
+  }
+  for (const f of banco.letras ?? []) {
+    if (!f.fonema) continue
+    for (const l of [LETRAS.find((x) => x.id === f.id), ALFABETO.find((x) => x.id === f.id)]) {
+      if (!l) continue
+      l.fonema = f.fonema
+      if (f.apoyoArticulatorio) l.apoyoArticulatorio = f.apoyoArticulatorio
+    }
+  }
 }

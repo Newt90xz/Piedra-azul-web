@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Partida, Premio, type FinPartida } from '../../actividades/Partida.tsx'
 import { JUEGOS, type Actividad, type Ronda } from '../../contenido/actividades.ts'
-import { aprobo, planDe, type PasoPlan } from '../../contenido/contenidos.ts'
+import { aprobo, contextoDePaso, planDeSala, type PasoPlan } from '../../contenido/contenidos.ts'
 import { nivelDe, partidaConExigencia } from '../../contenido/exigencia.ts'
 import { repo } from '../../datos/index.ts'
 import type { EstadoAlumno } from '../../dominio/tipos.ts'
@@ -18,7 +18,7 @@ type SalaTrabajo = NonNullable<EstadoAlumno['sala']>
 // la sala conectada. El niño nunca elige qué contenido trabajar.
 export default function Secuencia({ sala }: { sala: SalaTrabajo }) {
   const { estado, recargar } = useNino()
-  const plan = planDe(sala.contenidos)
+  const plan = planDeSala(sala.plan)
   // El servidor manda; lo local evita esperar al próximo refresco tras terminar.
   const [pasoLocal, setPasoLocal] = useState(0)
   const paso = Math.max(pasoLocal, estado.progreso.paso)
@@ -47,7 +47,7 @@ export default function Secuencia({ sala }: { sala: SalaTrabajo }) {
       setUltimo({ monedas: fin.monedas, logrado })
       setFase('premio')
       if (logrado) {
-        setEstrellas((e) => ({ ...e, [actual.actividadId]: fin.estrellas }))
+        setEstrellas((e) => ({ ...e, [actual.clave]: fin.estrellas }))
         setPasoLocal(paso + 1)
         if (paso + 1 === plan.length) setVerResumen(true)
       }
@@ -68,6 +68,7 @@ export default function Secuencia({ sala }: { sala: SalaTrabajo }) {
         objetivo={actual.contenido.pasos[actual.numero - 1].titulo}
         instrucciones={actual.instrucciones}
         icono={actual.contenido.icono}
+        contexto={contextoDePaso(actual, sala)}
       />
     )
   }
@@ -117,7 +118,7 @@ async function registrar(asignacion: string, paso: number, logrado: boolean, res
 const RETRASO_CAJA_MS = 140
 function Camino({ plan, paso, repeticion, alEmpezar }: { plan: PasoPlan[]; paso: number; repeticion: number; alEmpezar: () => void }) {
   const actual = plan[paso]
-  const contenidos = plan.filter((p) => p.numero === 1).map((p) => p.contenido)
+  const contenidos = plan.flatMap((p, inicio) => (p.numero === 1 ? [{ c: p.contenido, inicio }] : []))
 
   useEffect(() => {
     hablar(repeticion > 0 ? `¡Vamos otra vez! ${actual.contenido.pasos[actual.numero - 1].titulo}.` : `¡Vamos! ${actual.contenido.pasos[actual.numero - 1].titulo}.`)
@@ -126,7 +127,7 @@ function Camino({ plan, paso, repeticion, alEmpezar }: { plan: PasoPlan[]; paso:
   return (
     <main className="mx-auto grid h-full max-w-5xl content-center justify-items-center gap-10 px-6 py-6">
       <ol className="flex flex-wrap justify-center gap-5" aria-label={`Actividad ${paso + 1} de ${plan.length}`}>
-        {contenidos.map((c, ci) => (
+        {contenidos.map(({ c, inicio }, ci) => (
           <li
             key={`${c.id}-${ci}`}
             className="caja-entra flex items-center gap-2 rounded-full border-3 border-nino-borde bg-white/80 py-2 pr-4 pl-2"
@@ -135,8 +136,8 @@ function Camino({ plan, paso, repeticion, alEmpezar }: { plan: PasoPlan[]; paso:
             <span aria-hidden="true" className="grid size-14 place-items-center rounded-full text-[1.4em]" style={{ background: c.color }}>
               {c.icono}
             </span>
-            {[0, 1, 2].map((k) => {
-              const i = ci * 3 + k
+            {c.pasos.map((_, k) => {
+              const i = inicio + k
               const hecho = i < paso
               const aqui = i === paso
               return (
@@ -182,7 +183,7 @@ function Resumen({ plan, estrellas, recreo, alSeguir }: { plan: PasoPlan[]; estr
       <span role="img" aria-label="¡Terminaste!" className="animate-pop text-[4em] leading-none">🏆</span>
       <ul className="grid w-full gap-4 sm:grid-cols-2">
         {contenidos.map((c, ci) => {
-          const propias = plan.filter((p) => p.contenido.id === c.id).map((p) => estrellas[p.actividadId]).filter((e) => e !== undefined)
+          const propias = plan.filter((p) => p.contenido.id === c.id).map((p) => estrellas[p.clave]).filter((e) => e !== undefined)
           // Si recargó a mitad de camino no hay estrellas guardadas aquí: se muestran las 3 por haberlo logrado.
           const n = propias.length ? Math.round(propias.reduce((s, e) => s + e, 0) / propias.length) : 3
           return (

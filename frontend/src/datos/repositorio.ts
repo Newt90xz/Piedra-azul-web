@@ -13,8 +13,10 @@ import type {
   MensajeSala,
   MiembroSala,
   Observacion,
+  PasoSala,
   PerfilAlumno,
   Personaje,
+  PlantillaActividad,
   Progreso,
   ProgresoSala,
   RegistroEmocion,
@@ -22,6 +24,8 @@ import type {
   Sala,
   TipoSala,
 } from '../dominio/tipos.ts'
+
+import type { BancoRemoto } from '../contenido/banco.ts'
 
 // Contrato único de acceso a datos. Lo implementan `repositorioSupabase`
 // (el conectado) y `repositorioDemo` (localStorage, para probar pantallas).
@@ -69,7 +73,11 @@ export interface Repositorio {
   renombrarSala(id: string, nombre: string): Promise<void>
   // Plan de una sala de trabajo. Genera una asignación nueva: el avance de
   // quienes están en ella vuelve a la primera actividad.
-  asignarPlan(salaId: string, contenidos: string[]): Promise<void>
+  asignarPlan(salaId: string, plan: PasoSala[]): Promise<void>
+  // Plantillas propias de la docente (las del sistema están en contenido/plantillas.ts).
+  listarPlantillas(): Promise<PlantillaActividad[]>
+  guardarPlantilla(p: Omit<PlantillaActividad, 'id' | 'sistema'>): Promise<PlantillaActividad>
+  eliminarPlantilla(id: string): Promise<void>
   // Lo que se hace en un recreo. Quienes están dentro cambian de actividad al instante.
   configurarRecreo(salaId: string, actividad: ActividadRecreo, juegos: string[]): Promise<void>
   // A qué sala pasan los niños al terminar el plan; null: se quedan esperando a la docente.
@@ -90,6 +98,9 @@ export interface Repositorio {
   // La docente ya fue a ayudarlo: se apaga el aviso.
   marcarApoyado(estudianteId: string): Promise<void>
   mensajesSala(salaId: string): Promise<MensajeSala[]>
+
+  // Banco de contenidos de la base; null si no se pudo leer (quedan las palabras del código).
+  cargarBanco(): Promise<BancoRemoto | null>
 
   // Dispositivo del alumno (sin sesión de docente). Al entrar, el perfil
   // entrega una credencial que guarda el repositorio (como la sesión de la

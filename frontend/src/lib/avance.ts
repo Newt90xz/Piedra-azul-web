@@ -17,11 +17,12 @@ export function avancePorItem(resultados: ResultadoActividad[]): AvanceItem[] {
   const mapa = new Map<string, AvanceItem>()
   for (const r of resultados) {
     // En la práctica siempre se acierta al primer intento: inflaría la tasa.
-    if (actividad(r.actividadId)?.practica) continue
-    // Sin categoría (cuentos, actividades desconocidas) no hay letra o sílaba que medir.
-    const categoria = categoriaDe(r.actividadId)
-    if (!categoria) continue
+    if (r.contexto?.practica ?? actividad(r.actividadId)?.practica) continue
     for (const ronda of r.rondas) {
+      // La de la ronda; las partidas antiguas no la traen y se deduce del catálogo.
+      // Sin categoría (cuentos, actividades desconocidas) no hay letra o sílaba que medir.
+      const categoria = ronda.categoria ?? categoriaDe(r.actividadId)
+      if (!categoria) continue
       const clave = `${categoria}|${ronda.item}`
       const a = mapa.get(clave) ?? { item: ronda.item, categoria, rondas: 0, primerIntento: 0, tasa: 0 }
       a.rondas += 1
@@ -63,9 +64,9 @@ export function respuestaLegible(r: string, conteo: boolean) {
 export function detalleItem(resultados: ResultadoActividad[], categoria: Categoria, item: string): DetalleItem {
   const historial: DetalleItem['historial'] = []
   for (const r of resultados) {
-    if (actividad(r.actividadId)?.practica || categoriaDe(r.actividadId) !== categoria) continue
+    if (r.contexto?.practica ?? actividad(r.actividadId)?.practica) continue
     for (const ronda of r.rondas) {
-      if (ronda.item !== item) continue
+      if (ronda.item !== item || (ronda.categoria ?? categoriaDe(r.actividadId)) !== categoria) continue
       historial.push({ fecha: r.fecha, actividadId: r.actividadId, estudianteId: r.estudianteId, intentos: ronda.intentos, error: ronda.error })
     }
   }

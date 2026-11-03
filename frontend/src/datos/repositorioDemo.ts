@@ -1,3 +1,4 @@
+import { contenidosDePlan, pasosDeContenidos } from '../contenido/contenidos.ts'
 import { PERSONAJES_BASE, personajeDesdeBase } from '../contenido/personaje.ts'
 import { articulo } from '../contenido/tienda.ts'
 import type {
@@ -8,6 +9,7 @@ import type {
   MensajeSala,
   MiembroSala,
   Observacion,
+  PlantillaActividad,
   PosicionParque,
   ProgresoSala,
   RegistroEmocion,
@@ -20,8 +22,8 @@ import { AJUSTES_POR_DEFECTO, type Repositorio } from './repositorio.ts'
 // Implementación de demostración: guarda todo en localStorage del navegador.
 // Sirve para diseñar y probar las pantallas antes de conectar Supabase.
 
-// v4: salas conectadas y recreo.
-const CLAVE = 'leer-para-todos/demo-v4'
+// v5: plan por pasos y plantillas.
+const CLAVE = 'leer-para-todos/demo-v5'
 const CLAVE_SESION = 'leer-para-todos/sesion'
 
 interface Estado {
@@ -36,6 +38,7 @@ interface Estado {
   conectados: Conectado[]
   progreso: ProgresoSala[]
   compras: { estudianteId: string; articuloId: string }[]
+  plantillas: PlantillaActividad[]
   mensajes: (Omit<MensajeSala, 'nombre' | 'personaje' | 'color'> & { salaId: string })[]
 }
 
@@ -117,11 +120,12 @@ function semilla(): Estado {
       tipo: 'trabajo',
       actividad: 'parque',
       siguienteSala: 'sala-patio',
+      plan: pasosDeContenidos(['vocales', 'silabas-m']),
       contenidos: ['vocales', 'silabas-m'],
       juegos: [],
       asignacion: id(),
     },
-    { id: 'sala-patio', cursoId: 'kinder-a', nombre: 'Recreo', tipo: 'recreo', actividad: 'parque', contenidos: [], juegos: [], asignacion: id() },
+    { id: 'sala-patio', cursoId: 'kinder-a', nombre: 'Recreo', tipo: 'recreo', actividad: 'parque', plan: [], contenidos: [], juegos: [], asignacion: id() },
   ]
   return {
     docentes: [docente],
@@ -135,6 +139,7 @@ function semilla(): Estado {
     conectados: [],
     progreso: [],
     compras: [],
+    plantillas: [],
     mensajes: [],
   }
 }
@@ -304,15 +309,31 @@ export const repositorioDemo: Repositorio = {
   async crearSala(cursoId, nombre, tipo) {
     const e = leer()
     if (e.salas.some((s) => s.cursoId === cursoId && s.nombre === nombre)) throw new Error('duplicate key value')
-    const sala: Sala = { id: id(), cursoId, nombre, tipo, actividad: 'parque', contenidos: [], juegos: [], asignacion: id() }
+    const sala: Sala = { id: id(), cursoId, nombre, tipo, actividad: 'parque', plan: [], contenidos: [], juegos: [], asignacion: id() }
     mutar((x) => x.salas.push(sala))
     return sala
   },
   async renombrarSala(salaId, nombre) {
     mutar((e) => (e.salas = e.salas.map((s) => (s.id === salaId ? { ...s, nombre } : s))))
   },
-  async asignarPlan(salaId, contenidos) {
-    mutar((e) => (e.salas = e.salas.map((s) => (s.id === salaId ? { ...s, contenidos, asignacion: id() } : s))))
+  async asignarPlan(salaId, plan) {
+    mutar((e) => (e.salas = e.salas.map((s) => (s.id === salaId ? { ...s, plan, contenidos: contenidosDePlan(plan), asignacion: id() } : s))))
+  },
+  async listarPlantillas() {
+    return leer().plantillas
+  },
+  async guardarPlantilla(datos) {
+    if (leer().plantillas.some((p) => p.juegoId === datos.juegoId && p.nombre === datos.nombre)) throw new Error('duplicate key value')
+    const plantilla: PlantillaActividad = { ...datos, id: id() }
+    mutar((e) => e.plantillas.push(plantilla))
+    return plantilla
+  },
+  async eliminarPlantilla(plantillaId) {
+    mutar((e) => (e.plantillas = e.plantillas.filter((p) => p.id !== plantillaId)))
+  },
+  async cargarBanco() {
+    // La demo usa las palabras incluidas en el código.
+    return null
   },
   async configurarRecreo(salaId, actividad, juegos) {
     mutar((e) => (e.salas = e.salas.map((s) => (s.id === salaId ? { ...s, actividad, juegos } : s))))
@@ -414,6 +435,7 @@ export const repositorioDemo: Repositorio = {
             nombre: sala.nombre,
             tipo: sala.tipo,
             actividad: sala.actividad,
+            plan: sala.plan,
             siguienteSala: sala.siguienteSala,
             siguienteTipo: e.salas.find((s) => s.id === sala.siguienteSala)?.tipo,
             contenidos: sala.contenidos,
@@ -437,7 +459,7 @@ export const repositorioDemo: Repositorio = {
       previo && previo.salaId === sala.id && previo.asignacion === sala.asignacion
         ? { ...previo }
         : { estudianteId, salaId: sala.id, asignacion, paso: 0, repeticiones: 0, necesitaAyuda: false, actualizado: '' }
-    if (p.paso === paso && p.paso < sala.contenidos.length * 3) {
+    if (p.paso === paso && p.paso < sala.plan.length) {
       if (aprobado) Object.assign(p, { paso: p.paso + 1, repeticiones: 0, necesitaAyuda: false })
       else Object.assign(p, { repeticiones: p.repeticiones + 1, necesitaAyuda: p.repeticiones + 1 >= 2 })
     }
@@ -451,7 +473,7 @@ export const repositorioDemo: Repositorio = {
     const sala = e.salas.find((s) => s.id === e.miembros.find((m) => m.estudianteId === estudianteId)?.salaId)
     if (!sala?.siguienteSala) throw new Error('sin_sala_conectada')
     const p = e.progreso.find((x) => x.estudianteId === estudianteId)
-    const total = sala.contenidos.length * 3
+    const total = sala.plan.length
     if (!total || !p || p.salaId !== sala.id || p.asignacion !== sala.asignacion || p.paso < total) throw new Error('sin_terminar')
     await repositorioDemo.conectarEstudiante(sala.siguienteSala, estudianteId)
   },
