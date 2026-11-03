@@ -8,3 +8,6 @@ test-results/
 !.env.example
 *.local
 *.log
+
+# Frases de voz generadas en tiempo real (backend)
+.cache-voz/

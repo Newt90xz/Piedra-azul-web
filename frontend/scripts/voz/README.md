@@ -1,13 +1,47 @@
-# Voz de la app (Lola · Pocket-TTS)
+# Voz de la app (Pocket-TTS)
 
-La app habla con la voz **Lola** de [Pocket-TTS](https://github.com/kyutai-labs/pocket-tts), de Kyutai
-(código MIT; voz española del catálogo de Kyutai). La voz **no se genera en los computadores del
-colegio**: se pregraba una sola vez y la app solo reproduce archivos MP3 livianos.
+La app habla con [Pocket-TTS](https://github.com/kyutai-labs/pocket-tts), de Kyutai (código MIT), en
+**tiempo real** y con **clonación zero-shot**: imita la voz de una grabación corta. Si el servidor de
+voz no está disponible, usa los audios pregrabados (más abajo) y, si tampoco están, la voz del navegador.
 
-Las frases se graban **por trozos** (cada oración o palabra suelta, ver `src/lib/claveVoz.ts`) y la
-app los encadena. Así unas 17.000 frases posibles quedan en unos 2.100 audios cortos. Si falta algún
-trozo, la app dice esa frase con la voz del navegador, así que funciona aunque la generación no esté
-completa.
+```
+PC del niño ──GET /api/voz?texto=…──▶ backend (Express) ──POST /tts──▶ pocket-tts serve
+            ◀── audio mientras se genera ──┘  guarda cada frase en .cache-voz/
+```
+
+El modelo corre en **un solo computador** (el servidor o el PC de la docente), no en los del colegio:
+ellos solo reproducen. Medido en un i5 de escritorio: la frase empieza a sonar en ~1,5 s la primera
+vez y al instante desde la segunda (queda guardada en `backend/.cache-voz/`).
+
+## Voz en tiempo real
+
+1. Instalar Pocket-TTS (Python 3.10 a 3.14): `pip install pocket-tts`.
+2. **Habilitar la clonación** (una vez): aceptar los términos del modelo en
+   [huggingface.co/kyutai/pocket-tts](https://huggingface.co/kyutai/pocket-tts) e iniciar sesión con
+   `hf auth login`. Sin esto solo se pueden usar las voces del catálogo (`lola` en español).
+3. **Grabación de referencia:** 5 a 10 segundos de la voz a imitar, hablando claro, sin ruido ni
+   música (el modelo copia también el ambiente de la grabación). Solo con permiso de la persona.
+   Conviene convertirla una vez a `.safetensors` para que el servidor arranque más rápido:
+   ```bash
+   pocket-tts export-voice referencia.wav voz.safetensors --language spanish
+   ```
+4. **Levantar el servidor de voz** (dejarlo corriendo durante la clase):
+   ```bash
+   pocket-tts serve --language spanish --default-voice voz.safetensors --host 0.0.0.0 --port 8000
+   ```
+   Sin `--default-voice` usa a Lola. `--language spanish_24l` suena más natural pero es ~3 veces más lento.
+5. Configurar la app:
+   - `backend/.env`: `POCKET_TTS_URL=http://<computador-del-servidor>:8000`
+   - `frontend/.env`: `VITE_VOZ_EN_VIVO=si` (y reiniciar `pnpm dev`, Vite lee el `.env` al arrancar).
+
+Al cambiar la voz de referencia, borrar `backend/.cache-voz/` para que las frases se generen de nuevo
+con la voz nueva.
+
+## Audios pregrabados (respaldo)
+
+Las frases también se pueden pregrabar **por trozos** (cada oración o palabra suelta, ver
+`src/lib/claveVoz.ts`) que la app encadena. Así unas 17.000 frases posibles quedan en unos 2.100
+audios cortos. Sirven si el servidor de voz está apagado o no hay red hasta él.
 
 ## Generar los audios
 

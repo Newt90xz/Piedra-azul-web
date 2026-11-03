@@ -1,10 +1,14 @@
-// Audio de la plataforma.
+// Audio de la plataforma. La voz se busca en este orden:
 //
-// La voz de la app («Serena», Qwen3-TTS) se pregraba por trozos en
-// public/voz/<clave>.mp3 (ver scripts/voz/README.md): el computador del niño
-// solo reproduce archivos, sin generar voz. Cada frase se parte en trozos
-// (lib/claveVoz.ts) que se tocan uno tras otro. Si falta algún trozo, la frase
-// entera se dice con la mejor voz del navegador.
+// 1. En tiempo real (VITE_VOZ_EN_VIVO=si): el backend le pide la frase al
+//    servidor de Pocket-TTS, que imita la voz de referencia (clonación zero-shot),
+//    y la envía mientras se genera. El computador del niño solo reproduce.
+// 2. Pregrabada por trozos en public/voz/<clave>.mp3 (scripts/voz/README.md):
+//    cada frase se parte en trozos (lib/claveVoz.ts) que se tocan uno tras otro.
+// 3. La mejor voz en español del navegador.
+//
+// Si la voz en vivo falla o tarda demasiado, se pasa a la siguiente y se deja
+// de intentar un minuto, para no hacer esperar al niño en cada frase.
 //
 // RF-04 / RNF-04: un audio grabado por una persona (p. ej. el fonema «mmm» por
 // la educadora) se guarda con la misma clave y reemplaza al generado.
@@ -25,6 +29,12 @@ export interface OpcionesVoz {
 }
 
 const BASE_VOZ = `${import.meta.env.BASE_URL}voz/`
+const EN_VIVO = import.meta.env.VITE_VOZ_EN_VIVO === 'si'
+const API = ((import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:3000').replace(/\/$/, '')
+// Lo que se espera a que empiece a sonar la voz en vivo antes de usar otra.
+const ESPERA_VIVO_MS = 6000
+const PAUSA_TRAS_FALLO_MS = 60_000
+let vivoCaidoHasta = 0
 // Pausa entre trozos de una misma frase.
 const PAUSA_TROZOS_MS = 120
 
@@ -89,13 +99,41 @@ export function cancelarApuntar() {
   window.clearTimeout(temporizadorApuntar)
 }
 
-export function hablar(texto: string, { src, alTerminar, respaldo }: OpcionesVoz = {}) {
+export function hablar(texto: string, opciones: OpcionesVoz = {}) {
   detener()
   if (mudo) {
-    alTerminar?.()
+    opciones.alTerminar?.()
     return
   }
-  const rutas = src ? [src] : (audiosDe(texto) ?? (respaldo ? audiosDe(respaldo) : null))
+  if (opciones.src) return tocarCola([opciones.src], opciones.alTerminar)
+  if (EN_VIVO && Date.now() > vivoCaidoHasta) return hablarEnVivo(texto, opciones)
+  hablarSinVivo(texto, opciones)
+}
+
+// Pide la frase completa al backend y la reproduce mientras se genera. Si no
+// empieza a sonar a tiempo (servidor apagado o lento), dice la frase de otra forma.
+function hablarEnVivo(texto: string, opciones: OpcionesVoz) {
+  const mio = ++turno
+  const audio = new Audio(`${API}/api/voz?texto=${encodeURIComponent(texto)}`)
+  reproduciendo = audio
+  let sono = false
+  const caer = () => {
+    if (mio !== turno || sono) return
+    vivoCaidoHasta = Date.now() + PAUSA_TRAS_FALLO_MS
+    console.warn('[audio] La voz en tiempo real no respondió: se usa la de respaldo por un minuto.')
+    audio.pause()
+    hablarSinVivo(texto, opciones)
+  }
+  audio.onplaying = () => (sono = true)
+  audio.onerror = caer
+  audio.onended = () => mio === turno && opciones.alTerminar?.()
+  pendiente = window.setTimeout(caer, ESPERA_VIVO_MS)
+  audio.addEventListener('playing', () => window.clearTimeout(pendiente), { once: true })
+  void audio.play().catch(caer)
+}
+
+function hablarSinVivo(texto: string, { alTerminar, respaldo }: OpcionesVoz) {
+  const rutas = audiosDe(texto) ?? (respaldo ? audiosDe(respaldo) : null)
   if (rutas) return tocarCola(rutas, alTerminar)
   cargarIndice()
   if (!('speechSynthesis' in window)) {
