@@ -3,22 +3,20 @@ import type { InputHTMLAttributes, ReactNode } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { EXIGENCIAS } from '../../contenido/exigencia.ts'
-import type { Estudiante, Exigencia } from '../../dominio/tipos.ts'
+import { PERSONAJES_BASE, personajeDesdeBase } from '../../contenido/personaje.ts'
+import type { Estudiante, Exigencia, Personaje } from '../../dominio/tipos.ts'
 import { capitalizar } from '../../lib/texto.ts'
 import { AJUSTES_POR_DEFECTO, type NuevoEstudiante } from '../../datos/repositorio.ts'
 import { Boton, Campo, Tarjeta, claseEntrada } from '../../ui/aula.tsx'
+import { DibujoPersonaje } from '../../ui/Personaje.tsx'
 
-const AVATARES = [
-  '🦊', '🦖', '🐬', '🚒', '🦄', '⚽', '🐼', '🦁', '🚀', '🐢', '🏴‍☠️', '🦈',
-  '🐶', '🐱', '🐰', '🐻', '🐨', '🐸', '🐵', '🦉', '🐧', '🦋', '🐝', '🐞',
-  '🦕', '🐳', '🦒', '🦓', '🚗', '🚂', '🚜', '✈️', '🌈', '⭐', '🌻', '🎈',
-]
 const COLORES = ['#fde2c8', '#d3f2e3', '#cfe8fb', '#f6d1d1', '#e4dcf7', '#fff3c4']
 
 const esquema = z.object({
   // RNF-09: solo el nombre de pila.
   nombre: z.string().trim().min(2, 'Escribe el nombre de pila.').max(30).transform(capitalizar),
   avatar: z.string(),
+  personaje: z.custom<Personaje>(),
   color: z.string(),
   activo: z.boolean(),
   nivelHabilitado: z.coerce.number<string>().pipe(z.union([z.literal(1), z.literal(2), z.literal(3)])),
@@ -40,10 +38,10 @@ export function FormEstudiante({ inicial, cursoId, alGuardar }: { inicial?: Estu
   const { register, handleSubmit, watch, setValue, setError, formState } = useForm<Entrada, unknown, Salida>({
     resolver: zodResolver(esquema),
     defaultValues: inicial
-      ? { ...inicial, nivelHabilitado: String(inicial.nivelHabilitado) }
-      : { nombre: '', avatar: AVATARES[0], color: COLORES[0], activo: true, nivelHabilitado: '1', ajustes: AJUSTES_POR_DEFECTO },
+      ? { ...inicial, personaje: inicial.personaje ?? personajeDesdeBase(PERSONAJES_BASE[0]), nivelHabilitado: String(inicial.nivelHabilitado) }
+      : { nombre: '', avatar: '🙂', personaje: personajeDesdeBase(PERSONAJES_BASE[0]), color: COLORES[0], activo: true, nivelHabilitado: '1', ajustes: AJUSTES_POR_DEFECTO },
   })
-  const avatar = watch('avatar')
+  const personaje = watch('personaje') as Personaje
   const color = watch('color')
   const exigencia = watch('ajustes.exigencia')
 
@@ -65,21 +63,26 @@ export function FormEstudiante({ inicial, cursoId, alGuardar }: { inicial?: Estu
         </Campo>
 
         <fieldset>
-          <legend className="mb-1.5 text-sm font-semibold">Avatar (el niño lo toca para entrar)</legend>
-          <div className="flex flex-wrap gap-2">
-            {AVATARES.map((a) => (
-              <button
-                key={a}
-                type="button"
-                aria-pressed={avatar === a}
-                aria-label={`Avatar ${a}`}
-                onClick={() => setValue('avatar', a)}
-                className={`grid size-12 place-items-center rounded-2xl text-2xl ${avatar === a ? 'ring-3 ring-menta' : 'bg-fondo'}`}
-                style={avatar === a ? { background: color } : undefined}
-              >
-                {a}
-              </button>
-            ))}
+          <legend className="mb-1.5 text-sm font-semibold">Personaje (el niño lo toca para entrar)</legend>
+          <div className="grid grid-cols-6 gap-2">
+            {PERSONAJES_BASE.map((b) => {
+              const elegido = personaje.pelo === b.pelo
+              return (
+                <button
+                  key={b.id}
+                  type="button"
+                  aria-pressed={elegido}
+                  aria-label={`Personaje ${b.nombre}`}
+                  title={b.nombre}
+                  // Conserva lo que el niño ya compró y se puso.
+                  onClick={() => setValue('personaje', personajeDesdeBase(b, personaje))}
+                  className={`overflow-hidden rounded-2xl ${elegido ? 'ring-3 ring-menta' : 'bg-fondo'}`}
+                  style={elegido ? { background: color } : undefined}
+                >
+                  <DibujoPersonaje personaje={personajeDesdeBase(b)} color={color} vista="busto" />
+                </button>
+              )
+            })}
           </div>
         </fieldset>
 

@@ -1,5 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
+import type { BancoRemoto } from '../contenido/banco.ts'
+import { contenidosDePlan, pasosDeContenidos } from '../contenido/contenidos.ts'
 import type {
+  ActividadRecreo,
   Ajustes,
   Conectado,
   Curso,
@@ -11,7 +14,11 @@ import type {
   MiembroSala,
   Nivel,
   Observacion,
+  PasoSala,
   PerfilAlumno,
+  Personaje,
+  PlantillaActividad,
+  PosicionParque,
   ProgresoSala,
   RegistroEmocion,
   ResultadoActividad,
@@ -19,8 +26,8 @@ import type {
   TipoSala,
 } from '../dominio/tipos.ts'
 import { capitalizar } from '../lib/texto.ts'
-import type { Database } from './baseDatos.ts'
-import { guardarCredencial, leerCredencial, olvidarCredencial } from './dispositivo.ts'
+import type { Database, Json } from './baseDatos.ts'
+import { guardarCredencial, leerCredencial as leerCredencialGuardada, olvidarCredencial } from './dispositivo.ts'
 import { AJUSTES_POR_DEFECTO, type Repositorio } from './repositorio.ts'
 
 // Implementación conectada: Supabase Auth (RF-03) + PostgreSQL con RLS.
@@ -40,11 +47,28 @@ type FilaEstudiante = Database['public']['Tables']['estudiantes']['Row']
 // Igual al max-rows por defecto de Supabase (API > Settings).
 const POR_PAGINA = 1000
 
-// La columna `error` de cada ronda llega con la migración 20261022120000. Si la
-// base todavía no la tiene, los reportes se piden sin ella en vez de fallar.
-const COLUMNAS_RESULTADO = '*, rondas_resultado(orden, item, intentos, acertada, error), estudiantes!inner(curso_id)'
-const COLUMNAS_RESULTADO_SIN_ERROR = '*, rondas_resultado(orden, item, intentos, acertada), estudiantes!inner(curso_id)'
-let conColumnaError = true
+// Las columnas nuevas de cada ronda llegan con las migraciones. Si la base todavía
+// no las tiene, los reportes se piden con las que haya en vez de fallar.
+const COLUMNAS_RESULTADO = [
+  '*, rondas_resultado(orden, item, intentos, acertada, error, categoria, tiempo_ms, revelada), estudiantes!inner(curso_id)',
+  '*, rondas_resultado(orden, item, intentos, acertada, error), estudiantes!inner(curso_id)',
+  '*, rondas_resultado(orden, item, intentos, acertada), estudiantes!inner(curso_id)',
+] as const
+let columnasResultado = 0
+// Sin la migración de métricas, los resultados se guardan sin su foto de la partida.
+let conContexto = true
+
+// El modo demo guarda ids como «est-1» en este mismo navegador: esa credencial no
+// vale aquí, y mandarla a la base solo da un error tras otro.
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+function leerCredencial() {
+  const c = leerCredencialGuardada()
+  if (c && (!UUID.test(c.estudianteId) || !UUID.test(c.token))) {
+    olvidarCredencial()
+    return null
+  }
+  return c
+}
 
 // Sin error, PostgREST siempre trae `data` (salvo `maybeSingle`, que se trata aparte).
 // El código SQL se conserva para distinguir un rechazo del servidor de un fallo de red.
@@ -52,6 +76,13 @@ function sinError<T>({ data, error }: { data: T; error: { message: string; code?
   if (error) throw Object.assign(new Error(error.message), { code: error.code })
   return data as NonNullable<T>
 }
+
+// El plan de la sala. Sin la migración, o en una sala antigua, sale de sus contenidos.
+const aPlan = (plan: Json | null | undefined, contenidos: string[] | null): PasoSala[] =>
+  Array.isArray(plan) && plan.length > 0 ? (plan as unknown as PasoSala[]) : pasosDeContenidos(contenidos ?? [])
+
+// Lo valida la base (guardar_personaje); null: aún no tiene uno guardado.
+const aPersonaje = (j: Json | null | undefined) => (j ? (j as unknown as Personaje) : undefined)
 
 // Los nombres (de niños y salas) se muestran siempre con mayúscula inicial,
 // también los que se guardaron antes en minúscula.
@@ -65,7 +96,7 @@ const aEstudiante = (f: FilaEstudiante): Estudiante => ({
   activo: f.activo,
   nivelHabilitado: f.nivel_habilitado as Nivel,
   monedas: f.monedas,
-  avatarTienda: f.avatar_tienda ?? undefined,
+  personaje: aPersonaje(f.personaje),
   ajustes: { ...AJUSTES_POR_DEFECTO, ...(f.ajustes as Partial<Ajustes>) },
 })
 
@@ -78,6 +109,7 @@ const aFila = (e: Omit<Estudiante, 'id' | 'monedas'>) => ({
   foto_url: e.fotoUrl ?? null,
   activo: e.activo,
   nivel_habilitado: e.nivelHabilitado,
+  personaje: (e.personaje ?? null) as unknown as Json,
   ajustes: { ...e.ajustes },
 })
 
@@ -87,6 +119,9 @@ const aSala = (f: FilaSala): Sala => ({
   cursoId: f.curso_id,
   nombre: capitalizar(f.nombre),
   tipo: f.tipo as TipoSala,
+  actividad: f.actividad as ActividadRecreo,
+  siguienteSala: f.siguiente_sala ?? undefined,
+  plan: aPlan(f.plan, f.contenidos),
   contenidos: f.contenidos,
   juegos: f.juegos,
   asignacion: f.asignacion,
@@ -95,7 +130,7 @@ const aSala = (f: FilaSala): Sala => ({
 type FilaAlumno = Database['public']['Functions']['alumno_actual']['Returns'][number]
 
 // Dispositivo del alumno: ajustes y datos llegan por la función del alumno (sin foto).
-const aEstudianteDelDispositivo = (f: FilaAlumno): Estudiante => aEstudiante({ ...f, foto_url: null, creado_en: '' })
+const aEstudianteDelDispositivo = (f: FilaAlumno): Estudiante => aEstudiante({ ...f, foto_url: null, creado_en: '' } as FilaEstudiante)
 
 const aEstadoAlumno = (f: FilaAlumno): EstadoAlumno => ({
   estudiante: aEstudianteDelDispositivo(f),
@@ -104,22 +139,24 @@ const aEstadoAlumno = (f: FilaAlumno): EstadoAlumno => ({
         id: f.sala_id,
         nombre: capitalizar(f.sala_nombre ?? ''),
         tipo: (f.sala_tipo ?? 'trabajo') as TipoSala,
+        actividad: (f.sala_actividad ?? 'parque') as ActividadRecreo,
+        siguienteSala: f.siguiente_sala ?? undefined,
+        siguienteTipo: (f.siguiente_tipo ?? undefined) as TipoSala | undefined,
+        plan: aPlan(f.plan, f.contenidos),
         contenidos: f.contenidos ?? [],
         juegos: f.juegos ?? [],
         asignacion: f.asignacion ?? '',
       }
     : null,
   progreso: { paso: f.paso, repeticiones: f.repeticiones },
-  avataresComprados: f.comprados,
+  articulosComprados: f.comprados,
 })
 
-type FilaMensaje = Database['public']['Functions']['mensajes_playground']['Returns'][number]
-const aMensaje = (f: FilaMensaje): MensajeSala => ({
+const aMensaje = (f: { id: number; estudiante_id: string; nombre: string; personaje: Json | null; color: string; picto: string; enviado_en: string }): MensajeSala => ({
   id: f.id,
   estudianteId: f.estudiante_id,
   nombre: capitalizar(f.nombre),
-  avatar: f.avatar,
-  avatarTienda: f.avatar_tienda ?? undefined,
+  personaje: aPersonaje(f.personaje),
   color: f.color,
   picto: f.picto,
   enviadoEn: f.enviado_en,
@@ -270,13 +307,28 @@ export const repositorioSupabase: Repositorio = {
       p_duracion_ms: Math.round(r.duracionMs),
       p_estrellas: r.estrellas,
       p_monedas: r.monedas,
-      p_rondas: r.rondas.map(({ item, intentos, acertada, error }) => ({ item, intentos, acertada, error: error?.slice(0, 20) })),
+      // Una base sin migrar lee solo los campos que conoce de cada ronda.
+      p_rondas: r.rondas.map(({ item, intentos, acertada, error, categoria, tiempoMs, revelada, detalle }) => ({
+        item,
+        intentos,
+        acertada,
+        error: error?.slice(0, 20),
+        categoria,
+        tiempo_ms: tiempoMs === undefined ? undefined : Math.round(tiempoMs),
+        revelada,
+        detalle,
+      })) as unknown as Json,
     }
-    sinError(
-      actual
-        ? await supabase.rpc('guardar_resultado', datos)
-        : await supabase.rpc('guardar_resultado_sala', { ...datos, p_token: tokenDe(r.estudianteId) }),
-    )
+    const guardar = (contexto: { p_contexto?: Json }) =>
+      actual ? supabase.rpc('guardar_resultado', { ...datos, ...contexto }) : supabase.rpc('guardar_resultado_sala', { ...datos, ...contexto, p_token: tokenDe(r.estudianteId) })
+    const respuesta = await guardar(conContexto && r.contexto ? { p_contexto: r.contexto as unknown as Json } : {})
+    // PGRST202: la función aún no acepta p_contexto.
+    if (respuesta.error?.code === 'PGRST202' && conContexto) {
+      conContexto = false
+      sinError(await guardar({}))
+      return
+    }
+    sinError(respuesta)
   },
   async listarResultados({ estudianteId, cursoId, desde }) {
     // PostgREST corta cada respuesta en POR_PAGINA filas (max-rows del
@@ -285,7 +337,7 @@ export const repositorioSupabase: Repositorio = {
     for (let pagina = 0; ; pagina++) {
       let consulta = supabase
         .from('resultados_actividad')
-        .select((conColumnaError ? COLUMNAS_RESULTADO : COLUMNAS_RESULTADO_SIN_ERROR) as typeof COLUMNAS_RESULTADO)
+        .select(COLUMNAS_RESULTADO[columnasResultado] as (typeof COLUMNAS_RESULTADO)[0])
         .order('fecha', { ascending: false })
         .order('id')
         .order('orden', { referencedTable: 'rondas_resultado' })
@@ -294,10 +346,10 @@ export const repositorioSupabase: Repositorio = {
       if (cursoId) consulta = consulta.eq('estudiantes.curso_id', cursoId)
       if (desde) consulta = consulta.gte('fecha', desde.toISOString())
       const respuesta = await consulta
-      // 42703: columna inexistente. La base aún no tiene la migración de errores:
-      // se repite la página sin esa columna y se recuerda para las siguientes.
-      if (conColumnaError && respuesta.error?.code === '42703') {
-        conColumnaError = false
+      // 42703: columna inexistente. La base aún no tiene esa migración: se repite
+      // la página sin esas columnas y se recuerda para las siguientes.
+      if (columnasResultado < COLUMNAS_RESULTADO.length - 1 && respuesta.error?.code === '42703') {
+        columnasResultado++
         pagina--
         continue
       }
@@ -311,10 +363,19 @@ export const repositorioSupabase: Repositorio = {
             fecha: f.fecha,
             duracionMs: f.duracion_ms,
             rondas: f.rondas_resultado.map(
-              ({ item, intentos, acertada, error }): IntentoRonda => ({ item, intentos, acertada, error: error ?? undefined }),
+              ({ item, intentos, acertada, error, categoria, tiempo_ms, revelada }): IntentoRonda => ({
+                item,
+                intentos,
+                acertada,
+                error: error ?? undefined,
+                categoria: (categoria ?? undefined) as IntentoRonda['categoria'],
+                tiempoMs: tiempo_ms ?? undefined,
+                revelada: revelada ?? undefined,
+              }),
             ),
             estrellas: f.estrellas,
             monedas: f.monedas,
+            contexto: f.practica === undefined ? undefined : { practica: f.practica, contenidoId: f.contenido_id ?? undefined, nivel: (f.nivel ?? undefined) as Nivel | undefined },
           }),
         ),
       )
@@ -350,8 +411,40 @@ export const repositorioSupabase: Repositorio = {
   async renombrarSala(id, nombre) {
     sinError(await supabase.from('salas').update({ nombre: capitalizar(nombre.trim()) }).eq('id', id))
   },
-  async asignarPlan(salaId, contenidos, juegos) {
-    sinError(await supabase.from('salas').update({ contenidos, juegos, asignacion: crypto.randomUUID() }).eq('id', salaId))
+  async asignarPlan(salaId, plan) {
+    const datos = { contenidos: contenidosDePlan(plan), asignacion: crypto.randomUUID() }
+    const { error } = await supabase.from('salas').update({ ...datos, plan: plan as unknown as Json }).eq('id', salaId)
+    if (!error) return
+    if (error.code !== 'PGRST204') throw new Error(error.message)
+    // La base aún no tiene `plan`: los contenidos se guardan como antes, y lo configurable debe esperar.
+    if (pasosDeContenidos(datos.contenidos).length !== plan.length) {
+      throw new Error('Para usar actividades configurables falta aplicar la migración 20261103180000 en la base.')
+    }
+    sinError(await supabase.from('salas').update(datos).eq('id', salaId))
+  },
+  async listarPlantillas() {
+    const { data, error } = await supabase.from('plantillas_actividad').select('id, nombre, juego_id, parametros').order('nombre')
+    // Sin la migración todavía no hay plantillas propias: quedan las del sistema.
+    if (error) return []
+    return data.map((f): PlantillaActividad => ({ id: f.id, nombre: f.nombre, juegoId: f.juego_id, parametros: f.parametros as PlantillaActividad['parametros'] }))
+  },
+  async guardarPlantilla({ nombre, juegoId, parametros }) {
+    const { data, error } = await supabase
+      .from('plantillas_actividad')
+      .insert({ nombre, juego_id: juegoId, parametros: parametros as Json })
+      .select('id')
+      .single()
+    if (error) throw new Error(error.code === 'PGRST205' || error.code === '42P01' ? 'Para guardar plantillas falta aplicar la migración 20261103180000 en la base.' : error.message)
+    return { id: data.id, nombre, juegoId, parametros }
+  },
+  async eliminarPlantilla(id) {
+    sinError(await supabase.from('plantillas_actividad').delete().eq('id', id))
+  },
+  async configurarRecreo(salaId, actividad, juegos) {
+    sinError(await supabase.from('salas').update({ actividad, juegos }).eq('id', salaId))
+  },
+  async conectarSalas(salaId, destino) {
+    sinError(await supabase.from('salas').update({ siguiente_sala: destino }).eq('id', salaId))
   },
   async eliminarSala(id) {
     sinError(await supabase.from('salas').delete().eq('id', id))
@@ -410,12 +503,21 @@ export const repositorioSupabase: Repositorio = {
     const filas = sinError(
       await supabase
         .from('mensajes_sala')
-        .select('id, estudiante_id, picto, enviado_en, estudiantes!inner(nombre, avatar, avatar_tienda, color)')
+        .select('id, estudiante_id, picto, enviado_en, estudiantes!inner(nombre, personaje, color)')
         .eq('sala_id', salaId)
         .order('id', { ascending: false })
         .limit(40),
     )
     return filas.map((f) => aMensaje({ ...f, ...f.estudiantes }))
+  },
+
+  async cargarBanco(): Promise<BancoRemoto | null> {
+    const [palabras, letras] = await Promise.all([supabase.from('palabras').select(), supabase.from('letras').select()])
+    if (palabras.error || letras.error || palabras.data.length === 0) return null
+    return {
+      palabras: palabras.data.map((f) => ({ id: f.id, texto: f.texto, silabas: f.silabas, emoji: f.emoji, fotoUrl: f.foto_url ?? undefined, pictoUrl: f.picto_url ?? undefined })),
+      letras: letras.data.map((f) => ({ id: f.id, fonema: f.fonema, apoyoArticulatorio: f.apoyo_articulatorio })),
+    }
   },
 
   async perfilesAlumnos() {
@@ -424,8 +526,7 @@ export const repositorioSupabase: Repositorio = {
       (f): PerfilAlumno => ({
         id: f.id,
         nombre: capitalizar(f.nombre),
-        avatar: f.avatar,
-        avatarTienda: f.avatar_tienda ?? undefined,
+        personaje: aPersonaje(f.personaje),
         color: f.color,
         ocupado: f.ocupado,
       }),
@@ -464,17 +565,54 @@ export const repositorioSupabase: Repositorio = {
     )
     return { paso: filas[0].paso, repeticiones: filas[0].repeticiones }
   },
-  async comprarAvatar(avatarId) {
-    sinError(await supabase.rpc('comprar_avatar', { ...credencial(), p_avatar: avatarId }))
+  async pasarSalaConectada() {
+    sinError(await supabase.rpc('pasar_sala_conectada', credencial()))
   },
-  async usarAvatar(avatarId) {
-    sinError(await supabase.rpc('usar_avatar', { ...credencial(), p_avatar: avatarId }))
+  async comprarArticulo(articuloId) {
+    sinError(await supabase.rpc('comprar_articulo', { ...credencial(), p_articulo: articuloId }))
   },
-  async mensajesPlayground() {
-    const filas = sinError(await supabase.rpc('mensajes_playground', credencial()))
-    return filas.map(aMensaje)
+  async guardarPersonaje(personaje) {
+    sinError(await supabase.rpc('guardar_personaje', { ...credencial(), p_personaje: personaje as unknown as Json }))
   },
   async enviarMensaje(picto) {
     sinError(await supabase.rpc('enviar_mensaje', { ...credencial(), p_picto: picto }))
+  },
+  async datosParque() {
+    const filas = sinError(await supabase.rpc('parque_alumno', credencial()))
+    return {
+      canal: filas[0]?.canal ?? null,
+      miembros: filas.map((f) => ({ ficha: f.ficha, mia: f.mia, nombre: capitalizar(f.nombre), color: f.color, personaje: aPersonaje(f.personaje) })),
+    }
+  },
+  // Presence entrega a cada niño quiénes están y a dónde van, también a quien
+  // llega tarde; nada pasa por la base (RNF-09). El nombre del canal es secreto y
+  // lo entrega parque_alumno: los niños no tienen sesión para un canal privado.
+  conectarParque(canal, ficha, inicio, avisos) {
+    let posicion = inicio
+    const sala = supabase.channel(`parque:${canal}`, { config: { presence: { key: ficha } } })
+    sala
+      .on('presence', { event: 'sync' }, () => {
+        const estado = sala.presenceState<{ x: number; y: number }>()
+        avisos.alMoverse(
+          Object.entries(estado).flatMap(([f, [p]]): PosicionParque[] => (p ? [{ ficha: f, x: p.x, y: p.y }] : [])),
+        )
+      })
+      .on('broadcast', { event: 'picto' }, ({ payload }: { payload: { ficha: string; picto: string } }) => avisos.alDecir(payload.ficha, payload.picto))
+      // También al reconectar: el canal olvida la posición de quien se cayó.
+      .subscribe((estado) => {
+        if (estado === 'SUBSCRIBED') void sala.track(posicion)
+      })
+    return {
+      mover(x, y) {
+        posicion = { x, y }
+        void sala.track(posicion)
+      },
+      decir(picto) {
+        void sala.send({ type: 'broadcast', event: 'picto', payload: { ficha, picto } })
+      },
+      cerrar() {
+        void supabase.removeChannel(sala)
+      },
+    }
   },
 }

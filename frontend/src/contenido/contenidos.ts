@@ -1,4 +1,4 @@
-import type { IntentoRonda, Palabra } from '../dominio/tipos.ts'
+import type { ContextoPartida, IntentoRonda, Nivel, Palabra, ParametrosJuego, PasoSala, Sala } from '../dominio/tipos.ts'
 import {
   actividad,
   completaLaSilaba,
@@ -12,6 +12,7 @@ import {
   type Ronda,
 } from './actividades.ts'
 import { CONSONANTES_SILABAS, LETRAS, PALABRAS, PALABRAS_NIVEL_3, VOCALES, fonemaDe, palabra, quitarTildes } from './banco.ts'
+import { juegoConfigurable } from './plantillas.ts'
 
 // Contenidos de las Bases Curriculares de la Educación Parvularia (MINEDUC,
 // 2018), núcleo Lenguaje Verbal, Tercer Nivel (Transición):
@@ -60,7 +61,8 @@ export interface Contenido {
   // Lo que ve el niño en su camino: sin texto.
   icono: string
   color: string
-  pasos: [Paso, Paso, Paso]
+  // 3 actividades preordenadas; una sola en las configurables.
+  pasos: Paso[]
 }
 
 // Rondas por partida (regla de oro 4: micro-partidas de 4 a 5 rondas).
@@ -524,26 +526,96 @@ export function contenido(id: string) {
 
 export interface PasoPlan {
   contenido: Contenido
-  numero: 1 | 2 | 3
-  // Con el que se guarda el resultado: «silabas-m-2».
+  numero: number
+  // Con el que se guarda el resultado: «silabas-m-2» o «escucha-letra».
   actividadId: string
+  // Distingue dos pasos con la misma actividad (dos plantillas de letras).
+  clave: string
   generar: () => Ronda[]
   instrucciones?: string
+  parametros?: ParametrosJuego
 }
 
-// Los contenidos de la sala, en orden, desplegados en sus 3 actividades.
-export function planDe(contenidos: string[]): PasoPlan[] {
-  return contenidos.flatMap((id) => {
-    const c = contenido(id)
-    if (!c) return []
-    return c.pasos.map((p, i) => ({
-      contenido: c,
-      numero: (i + 1) as 1 | 2 | 3,
-      actividadId: `${c.id}-${i + 1}`,
-      generar: p.generar,
-      instrucciones: p.instrucciones,
-    }))
+// Los contenidos, desplegados en los pasos que se guardan en la sala.
+export function pasosDeContenidos(contenidos: string[]): PasoSala[] {
+  return contenidos.flatMap((id) => contenido(id)?.pasos.map((_, i) => ({ juego: `${id}-${i + 1}` })) ?? [])
+}
+
+// Los pasos de la sala, listos para jugar. Un paso que este código no conoce se
+// omite, igual que antes un contenido desconocido.
+export function planDeSala(plan: PasoSala[]): PasoPlan[] {
+  return plan.flatMap((p, i): PasoPlan[] => {
+    const deContenido = pasoDe(p.juego)
+    if (deContenido) {
+      const paso = deContenido.contenido.pasos[Number(deContenido.numero) - 1]
+      if (!paso) return []
+      return [{ contenido: deContenido.contenido, numero: Number(deContenido.numero), actividadId: p.juego, clave: `${i}`, generar: paso.generar, instrucciones: paso.instrucciones }]
+    }
+    const j = juegoConfigurable(p.juego)
+    if (!j) return []
+    const parametros = p.parametros ?? j.porDefecto
+    const generar = () => j.generar(parametros)
+    return [
+      {
+        // Una entrada propia por paso: la misma actividad puede ir dos veces con otras letras.
+        contenido: {
+          id: `${j.id}#${i}`,
+          oa: j.oa,
+          titulo: p.titulo ?? j.titulo,
+          descripcion: j.descripcion,
+          categoria: j.categoria,
+          area: j.area,
+          icono: j.icono,
+          color: j.color,
+          pasos: [{ titulo: j.titulo, generar, instrucciones: j.instrucciones }],
+        },
+        numero: 1,
+        actividadId: j.id,
+        clave: `${i}`,
+        generar,
+        instrucciones: j.instrucciones,
+        parametros,
+      },
+    ]
   })
+}
+
+export const planDe = (contenidos: string[]) => planDeSala(pasosDeContenidos(contenidos))
+
+// Lo que edita la docente: un contenido entero o una actividad configurada.
+export type BloquePlan = { contenido: string } | { paso: PasoSala }
+
+export function bloquesDePlan(plan: PasoSala[]): BloquePlan[] {
+  const bloques: BloquePlan[] = []
+  for (const p of plan) {
+    const c = pasoDe(p.juego)
+    if (!c) bloques.push({ paso: p })
+    else if (c.numero === '1') bloques.push({ contenido: c.contenido.id })
+  }
+  return bloques
+}
+
+export const planDeBloques = (bloques: BloquePlan[]): PasoSala[] => bloques.flatMap((b) => ('paso' in b ? [b.paso] : pasosDeContenidos([b.contenido])))
+
+// Los contenidos enteros del plan: se guardan también en `salas.contenidos`, que
+// siguen leyendo las versiones anteriores de la app.
+export const contenidosDePlan = (plan: PasoSala[]) => bloquesDePlan(plan).flatMap((b) => ('contenido' in b ? [b.contenido] : []))
+
+// Nivel de lo que mide cada categoría (Sonidos, Sílabas, Palabras), para los reportes.
+const NIVEL_POR_CATEGORIA: Record<Categoria, Nivel> = { auditiva: 1, letras: 1, silabas: 2, conteo: 2, rimas: 2, palabras: 3, escritura: 3 }
+
+// Foto de la partida al jugarla: si el catálogo cambia, el historial no se pierde.
+export function contextoDePaso(p: PasoPlan, sala: Pick<Sala, 'id' | 'asignacion'>): ContextoPartida {
+  const configurable = Boolean(p.parametros)
+  return {
+    contenidoId: configurable ? undefined : p.contenido.id,
+    paso: configurable ? undefined : p.numero,
+    nivel: NIVEL_POR_CATEGORIA[p.contenido.categoria],
+    oa: p.contenido.oa,
+    salaId: sala.id,
+    asignacion: sala.asignacion,
+    parametros: p.parametros,
+  }
 }
 
 export function aprobo(rondas: Pick<IntentoRonda, 'acertada'>[], umbral = UMBRAL_APROBAR) {

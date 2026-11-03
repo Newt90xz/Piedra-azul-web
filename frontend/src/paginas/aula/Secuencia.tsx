@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Partida, Premio, type FinPartida } from '../../actividades/Partida.tsx'
 import { JUEGOS, type Actividad, type Ronda } from '../../contenido/actividades.ts'
-import { aprobo, planDe, type PasoPlan } from '../../contenido/contenidos.ts'
+import { aprobo, contextoDePaso, planDeSala, type PasoPlan } from '../../contenido/contenidos.ts'
 import { nivelDe, partidaConExigencia } from '../../contenido/exigencia.ts'
 import { repo } from '../../datos/index.ts'
 import type { EstadoAlumno } from '../../dominio/tipos.ts'
@@ -14,11 +14,11 @@ type SalaTrabajo = NonNullable<EstadoAlumno['sala']>
 
 // Sala de trabajo: el niño recorre en orden las actividades de los contenidos
 // que asignó la docente. Con 60 % o más pasa a la siguiente; si no, la repite
-// con otras rondas del mismo pool. Al terminar todas ve un resumen y llega a
-// los juegos de la sala. El niño nunca elige qué contenido trabajar.
+// con otras rondas del mismo pool. Al terminar todas ve un resumen y pasa solo a
+// la sala conectada. El niño nunca elige qué contenido trabajar.
 export default function Secuencia({ sala }: { sala: SalaTrabajo }) {
   const { estado, recargar } = useNino()
-  const plan = planDe(sala.contenidos)
+  const plan = planDeSala(sala.plan)
   // El servidor manda; lo local evita esperar al próximo refresco tras terminar.
   const [pasoLocal, setPasoLocal] = useState(0)
   const paso = Math.max(pasoLocal, estado.progreso.paso)
@@ -47,7 +47,7 @@ export default function Secuencia({ sala }: { sala: SalaTrabajo }) {
       setUltimo({ monedas: fin.monedas, logrado })
       setFase('premio')
       if (logrado) {
-        setEstrellas((e) => ({ ...e, [actual.actividadId]: fin.estrellas }))
+        setEstrellas((e) => ({ ...e, [actual.clave]: fin.estrellas }))
         setPasoLocal(paso + 1)
         if (paso + 1 === plan.length) setVerResumen(true)
       }
@@ -68,6 +68,7 @@ export default function Secuencia({ sala }: { sala: SalaTrabajo }) {
         objetivo={actual.contenido.pasos[actual.numero - 1].titulo}
         instrucciones={actual.instrucciones}
         icono={actual.contenido.icono}
+        contexto={contextoDePaso(actual, sala)}
       />
     )
   }
@@ -87,8 +88,10 @@ export default function Secuencia({ sala }: { sala: SalaTrabajo }) {
   }
 
   if (!actual) {
-    if (verResumen) return <Resumen plan={plan} estrellas={estrellas} alSeguir={() => setVerResumen(false)} />
-    return <Juegos sala={sala} />
+    if (verResumen) return <Resumen plan={plan} estrellas={estrellas} recreo={sala.siguienteTipo === 'recreo'} alSeguir={() => setVerResumen(false)} />
+    // Sin sala conectada: terminó y espera a la docente.
+    if (!sala.siguienteSala) return <MiniJuego />
+    return <PasarDeSala recreo={sala.siguienteTipo === 'recreo'} avanceGuardado={estado.progreso.paso >= plan.length} />
   }
 
   return <Camino plan={plan} paso={paso} repeticion={estado.progreso.paso === paso ? estado.progreso.repeticiones : 0} alEmpezar={empezar} />
@@ -115,7 +118,7 @@ async function registrar(asignacion: string, paso: number, logrado: boolean, res
 const RETRASO_CAJA_MS = 140
 function Camino({ plan, paso, repeticion, alEmpezar }: { plan: PasoPlan[]; paso: number; repeticion: number; alEmpezar: () => void }) {
   const actual = plan[paso]
-  const contenidos = plan.filter((p) => p.numero === 1).map((p) => p.contenido)
+  const contenidos = plan.flatMap((p, inicio) => (p.numero === 1 ? [{ c: p.contenido, inicio }] : []))
 
   useEffect(() => {
     hablar(repeticion > 0 ? `¡Vamos otra vez! ${actual.contenido.pasos[actual.numero - 1].titulo}.` : `¡Vamos! ${actual.contenido.pasos[actual.numero - 1].titulo}.`)
@@ -124,7 +127,7 @@ function Camino({ plan, paso, repeticion, alEmpezar }: { plan: PasoPlan[]; paso:
   return (
     <main className="mx-auto grid h-full max-w-5xl content-center justify-items-center gap-10 px-6 py-6">
       <ol className="flex flex-wrap justify-center gap-5" aria-label={`Actividad ${paso + 1} de ${plan.length}`}>
-        {contenidos.map((c, ci) => (
+        {contenidos.map(({ c, inicio }, ci) => (
           <li
             key={`${c.id}-${ci}`}
             className="caja-entra flex items-center gap-2 rounded-full border-3 border-nino-borde bg-white/80 py-2 pr-4 pl-2"
@@ -133,8 +136,8 @@ function Camino({ plan, paso, repeticion, alEmpezar }: { plan: PasoPlan[]; paso:
             <span aria-hidden="true" className="grid size-14 place-items-center rounded-full text-[1.4em]" style={{ background: c.color }}>
               {c.icono}
             </span>
-            {[0, 1, 2].map((k) => {
-              const i = ci * 3 + k
+            {c.pasos.map((_, k) => {
+              const i = inicio + k
               const hecho = i < paso
               const aqui = i === paso
               return (
@@ -170,7 +173,7 @@ function Camino({ plan, paso, repeticion, alEmpezar }: { plan: PasoPlan[]; paso:
 
 // Retroalimentación breve al terminar el plan: cada contenido con sus estrellas.
 // Sin números ni texto; el detalle (tiempos, intentos) queda para la docente.
-function Resumen({ plan, estrellas, alSeguir }: { plan: PasoPlan[]; estrellas: Record<string, number>; alSeguir: () => void }) {
+function Resumen({ plan, estrellas, recreo, alSeguir }: { plan: PasoPlan[]; estrellas: Record<string, number>; recreo: boolean; alSeguir: () => void }) {
   const contenidos = plan.filter((p) => p.numero === 1).map((p) => p.contenido)
 
   useEffect(() => hablar('¡Terminaste todo! Mira tus estrellas.'), [])
@@ -180,7 +183,7 @@ function Resumen({ plan, estrellas, alSeguir }: { plan: PasoPlan[]; estrellas: R
       <span role="img" aria-label="¡Terminaste!" className="animate-pop text-[4em] leading-none">🏆</span>
       <ul className="grid w-full gap-4 sm:grid-cols-2">
         {contenidos.map((c, ci) => {
-          const propias = plan.filter((p) => p.contenido.id === c.id).map((p) => estrellas[p.actividadId]).filter((e) => e !== undefined)
+          const propias = plan.filter((p) => p.contenido.id === c.id).map((p) => estrellas[p.clave]).filter((e) => e !== undefined)
           // Si recargó a mitad de camino no hay estrellas guardadas aquí: se muestran las 3 por haberlo logrado.
           const n = propias.length ? Math.round(propias.reduce((s, e) => s + e, 0) / propias.length) : 3
           return (
@@ -201,19 +204,43 @@ function Resumen({ plan, estrellas, alSeguir }: { plan: PasoPlan[]; estrellas: R
           )
         })}
       </ul>
-      <BotonNino voz="¡A jugar!" onClick={alSeguir} className="grid size-28 place-items-center border-[#e6c84d] bg-nino-amarillo">
+      <BotonNino voz={recreo ? '¡Al recreo!' : 'Seguir'} onClick={alSeguir} className="grid size-28 place-items-center border-[#e6c84d] bg-nino-amarillo">
         <Icono nombre="derecha" className="size-14" />
       </BotonNino>
     </main>
   )
 }
 
-// Juegos de la sala: el punto de llegada tras los contenidos. Se juegan las
-// veces que quiera, siempre con rondas nuevas del pool, hasta que la docente
-// lo mueva de sala.
-function Juegos({ sala }: { sala: SalaTrabajo }) {
+// Pasa a la sala conectada; el estado del niño lo lleva allá en cuanto el servidor
+// lo confirma. Se reintenta porque su último avance puede venir aún en camino.
+const REINTENTO_PASAR_MS = 2500
+function PasarDeSala({ recreo, avanceGuardado }: { recreo: boolean; avanceGuardado: boolean }) {
+  const { recargar } = useNino()
+
+  useEffect(() => hablar(recreo ? '¡Al recreo!' : '¡Seguimos!'), [recreo])
+
+  useEffect(() => {
+    if (!avanceGuardado) return
+    const pasar = () => void repo.pasarSalaConectada().then(recargar, (e: unknown) => console.warn('[sala] Aún no puede pasar.', e))
+    pasar()
+    const t = window.setInterval(pasar, REINTENTO_PASAR_MS)
+    return () => window.clearInterval(t)
+  }, [avanceGuardado, recargar])
+
+  return (
+    <main className="grid h-full place-items-center">
+      <span role="img" aria-label={recreo ? 'Al recreo' : 'Seguimos'} className="animate-pop text-[5em] leading-none">
+        {recreo ? '🌳' : '🚀'}
+      </span>
+    </main>
+  )
+}
+
+// Juegos del recreo: se juegan las veces que quiera, siempre con rondas nuevas
+// del pool, hasta que la docente lo mueva de sala.
+export function Juegos({ ids }: { ids: string[] }) {
   const { estudiante } = useNino()
-  const juegos = JUEGOS.filter((j) => sala.juegos.includes(j.id))
+  const juegos = JUEGOS.filter((j) => ids.includes(j.id))
   const [jugando, setJugando] = useState<{ juego: Actividad; rondas: Ronda[]; n: number } | null>(null)
   const [premio, setPremio] = useState<number | null>(null)
   const solo = juegos.length === 1 ? juegos[0] : null
@@ -229,8 +256,8 @@ function Juegos({ sala }: { sala: SalaTrabajo }) {
 
   const terminar = useCallback((fin: FinPartida) => setPremio(fin.monedas), [])
 
-  // Sin juegos asignados: terminó y espera a la docente.
-  if (juegos.length === 0) return <MiniJuego />
+  // La docente aún no elige juegos para este recreo.
+  if (juegos.length === 0) return <MiniJuego saludo="¡Es hora de recreo! ¡Revienta los globos!" />
 
   if (jugando && premio !== null) {
     return (

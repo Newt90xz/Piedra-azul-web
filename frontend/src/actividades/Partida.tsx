@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { actividad, instruccionesDe, type Ronda } from '../contenido/actividades.ts'
+import { categoriaDe } from '../contenido/contenidos.ts'
 import { nivelDe } from '../contenido/exigencia.ts'
 import { guardarResultadoConRespaldo } from '../datos/pendientes.ts'
-import type { IntentoRonda } from '../dominio/tipos.ts'
+import type { ContextoPartida, IntentoRonda } from '../dominio/tipos.ts'
 import { efecto, hablar } from '../lib/audio.ts'
 import { Icono } from '../ui/Icono.tsx'
 import { BotonNino, useNino } from '../ui/nino.tsx'
@@ -26,6 +27,7 @@ interface Registro {
   error?: string
   estrellas: number
   monedas: number
+  tiempoMs: number
 }
 
 // Lo que deja una partida terminada. El detalle (intentos por ronda, tiempo)
@@ -45,6 +47,7 @@ export function Partida({
   objetivo,
   instrucciones,
   icono,
+  contexto,
 }: {
   actividadId: string
   rondas: Ronda[]
@@ -56,6 +59,8 @@ export function Partida({
   icono?: string
   // Solo en los juegos: en los contenidos el niño sigue el camino que armó la docente.
   alSalir?: () => void
+  // Foto de la partida: sala, contenido, parámetros…
+  contexto?: ContextoPartida
 }) {
   const { estudiante, silenciado, recargar } = useNino()
   // `error`: la última respuesta equivocada de esta ronda (se reemplaza en cada fallo).
@@ -64,6 +69,7 @@ export function Partida({
   const [racha, setRacha] = useState(0)
   const [inicio] = useState(() => Date.now())
   const terminada = useRef(false)
+  const inicioRonda = useRef(0)
   const datosActividad = actividad(actividadId)
   const practica = datosActividad?.practica ?? false
   const tituloObjetivo = objetivo ?? datosActividad?.objetivo
@@ -76,7 +82,9 @@ export function Partida({
   const ronda = rondas[estado.indice]
 
   useEffect(() => {
-    if (ronda && !verInstrucciones) hablar(ronda.instruccion)
+    if (!ronda || verInstrucciones) return
+    inicioRonda.current = Date.now()
+    hablar(ronda.instruccion)
   }, [ronda, verInstrucciones])
 
   // Fin: RF-12, se guarda fecha, intentos por ronda y tiempo empleado. El id se
@@ -88,7 +96,15 @@ export function Partida({
     const fin: FinPartida = {
       resultadoId: crypto.randomUUID(),
       // Acertada = resuelta antes de que se iluminara la respuesta.
-      rondas: registro.map((r) => ({ item: r.item, intentos: r.intentos, acertada: r.intentos <= revelarTras, error: r.error })),
+      rondas: registro.map((r) => ({
+        item: r.item,
+        intentos: r.intentos,
+        acertada: r.intentos <= revelarTras,
+        error: r.error,
+        categoria: categoriaDe(actividadId),
+        tiempoMs: r.tiempoMs,
+        revelada: r.intentos > revelarTras,
+      })),
       estrellas: promedio >= 2.5 ? 3 : promedio >= 1.75 ? 2 : 1,
       monedas: registro.reduce((s, r) => s + r.monedas, 0),
     }
@@ -101,9 +117,10 @@ export function Partida({
       rondas: fin.rondas,
       estrellas: fin.estrellas,
       monedas: fin.monedas,
+      contexto: { ...contexto, mecanica: rondas[0]?.tipo, practica, version: 1 },
     }).then(recargar)
     alTerminar(fin)
-  }, [ronda, registro, actividadId, estudiante.id, inicio, recargar, alTerminar, revelarTras])
+  }, [ronda, registro, actividadId, estudiante.id, inicio, recargar, alTerminar, revelarTras, contexto, rondas, practica])
 
   const avanzar = (desde: number) =>
     setEstado((e) => (e.indice === desde ? { indice: desde + 1, intentos: 0, resuelta: false } : e))
@@ -122,7 +139,7 @@ export function Partida({
     const nuevaRacha = !practica && intentos === 1 ? racha + 1 : 0
     setRacha(nuevaRacha)
     const bono = nuevaRacha >= 3 ? BONO_RACHA : 0
-    setRegistro((r) => [...r, { item: ronda.item, intentos, error: estado.error, estrellas: p.estrellas, monedas: p.monedas + bono }])
+    setRegistro((r) => [...r, { item: ronda.item, intentos, error: estado.error, estrellas: p.estrellas, monedas: p.monedas + bono, tiempoMs: Date.now() - inicioRonda.current }])
     setEstado({ ...estado, intentos, resuelta: true })
     efecto('acierto', silenciado)
     const desde = estado.indice

@@ -1,5 +1,12 @@
 # React + TypeScript + Vite
 
+## CSS configuration
+
+Tailwind CSS 4 runs through `@tailwindcss/vite`. The inline PostCSS configuration
+in [vite.config.ts](./vite.config.ts) prevents Vite from loading unrelated
+`postcss.config.*` files from parent directories. No separate PostCSS Tailwind
+plugin or `autoprefixer` installation is needed.
+
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
 Currently, two official plugins are available:
