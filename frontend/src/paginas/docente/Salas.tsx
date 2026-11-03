@@ -110,6 +110,8 @@ export default function Salas() {
   const [elegido, setElegido] = useState<Estudiante | null>(null)
   // Movimientos pedidos: estudianteId → sala de destino.
   const [pedidos, setPedidos] = useState<Record<string, string>>({})
+  // Sala a la que se le está creando un recreo: se ve su esqueleto hasta que llega.
+  const [creandoRecreo, setCreandoRecreo] = useState<string | null>(null)
   const { datos, error, recargar } = useConsulta(async (): Promise<Datos> => {
     // Vista en vivo: se repite cada pocos segundos, así que solo trae lo de hoy
     // y la última emoción de cada niño (no el historial completo).
@@ -195,12 +197,29 @@ export default function Salas() {
   const enSalas = (datos?.estudiantes.length ?? 0) - sinSala.length
   const { rutas, sueltas } = armarRutas(datos?.salas ?? [])
 
+  // Ya llegó el recreo conectado: el esqueleto deja su lugar a la tarjeta real.
+  if (creandoRecreo && datos?.salas.find((s) => s.id === creandoRecreo)?.siguienteSala) setCreandoRecreo(null)
+
+  const crearRecreo = async (sala: Sala) => {
+    setCreandoRecreo(sala.id)
+    let listo = false
+    await ejecutar(async () => {
+      const nombres = new Set(datos?.salas.map((s) => s.nombre))
+      let nombre = 'Recreo'
+      for (let n = 2; nombres.has(nombre); n++) nombre = `Recreo ${n}`
+      const recreo = await repo.crearSala(sala.cursoId, nombre, 'recreo')
+      await repo.conectarSalas(sala.id, recreo.id)
+      listo = true
+    })
+    if (!listo) setCreandoRecreo(null)
+  }
+
   const tarjeta = (s: Sala) =>
     datos &&
     (s.tipo === 'recreo' ? (
       <TarjetaRecreo key={s.id} sala={s} dentro={enDestino(s.id)} datos={datos} ejecutar={ejecutar} />
     ) : (
-      <TarjetaSala key={s.id} sala={s} dentro={enDestino(s.id)} datos={datos} ejecutar={ejecutar} />
+      <TarjetaSala key={s.id} sala={s} dentro={enDestino(s.id)} datos={datos} ejecutar={ejecutar} creandoRecreo={creandoRecreo === s.id} alCrearRecreo={() => void crearRecreo(s)} />
     ))
 
   return (
@@ -243,6 +262,12 @@ export default function Salas() {
                     {tarjeta(s)}
                   </div>
                 ))}
+                {creandoRecreo === r.salas.at(-1)?.id && (
+                  <div className="flex items-stretch gap-2">
+                    <Flecha />
+                    <EsqueletoRecreo />
+                  </div>
+                )}
                 {r.compartida && (
                   <div className="flex items-center gap-2">
                     <Flecha />
@@ -265,6 +290,27 @@ export default function Salas() {
         </>
       )}
     </MoverContexto>
+  )
+}
+
+// La tarjeta del recreo mientras se crea: mismo tamaño, para que nada salte al llegar.
+function EsqueletoRecreo() {
+  return (
+    <div role="status" aria-label="Creando el recreo" className={`${claseTarjeta} grid w-80 animate-pulse content-start gap-4 p-4`}>
+      <div className="grid gap-2">
+        <span className="h-5 w-32 rounded-lg bg-borde" />
+        <span className="h-3 w-24 rounded-lg bg-borde/70" />
+      </div>
+      <div className="grid gap-2">
+        <span className="h-3 w-44 rounded-lg bg-borde/70" />
+        <div className="grid grid-cols-4 gap-1.5">
+          {[0, 1, 2, 3].map((i) => (
+            <span key={i} className="h-14 rounded-xl bg-fondo" />
+          ))}
+        </div>
+      </div>
+      <span className="h-20 rounded-2xl bg-fondo" />
+    </div>
   )
 }
 
@@ -528,7 +574,21 @@ function EncabezadoSala({ sala, n, ejecutar, accion }: { sala: Sala; n: number; 
   )
 }
 
-function TarjetaSala({ sala, dentro, datos, ejecutar }: { sala: Sala; dentro: Estudiante[]; datos: Datos; ejecutar: Ejecutar }) {
+function TarjetaSala({
+  sala,
+  dentro,
+  datos,
+  ejecutar,
+  creandoRecreo,
+  alCrearRecreo,
+}: {
+  sala: Sala
+  dentro: Estudiante[]
+  datos: Datos
+  ejecutar: Ejecutar
+  creandoRecreo: boolean
+  alCrearRecreo: () => void
+}) {
   const { pendiente } = useMover()
   const [editando, setEditando] = useState(false)
   const pasoDe = (id: string) => avanceEn(sala, datos.progresoDe.get(id))?.paso ?? 0
@@ -555,29 +615,22 @@ function TarjetaSala({ sala, dentro, datos, ejecutar }: { sala: Sala; dentro: Es
           return destino !== undefined ? <Conectando destino={destino} /> : <EstadoAvance sala={sala} p={avanceEn(sala, datos.progresoDe.get(e.id))} />
         }}
       </ListaNinos>
-      <AlTerminar sala={sala} datos={datos} ejecutar={ejecutar} />
+      <AlTerminar sala={sala} datos={datos} ejecutar={ejecutar} creandoRecreo={creandoRecreo} alCrearRecreo={alCrearRecreo} />
     </ZonaSoltar>
   )
 }
 
 // A dónde pasan los niños al terminar el plan. Lo más común, un recreo, se crea
 // y conecta de una vez.
-function AlTerminar({ sala, datos, ejecutar }: { sala: Sala; datos: Datos; ejecutar: Ejecutar }) {
+function AlTerminar({ sala, datos, ejecutar, creandoRecreo, alCrearRecreo }: { sala: Sala; datos: Datos; ejecutar: Ejecutar; creandoRecreo: boolean; alCrearRecreo: () => void }) {
   const opciones = datos.salas.filter((s) => !hariaCirculo(datos.salas, sala.id, s.id))
-  const crearRecreo = () =>
-    ejecutar(async () => {
-      const nombres = new Set(datos.salas.map((s) => s.nombre))
-      let nombre = 'Recreo'
-      for (let n = 2; nombres.has(nombre); n++) nombre = `Recreo ${n}`
-      const recreo = await repo.crearSala(sala.cursoId, nombre, 'recreo')
-      await repo.conectarSalas(sala.id, recreo.id)
-    })
   return (
     <div className="mt-auto grid gap-1.5 border-t border-borde pt-3">
       <label className="grid gap-1 text-xs font-bold text-tinta-suave">
         Al terminar pasan a
         <select
           value={sala.siguienteSala ?? ''}
+          disabled={creandoRecreo}
           onChange={(e) => void ejecutar(() => repo.conectarSalas(sala.id, e.target.value || null))}
           className={claseEntrada}
         >
@@ -590,9 +643,24 @@ function AlTerminar({ sala, datos, ejecutar }: { sala: Sala; datos: Datos; ejecu
         </select>
       </label>
       {!sala.siguienteSala && (
-        <button type="button" onClick={() => void crearRecreo()} className="justify-self-start text-sm font-semibold text-menta-oscuro underline">
-          + Crear un recreo y conectarlo
-        </button>
+        <Boton
+          variante="suave"
+          disabled={creandoRecreo}
+          aria-busy={creandoRecreo}
+          onClick={alCrearRecreo}
+          className="cursor-pointer active:scale-[0.98] disabled:cursor-wait"
+        >
+          {creandoRecreo ? (
+            <>
+              <span aria-hidden="true" className="size-4 animate-spin rounded-full border-2 border-menta border-t-transparent" />
+              Creando el recreo…
+            </>
+          ) : (
+            <>
+              <Icono nombre="mas" /> Crear un recreo y conectarlo
+            </>
+          )}
+        </Boton>
       )}
     </div>
   )
