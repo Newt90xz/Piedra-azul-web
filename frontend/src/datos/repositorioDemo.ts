@@ -1,4 +1,5 @@
-import { AVATARES_TIENDA } from '../contenido/tienda.ts'
+import { PERSONAJES_BASE, personajeDesdeBase } from '../contenido/personaje.ts'
+import { articulo } from '../contenido/tienda.ts'
 import type {
   Conectado,
   Curso,
@@ -7,6 +8,7 @@ import type {
   MensajeSala,
   MiembroSala,
   Observacion,
+  PosicionParque,
   ProgresoSala,
   RegistroEmocion,
   ResultadoActividad,
@@ -18,8 +20,8 @@ import { AJUSTES_POR_DEFECTO, type Repositorio } from './repositorio.ts'
 // Implementación de demostración: guarda todo en localStorage del navegador.
 // Sirve para diseñar y probar las pantallas antes de conectar Supabase.
 
-// v2: salas con plan, sesiones de dispositivo, tienda y playground.
-const CLAVE = 'leer-para-todos/demo-v2'
+// v4: salas conectadas y recreo.
+const CLAVE = 'leer-para-todos/demo-v4'
 const CLAVE_SESION = 'leer-para-todos/sesion'
 
 interface Estado {
@@ -33,8 +35,8 @@ interface Estado {
   miembros: MiembroSala[]
   conectados: Conectado[]
   progreso: ProgresoSala[]
-  compras: { estudianteId: string; avatarId: string }[]
-  mensajes: (Omit<MensajeSala, 'nombre' | 'avatar' | 'avatarTienda' | 'color'> & { salaId: string })[]
+  compras: { estudianteId: string; articuloId: string }[]
+  mensajes: (Omit<MensajeSala, 'nombre' | 'personaje' | 'color'> & { salaId: string })[]
 }
 
 // Igual que la base: un dispositivo sin señales por 10 minutos libera el perfil.
@@ -71,7 +73,8 @@ function semilla(): Estado {
     color,
     activo: true,
     nivelHabilitado: nivel,
-    monedas: 40 + i * 25,
+    monedas: 400 + i * 150,
+    personaje: personajeDesdeBase(PERSONAJES_BASE[i * 2]),
     ajustes: { ...AJUSTES_POR_DEFECTO, reducirAnimaciones: i === 2, modoImagen: i === 4 ? 'foto' : 'mixto' },
   }))
 
@@ -112,11 +115,13 @@ function semilla(): Estado {
       cursoId: 'kinder-a',
       nombre: 'Grupo Sílabas',
       tipo: 'trabajo',
+      actividad: 'parque',
+      siguienteSala: 'sala-patio',
       contenidos: ['vocales', 'silabas-m'],
-      juegos: ['aplausos', 'choque-sonidos'],
+      juegos: [],
       asignacion: id(),
     },
-    { id: 'sala-patio', cursoId: 'kinder-a', nombre: 'Patio', tipo: 'playground', contenidos: [], juegos: [], asignacion: id() },
+    { id: 'sala-patio', cursoId: 'kinder-a', nombre: 'Recreo', tipo: 'recreo', actividad: 'parque', contenidos: [], juegos: [], asignacion: id() },
   ]
   return {
     docentes: [docente],
@@ -299,19 +304,25 @@ export const repositorioDemo: Repositorio = {
   async crearSala(cursoId, nombre, tipo) {
     const e = leer()
     if (e.salas.some((s) => s.cursoId === cursoId && s.nombre === nombre)) throw new Error('duplicate key value')
-    const sala: Sala = { id: id(), cursoId, nombre, tipo, contenidos: [], juegos: [], asignacion: id() }
+    const sala: Sala = { id: id(), cursoId, nombre, tipo, actividad: 'parque', contenidos: [], juegos: [], asignacion: id() }
     mutar((x) => x.salas.push(sala))
     return sala
   },
   async renombrarSala(salaId, nombre) {
     mutar((e) => (e.salas = e.salas.map((s) => (s.id === salaId ? { ...s, nombre } : s))))
   },
-  async asignarPlan(salaId, contenidos, juegos) {
-    mutar((e) => (e.salas = e.salas.map((s) => (s.id === salaId ? { ...s, contenidos, juegos, asignacion: id() } : s))))
+  async asignarPlan(salaId, contenidos) {
+    mutar((e) => (e.salas = e.salas.map((s) => (s.id === salaId ? { ...s, contenidos, asignacion: id() } : s))))
+  },
+  async configurarRecreo(salaId, actividad, juegos) {
+    mutar((e) => (e.salas = e.salas.map((s) => (s.id === salaId ? { ...s, actividad, juegos } : s))))
+  },
+  async conectarSalas(salaId, destino) {
+    mutar((e) => (e.salas = e.salas.map((s) => (s.id === salaId ? { ...s, siguienteSala: destino ?? undefined } : s))))
   },
   async eliminarSala(salaId) {
     mutar((e) => {
-      e.salas = e.salas.filter((s) => s.id !== salaId)
+      e.salas = e.salas.filter((s) => s.id !== salaId).map((s) => (s.siguienteSala === salaId ? { ...s, siguienteSala: undefined } : s))
       e.miembros = e.miembros.filter((m) => m.salaId !== salaId)
       e.progreso = e.progreso.filter((x) => x.salaId !== salaId)
       e.mensajes = e.mensajes.filter((x) => x.salaId !== salaId)
@@ -360,7 +371,7 @@ export const repositorioDemo: Repositorio = {
       .sort((a, b) => a.nombre.localeCompare(b.nombre))
       .map((x) => {
         const c = e.conectados.find((c) => c.estudianteId === x.id)
-        return { id: x.id, nombre: x.nombre, avatar: x.avatar, avatarTienda: x.avatarTienda, color: x.color, ocupado: !!c && vigente(c) }
+        return { id: x.id, nombre: x.nombre, personaje: x.personaje, color: x.color, ocupado: !!c && vigente(c) }
       })
   },
   async entrarComoAlumno(estudianteId) {
@@ -397,9 +408,21 @@ export const repositorioDemo: Repositorio = {
     if (!estudiante?.activo) return null
     return {
       estudiante,
-      sala: sala ? { id: sala.id, nombre: sala.nombre, tipo: sala.tipo, contenidos: sala.contenidos, juegos: sala.juegos, asignacion: sala.asignacion } : null,
+      sala: sala
+        ? {
+            id: sala.id,
+            nombre: sala.nombre,
+            tipo: sala.tipo,
+            actividad: sala.actividad,
+            siguienteSala: sala.siguienteSala,
+            siguienteTipo: e.salas.find((s) => s.id === sala.siguienteSala)?.tipo,
+            contenidos: sala.contenidos,
+            juegos: sala.juegos,
+            asignacion: sala.asignacion,
+          }
+        : null,
       progreso: vale ? { paso: p.paso, repeticiones: p.repeticiones } : { paso: 0, repeticiones: 0 },
-      avataresComprados: e.compras.filter((x) => x.estudianteId === c.estudianteId).map((x) => x.avatarId),
+      articulosComprados: e.compras.filter((x) => x.estudianteId === c.estudianteId).map((x) => x.articuloId),
     }
   },
   async registrarProgreso(asignacion, paso, aprobado) {
@@ -422,42 +445,94 @@ export const repositorioDemo: Repositorio = {
     mutar((x) => (x.progreso = [...x.progreso.filter((y) => y.estudianteId !== estudianteId), p]))
     return { paso: p.paso, repeticiones: p.repeticiones }
   },
-  async comprarAvatar(avatarId) {
+  async pasarSalaConectada() {
     const estudianteId = alumnoConectado()
-    const precio = AVATARES_TIENDA.find((a) => a.id === avatarId)?.precio
-    if (precio === undefined) throw new Error('avatar_invalido')
+    const e = leer()
+    const sala = e.salas.find((s) => s.id === e.miembros.find((m) => m.estudianteId === estudianteId)?.salaId)
+    if (!sala?.siguienteSala) throw new Error('sin_sala_conectada')
+    const p = e.progreso.find((x) => x.estudianteId === estudianteId)
+    const total = sala.contenidos.length * 3
+    if (!total || !p || p.salaId !== sala.id || p.asignacion !== sala.asignacion || p.paso < total) throw new Error('sin_terminar')
+    await repositorioDemo.conectarEstudiante(sala.siguienteSala, estudianteId)
+  },
+  async comprarArticulo(articuloId) {
+    const estudianteId = alumnoConectado()
+    const precio = articulo(articuloId)?.precio
+    if (!precio) throw new Error('articulo_invalido')
     mutar((e) => {
       const est = e.estudiantes.find((x) => x.id === estudianteId)
       if (!est) throw new Error('sin_sesion')
-      if (!e.compras.some((x) => x.estudianteId === estudianteId && x.avatarId === avatarId)) {
-        if (est.monedas < precio) throw new Error('monedas_insuficientes')
-        est.monedas -= precio
-        e.compras.push({ estudianteId, avatarId })
-      }
-      est.avatarTienda = avatarId
+      if (e.compras.some((x) => x.estudianteId === estudianteId && x.articuloId === articuloId)) return
+      if (est.monedas < precio) throw new Error('monedas_insuficientes')
+      est.monedas -= precio
+      e.compras.push({ estudianteId, articuloId })
     })
   },
-  async usarAvatar(avatarId) {
+  async guardarPersonaje(personaje) {
     const estudianteId = alumnoConectado()
     mutar((e) => {
-      if (avatarId && !e.compras.some((x) => x.estudianteId === estudianteId && x.avatarId === avatarId)) throw new Error('avatar_invalido')
+      const tiene = (id: string) => !articulo(id)?.precio || e.compras.some((x) => x.estudianteId === estudianteId && x.articuloId === id)
+      if (![personaje.pelo, personaje.ojos, ...Object.values(personaje.puestos)].every((id) => id && articulo(id) && tiene(id))) {
+        throw new Error('personaje_invalido')
+      }
       const est = e.estudiantes.find((x) => x.id === estudianteId)
-      if (est) est.avatarTienda = avatarId ?? undefined
+      if (est) est.personaje = personaje
     })
   },
-  async mensajesPlayground() {
+  async datosParque() {
     const estudianteId = alumnoConectado()
     const e = leer()
     const m = e.miembros.find((x) => x.estudianteId === estudianteId)
-    const sala = m && e.salas.find((s) => s.id === m.salaId && s.tipo === 'playground')
-    return sala ? mensajesDe(e, sala.id) : []
+    const sala = m && e.salas.find((s) => s.id === m.salaId && s.tipo === 'recreo' && s.actividad === 'parque')
+    if (!sala) return { canal: null, miembros: [] }
+    const ids = e.miembros.filter((x) => x.salaId === sala.id).map((x) => x.estudianteId)
+    return {
+      canal: sala.id,
+      miembros: e.estudiantes
+        .filter((x) => ids.includes(x.id))
+        .map((x) => ({ ficha: x.id, mia: x.id === estudianteId, nombre: x.nombre, color: x.color, personaje: x.personaje })),
+    }
+  },
+  // La demo imita Presence entre pestañas del mismo navegador.
+  conectarParque(canal, ficha, inicio, avisos) {
+    const VENCE_MS = 3000
+    const radio = new BroadcastChannel(`parque-demo/${canal}`)
+    const vistos = new Map<string, PosicionParque & { visto: number }>()
+    let posicion = inicio
+    const avisar = () =>
+      avisos.alMoverse([...vistos.values()].filter((p) => Date.now() - p.visto < VENCE_MS).map(({ ficha: f, x, y }) => ({ ficha: f, x, y })))
+    const anunciar = () => {
+      vistos.set(ficha, { ficha, ...posicion, visto: Date.now() })
+      radio.postMessage({ tipo: 'pos', ficha, ...posicion })
+      avisar()
+    }
+    radio.onmessage = ({ data }: MessageEvent<{ tipo: 'pos'; ficha: string; x: number; y: number } | { tipo: 'picto'; ficha: string; picto: string }>) => {
+      if (data.tipo === 'picto') return avisos.alDecir(data.ficha, data.picto)
+      vistos.set(data.ficha, { ficha: data.ficha, x: data.x, y: data.y, visto: Date.now() })
+      avisar()
+    }
+    const latido = window.setInterval(anunciar, 1000)
+    anunciar()
+    return {
+      mover(x, y) {
+        posicion = { x, y }
+        anunciar()
+      },
+      decir(picto) {
+        radio.postMessage({ tipo: 'picto', ficha, picto })
+      },
+      cerrar() {
+        window.clearInterval(latido)
+        radio.close()
+      },
+    }
   },
   async enviarMensaje(picto) {
     const estudianteId = alumnoConectado()
     const e = leer()
     const m = e.miembros.find((x) => x.estudianteId === estudianteId)
-    const sala = m && e.salas.find((s) => s.id === m.salaId && s.tipo === 'playground')
-    if (!sala) throw new Error('sin_playground')
+    const sala = m && e.salas.find((s) => s.id === m.salaId && s.tipo === 'recreo' && s.actividad === 'parque')
+    if (!sala) throw new Error('sin_parque')
     const ultimo = e.mensajes.filter((x) => x.estudianteId === estudianteId).at(-1)
     if (ultimo && Date.now() - new Date(ultimo.enviadoEn).getTime() < 2000) return
     mutar((x) => x.mensajes.push({ id: x.mensajes.length + 1, salaId: sala.id, estudianteId, picto, enviadoEn: new Date().toISOString() }))
@@ -478,7 +553,7 @@ function mensajesDe(e: Estado, salaId: string): MensajeSala[] {
     .reverse()
     .flatMap((m) => {
       const est = e.estudiantes.find((x) => x.id === m.estudianteId)
-      return est ? [{ ...m, nombre: est.nombre, avatar: est.avatar, avatarTienda: est.avatarTienda, color: est.color }] : []
+      return est ? [{ ...m, nombre: est.nombre, personaje: est.personaje, color: est.color }] : []
     })
 }
 

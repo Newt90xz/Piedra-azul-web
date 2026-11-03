@@ -271,6 +271,88 @@ body {
 }
 .nino[data-contraste='alto'] .tarjeta-nino { border-color: #000; border-width: 4px; }
 
+/* Parque del recreo (paginas/aula/Playground.tsx). */
+.monito-sombra { background: radial-gradient(closest-side, rgba(40, 60, 40, 0.42), rgba(40, 60, 40, 0)); }
+
+/* Caminar: el dibujo se corta a la altura de la cadera y cada pierna gira por su lado. */
+.monito-parte-arriba { clip-path: inset(0 0 23.5% 0); }
+.monito-pierna-izq { clip-path: inset(76% 50% 0 0); transform-origin: 43% 76%; animation: pierna 0.42s ease-in-out infinite alternate; }
+.monito-pierna-der { clip-path: inset(76% 0 0 50%); transform-origin: 57% 76%; animation: pierna 0.42s ease-in-out infinite alternate-reverse; }
+@keyframes pierna {
+  from { transform: rotate(-16deg); }
+  to { transform: rotate(16deg); }
+}
+@keyframes monito-camina {
+  0%, 100% { transform: translateY(0) rotate(-1.5deg); }
+  50% { transform: translateY(-3.5%) rotate(1.5deg); }
+}
+.monito-camina { animation: monito-camina 0.42s ease-in-out infinite; }
+@keyframes monito-desliza {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-2%) rotate(2deg); }
+}
+.monito-desliza { animation: monito-desliza 0.6s ease-in-out infinite; }
+
+/* Jugando: lo decide el puesto donde está parado, así todos ven lo mismo. */
+@keyframes juega-columpio {
+  from { transform: rotate(-20deg); }
+  to { transform: rotate(20deg); }
+}
+.juega-columpio { transform-origin: 50% -90%; animation: juega-columpio 1.1s ease-in-out infinite alternate; }
+@keyframes juega-resbalin {
+  0% { transform: translate(-120%, -135%); opacity: 0; }
+  12% { transform: translate(-120%, -135%); opacity: 1; }
+  70% { transform: translate(0, 0); opacity: 1; }
+  100% { transform: translate(0, 0); opacity: 1; }
+}
+.juega-resbalin { animation: juega-resbalin 2.4s cubic-bezier(0.5, 0, 0.8, 0.6) infinite; }
+@keyframes juega-balancin {
+  from { transform: translateY(14%); }
+  to { transform: translateY(-20%); }
+}
+.juega-balancin { animation: juega-balancin 1s ease-in-out infinite alternate; }
+.juega-balancin.juega-puesto-1 { animation-direction: alternate-reverse; }
+@keyframes juega-cama {
+  0%, 100% { transform: translateY(0) scale(1.08, 0.92); }
+  12% { transform: translateY(-6%) scale(0.96, 1.05); }
+  50% { transform: translateY(-62%) scale(1); }
+  88% { transform: translateY(-6%) scale(0.96, 1.05); }
+}
+.juega-cama { transform-origin: 50% 100%; animation: juega-cama 0.95s ease-in-out infinite; }
+.juega-cama.juega-puesto-1 { animation-delay: -0.3s; }
+.juega-cama.juega-puesto-2 { animation-delay: -0.6s; }
+@keyframes juega-arenero {
+  from { transform: rotate(-5deg); }
+  to { transform: rotate(5deg) translateY(3%); }
+}
+.juega-arenero { transform-origin: 50% 100%; animation: juega-arenero 0.7s ease-in-out infinite alternate; }
+
+/* Marca de a dónde va y flecha sobre el niño propio. */
+.parque-destino { width: 4cqw; height: 1.8cqw; margin: -0.9cqw 0 0 -2cqw; border: 0.25cqw solid #fff; border-radius: 50%; animation: parque-destino 0.7s ease-out forwards; }
+@keyframes parque-destino {
+  from { transform: scale(0.3); opacity: 1; }
+  to { transform: scale(1.1); opacity: 0; }
+}
+.parque-yo { width: 0; height: 0; margin-left: -0.75cqw; border-left: 0.75cqw solid transparent; border-right: 0.75cqw solid transparent; border-top: 1.1cqw solid #ffc93c; filter: drop-shadow(0 1px 0 rgba(60, 50, 80, 0.5)); animation: parque-yo 0.9s ease-in-out infinite alternate; }
+@keyframes parque-yo {
+  to { transform: translateY(-40%); }
+}
+
+/* Íconos de lo que se puede tocar. */
+.parque-icono { animation: parque-icono 1.6s ease-in-out infinite alternate; transition: filter 0.15s; }
+.parque-icono:hover, .parque-icono:focus-visible { filter: brightness(1.12); }
+@keyframes parque-icono {
+  from { translate: 0 -3%; }
+  to { translate: 0 5%; }
+}
+.parque-icono > span { background: #5ba8e6; }
+.parque-icono-tienda > span { background: #f2789a; }
+.parque-icono-columpio > span { background: #4fb783; }
+.parque-icono-resbalin > span { background: #f2a13c; }
+.parque-icono-balancin > span { background: #e8674d; }
+.parque-icono-cama > span { background: #6a6fd6; }
+.parque-icono-arenero > span { background: #c9923f; }
+
 .nino[data-reducir='si'] *,
 .nino[data-reducir='si'] *::before,
 .nino[data-reducir='si'] *::after {

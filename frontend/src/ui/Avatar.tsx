@@ -1,10 +1,8 @@
-import { avatarTienda } from '../contenido/tienda.ts'
+import { personajePorDefecto } from '../contenido/personaje.ts'
 import type { Estudiante } from '../dominio/tipos.ts'
+import { DibujoPersonaje } from './Personaje.tsx'
 
-type ConAvatar = Pick<Estudiante, 'avatar' | 'color' | 'nombre'> & Partial<Pick<Estudiante, 'fotoUrl' | 'avatarTienda'>>
-
-// El avatar comprado en la tienda reemplaza al que eligió la docente.
-const emojiAvatar = (e: Pick<ConAvatar, 'avatar' | 'avatarTienda'>) => avatarTienda(e.avatarTienda)?.emoji ?? e.avatar
+type ConAvatar = Pick<Estudiante, 'color' | 'nombre'> & Partial<Pick<Estudiante, 'fotoUrl' | 'personaje'>>
 
 export function Avatar({ estudiante, className = '' }: { estudiante: ConAvatar; className?: string }) {
   return (
@@ -13,7 +11,11 @@ export function Avatar({ estudiante, className = '' }: { estudiante: ConAvatar; 
       style={{ background: estudiante.color }}
       aria-hidden="true"
     >
-      {estudiante.fotoUrl ? <img src={estudiante.fotoUrl} alt="" className="size-full object-cover" /> : emojiAvatar(estudiante)}
+      {estudiante.fotoUrl ? (
+        <img src={estudiante.fotoUrl} alt="" className="size-full object-cover" />
+      ) : (
+        <DibujoPersonaje personaje={estudiante.personaje ?? personajePorDefecto(estudiante.nombre)} color={estudiante.color} vista="busto" className="size-full" />
+      )}
     </span>
   )
 }

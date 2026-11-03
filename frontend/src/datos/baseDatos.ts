@@ -1,6 +1,6 @@
 // Generado desde Supabase (MCP generate_typescript_types). No editar a mano:
 // regenerar después de cada migración.
-// PENDIENTE: ajustado a mano para 20261020230000_flujo_alumno; regenerar al aplicarla.
+// PENDIENTE: ajustado a mano para 20261103120000_salas_conectadas_recreo; regenerar al aplicarla.
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -35,7 +35,6 @@ export type Database = {
           activo: boolean
           ajustes: Json
           avatar: string
-          avatar_tienda: string | null
           color: string
           creado_en: string
           curso_id: string
@@ -44,12 +43,12 @@ export type Database = {
           monedas: number
           nivel_habilitado: number
           nombre: string
+          personaje: Json | null
         }
         Insert: {
           activo?: boolean
           ajustes?: Json
           avatar: string
-          avatar_tienda?: string | null
           color: string
           creado_en?: string
           curso_id: string
@@ -58,12 +57,12 @@ export type Database = {
           monedas?: number
           nivel_habilitado?: number
           nombre: string
+          personaje?: Json | null
         }
         Update: {
           activo?: boolean
           ajustes?: Json
           avatar?: string
-          avatar_tienda?: string | null
           color?: string
           creado_en?: string
           curso_id?: string
@@ -72,6 +71,7 @@ export type Database = {
           monedas?: number
           nivel_habilitado?: number
           nombre?: string
+          personaje?: Json | null
         }
         Relationships: [
           {
@@ -156,13 +156,13 @@ export type Database = {
           },
         ]
       }
-      avatares_comprados: {
-        Row: { avatar_id: string; comprado_en: string; estudiante_id: string }
-        Insert: { avatar_id: string; comprado_en?: string; estudiante_id: string }
-        Update: { avatar_id?: string; comprado_en?: string; estudiante_id?: string }
+      articulos_comprados: {
+        Row: { articulo_id: string; comprado_en: string; estudiante_id: string }
+        Insert: { articulo_id: string; comprado_en?: string; estudiante_id: string }
+        Update: { articulo_id?: string; comprado_en?: string; estudiante_id?: string }
         Relationships: [
           {
-            foreignKeyName: 'avatares_comprados_estudiante_id_fkey'
+            foreignKeyName: 'articulos_comprados_estudiante_id_fkey'
             columns: ['estudiante_id']
             isOneToOne: false
             referencedRelation: 'estudiantes'
@@ -284,8 +284,13 @@ export type Database = {
           juegos: string[]
           nombre: string
           tipo: string
+          actividad: string
+          siguiente_sala: string | null
+          canal_parque: string
         }
         Insert: {
+          actividad?: string
+          siguiente_sala?: string | null
           asignacion?: string
           contenidos?: string[]
           creado_en?: string
@@ -296,6 +301,8 @@ export type Database = {
           tipo?: string
         }
         Update: {
+          actividad?: string
+          siguiente_sala?: string | null
           asignacion?: string
           contenidos?: string[]
           creado_en?: string
@@ -352,7 +359,6 @@ export type Database = {
           ajustes: Json
           asignacion: string | null
           avatar: string
-          avatar_tienda: string | null
           color: string
           comprados: string[]
           contenidos: string[] | null
@@ -363,13 +369,18 @@ export type Database = {
           nivel_habilitado: number
           nombre: string
           paso: number
+          personaje: Json | null
           repeticiones: number
           sala_id: string | null
           sala_nombre: string | null
+          sala_actividad: string | null
           sala_tipo: string | null
+          siguiente_sala: string | null
+          siguiente_tipo: string | null
         }[]
       }
-      comprar_avatar: { Args: { p_avatar: string; p_estudiante: string; p_token: string }; Returns: undefined }
+      pasar_sala_conectada: { Args: { p_estudiante: string; p_token: string }; Returns: undefined }
+      comprar_articulo: { Args: { p_articulo: string; p_estudiante: string; p_token: string }; Returns: undefined }
       entrar_alumno: { Args: { p_estudiante: string }; Returns: string }
       enviar_mensaje: { Args: { p_estudiante: string; p_picto: string; p_token: string }; Returns: undefined }
       guardar_resultado_sala: {
@@ -386,22 +397,14 @@ export type Database = {
         }
         Returns: undefined
       }
-      mensajes_playground: {
+      guardar_personaje: { Args: { p_estudiante: string; p_personaje: Json; p_token: string }; Returns: undefined }
+      parque_alumno: {
         Args: { p_estudiante: string; p_token: string }
-        Returns: {
-          avatar: string
-          avatar_tienda: string | null
-          color: string
-          enviado_en: string
-          estudiante_id: string
-          id: number
-          nombre: string
-          picto: string
-        }[]
+        Returns: { canal: string; color: string; ficha: string; mia: boolean; nombre: string; personaje: Json | null }[]
       }
       perfiles_alumnos: {
         Args: Record<PropertyKey, never>
-        Returns: { avatar: string; avatar_tienda: string | null; color: string; id: string; nombre: string; ocupado: boolean }[]
+        Returns: { color: string; id: string; nombre: string; ocupado: boolean; personaje: Json | null }[]
       }
       registrar_emocion_sala: {
         Args: { p_emocion: Database['public']['Enums']['emocion']; p_estudiante: string; p_token: string }
@@ -419,7 +422,6 @@ export type Database = {
         Returns: { paso: number; repeticiones: number }[]
       }
       salir_alumno: { Args: { p_estudiante: string; p_token: string }; Returns: undefined }
-      usar_avatar: { Args: { p_avatar: string | null; p_estudiante: string; p_token: string }; Returns: undefined }
       guardar_resultado: {
         Args: {
           p_actividad_id: string

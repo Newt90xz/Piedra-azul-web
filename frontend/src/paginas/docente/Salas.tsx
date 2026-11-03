@@ -4,7 +4,7 @@ import { JUEGOS } from '../../contenido/actividades.ts'
 import { CONTENIDOS, contenido, planDe, type Contenido } from '../../contenido/contenidos.ts'
 import { pictoMensaje } from '../../contenido/mensajes.ts'
 import { repo } from '../../datos/index.ts'
-import type { Conectado, Emocion, Estudiante, MiembroSala, ProgresoSala, ResultadoActividad, Sala, TipoSala } from '../../dominio/tipos.ts'
+import type { ActividadRecreo, Conectado, Emocion, Estudiante, MiembroSala, ProgresoSala, ResultadoActividad, Sala, TipoSala } from '../../dominio/tipos.ts'
 import { EMOCIONES, inicioDia, minutos } from '../../lib/avance.ts'
 import { capitalizar } from '../../lib/texto.ts'
 import { useConsulta } from '../../lib/useConsulta.ts'
@@ -15,10 +15,15 @@ import { AvisoError, Boton, Encabezado, claseEntrada, claseTarjeta } from '../..
 const REFRESCO_MS = 5000
 // Igual que la base: un dispositivo sin señales por 10 minutos se da por apagado.
 const VIGENTE_MS = 10 * 60_000
-const TIPOS: Record<TipoSala, { nombre: string; icono: string; color: string; ayuda: string }> = {
-  trabajo: { nombre: 'Sala de trabajo', icono: '📚', color: 'text-menta-oscuro', ayuda: 'Contenidos en orden y juegos al terminar.' },
-  playground: { nombre: 'Playground', icono: '🎈', color: 'text-[#7a5b00]', ayuda: 'Espacio común con mensajes de pictogramas.' },
-  dibujo: { nombre: 'Dibujo', icono: '🎨', color: 'text-[#7b3fa0]', ayuda: 'Dibujo libre y repasar letras.' },
+const TIPOS: Record<TipoSala, { nombre: string; icono: string; color: string }> = {
+  trabajo: { nombre: 'Actividades', icono: '📚', color: 'text-menta-oscuro' },
+  recreo: { nombre: 'Recreo', icono: '🌳', color: 'text-[#7a5b00]' },
+}
+const ACTIVIDADES_RECREO: Record<ActividadRecreo, { nombre: string; icono: string; ayuda: string; estado: string }> = {
+  parque: { nombre: 'Parque', icono: '🛝', ayuda: 'Caminan con su personaje, se ven en vivo y se saludan.', estado: 'En el parque' },
+  dibujo: { nombre: 'Dibujo', icono: '🎨', ayuda: 'Dibujo libre, sellos y letras para repasar.', estado: 'Dibujando' },
+  globos: { nombre: 'Globos', icono: '🎈', ayuda: 'Revientan globos y pueden ir a la tienda.', estado: 'Con los globos' },
+  juegos: { nombre: 'Juegos', icono: '🎲', ayuda: 'Los juegos que elijas, las veces que quieran.', estado: 'Jugando' },
 }
 // Destino «sin sala»: soltar ahí saca al niño de su sala y vuelve a la espera.
 const ESPERA = ''
@@ -42,6 +47,37 @@ const enLinea = (c: Conectado | undefined) => !!c && Date.now() - new Date(c.vis
 // Avance que vale para la sala y el plan actuales; otro plan o sala parte en cero.
 function avanceEn(sala: Sala, p: ProgresoSala | undefined) {
   return p && p.salaId === sala.id && p.asignacion === sala.asignacion ? p : undefined
+}
+
+// Salas de una ruta en orden: cada una seguida de la sala a la que pasan al terminar.
+// Un recreo al que llegan varias rutas se muestra entero solo en la primera.
+function armarRutas(salas: Sala[]) {
+  const porId = new Map(salas.map((s) => [s.id, s]))
+  const destinos = new Set(salas.map((s) => s.siguienteSala))
+  const vistas = new Set<string>()
+  const rutas: { salas: Sala[]; compartida?: Sala }[] = []
+  const inicios = [...salas.filter((s) => s.tipo === 'trabajo' && !destinos.has(s.id)), ...salas.filter((s) => s.tipo === 'trabajo')]
+  for (const inicio of inicios) {
+    if (vistas.has(inicio.id)) continue
+    const ruta: Sala[] = []
+    let actual: Sala | undefined = inicio
+    while (actual && !vistas.has(actual.id)) {
+      vistas.add(actual.id)
+      ruta.push(actual)
+      actual = actual.siguienteSala ? porId.get(actual.siguienteSala) : undefined
+    }
+    rutas.push({ salas: ruta, compartida: actual })
+  }
+  return { rutas, sueltas: salas.filter((s) => !vistas.has(s.id)) }
+}
+
+// ¿Conectar `origen` con `destino` cerraría un círculo?
+function hariaCirculo(salas: Sala[], origen: string, destino: string) {
+  for (let id: string | undefined = destino, n = 0; id && n <= salas.length; n++) {
+    if (id === origen) return true
+    id = salas.find((s) => s.id === id)?.siguienteSala
+  }
+  return false
 }
 
 // Mover niños entre salas: se arrastra su ficha a la caja de una sala (o a «Sin
@@ -155,13 +191,22 @@ export default function Salas() {
   const sinSala = enDestino(ESPERA)
   const enEspera = sinSala.filter((e) => enLinea(datos?.conectados.get(e.id)))
   const enSalas = (datos?.estudiantes.length ?? 0) - sinSala.length
+  const { rutas, sueltas } = armarRutas(datos?.salas ?? [])
+
+  const tarjeta = (s: Sala) =>
+    datos &&
+    (s.tipo === 'recreo' ? (
+      <TarjetaRecreo key={s.id} sala={s} dentro={enDestino(s.id)} datos={datos} ejecutar={ejecutar} />
+    ) : (
+      <TarjetaSala key={s.id} sala={s} dentro={enDestino(s.id)} datos={datos} ejecutar={ejecutar} />
+    ))
 
   return (
     <MoverContexto value={{ elegido, elegir: setElegido, salaDe, pendiente, mover }}>
       <Encabezado
         antetitulo="Trabajo en aula"
         titulo="Salas"
-        descripcion="Arrastra a cada niño a su sala. En tablet: tócalo y luego toca la sala."
+        descripcion="Cada fila es una ruta: al terminar sus actividades, el niño pasa solo a la sala siguiente. Arrastra a cada niño a donde empieza."
         accion={
           datos && (
             <p className="flex items-center gap-2 text-sm font-semibold text-tinta">
@@ -187,21 +232,45 @@ export default function Salas() {
         <>
           <Avisos datos={datos} ejecutar={ejecutar} />
           <SinSala ninos={sinSala} datos={datos} />
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(20rem,1fr))] items-start gap-5">
-            {datos.salas.map((s) =>
-              s.tipo === 'playground' ? (
-                <TarjetaPlayground key={s.id} sala={s} dentro={enDestino(s.id)} datos={datos} ejecutar={ejecutar} />
-              ) : s.tipo === 'dibujo' ? (
-                <TarjetaDibujo key={s.id} sala={s} dentro={enDestino(s.id)} datos={datos} ejecutar={ejecutar} />
-              ) : (
-                <TarjetaSala key={s.id} sala={s} dentro={enDestino(s.id)} datos={datos} ejecutar={ejecutar} />
-              ),
+          <div className="grid gap-6">
+            {rutas.map((r) => (
+              <section key={r.salas[0].id} aria-label={`Ruta de ${r.salas[0].nombre}`} className="flex flex-wrap items-stretch gap-x-2 gap-y-4">
+                {r.salas.map((s, i) => (
+                  <div key={s.id} className="flex items-stretch gap-2">
+                    {i > 0 && <Flecha />}
+                    {tarjeta(s)}
+                  </div>
+                ))}
+                {r.compartida && (
+                  <div className="flex items-center gap-2">
+                    <Flecha />
+                    <p className="rounded-2xl border-2 border-dashed border-borde px-4 py-3 text-sm font-semibold text-tinta">
+                      <span aria-hidden="true">{TIPOS[r.compartida.tipo].icono}</span> {r.compartida.nombre}
+                      <span className="block text-xs font-normal text-tinta-suave">Compartida con otra ruta</span>
+                    </p>
+                  </div>
+                )}
+              </section>
+            ))}
+            {sueltas.length > 0 && (
+              <section aria-labelledby="titulo-sueltas" className="grid gap-3">
+                <h2 id="titulo-sueltas" className="text-sm font-bold text-tinta-suave">Recreos sin conectar</h2>
+                <div className="flex flex-wrap items-stretch gap-4">{sueltas.map(tarjeta)}</div>
+              </section>
             )}
             <CrearSala cursoId={cursoId} alCrear={(nombre, tipo) => ejecutar(() => repo.crearSala(cursoId, nombre, tipo))} />
           </div>
         </>
       )}
     </MoverContexto>
+  )
+}
+
+function Flecha() {
+  return (
+    <span aria-hidden="true" className="grid w-7 shrink-0 place-items-center text-2xl font-bold text-menta-oscuro">
+      →
+    </span>
   )
 }
 
@@ -377,7 +446,7 @@ function EnLinea({ e, online, className = 'size-9 text-xl' }: { e: Estudiante; o
   )
 }
 
-// Al final de la grilla, como una sala más por crear.
+// Bajo las rutas: una sala de actividades empieza una ruta nueva.
 function CrearSala({ cursoId, alCrear }: { cursoId: string; alCrear: (nombre: string, tipo: TipoSala) => Promise<void> }) {
   const [nombre, setNombre] = useState('')
   const [tipo, setTipo] = useState<TipoSala>('trabajo')
@@ -391,21 +460,20 @@ function CrearSala({ cursoId, alCrear }: { cursoId: string; alCrear: (nombre: st
   }
 
   return (
-    <form onSubmit={(e) => void enviar(e)} className="grid gap-3 rounded-3xl border-2 border-dashed border-borde p-5">
+    <form onSubmit={(e) => void enviar(e)} className="flex flex-wrap items-center gap-3 rounded-3xl border-2 border-dashed border-borde p-4">
       <h2 className="font-bold text-tinta">Nueva sala</h2>
-      <label className="grid gap-1 text-sm font-semibold text-tinta">
+      <label className="min-w-56 flex-1 text-sm font-semibold text-tinta">
         <span className="sr-only">Nombre de la sala</span>
         <input value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={40} placeholder="Nombre, ej.: Grupo Sílabas" className={claseEntrada} />
       </label>
-      <fieldset className="grid grid-cols-3 gap-2 text-sm font-semibold text-tinta">
+      <fieldset className="flex gap-2 text-sm font-semibold text-tinta">
         <legend className="sr-only">Tipo</legend>
         {(Object.keys(TIPOS) as TipoSala[]).map((valor) => (
           <label
             key={valor}
-            title={TIPOS[valor].ayuda}
-            className={`grid cursor-pointer justify-items-center gap-0.5 rounded-xl border px-2 py-2 text-center leading-tight ${tipo === valor ? 'border-menta bg-menta-fondo' : 'border-borde bg-white'}`}
+            className={`flex cursor-pointer items-center gap-1.5 rounded-xl border px-3 py-2 ${tipo === valor ? 'border-menta bg-menta-fondo' : 'border-borde bg-white'}`}
           >
-            <span aria-hidden="true" className="text-lg">{TIPOS[valor].icono}</span>
+            <span aria-hidden="true">{TIPOS[valor].icono}</span>
             <input type="radio" name="tipo-sala" value={valor} checked={tipo === valor} onChange={() => setTipo(valor)} className="sr-only" />
             {TIPOS[valor].nombre}
           </label>
@@ -459,16 +527,13 @@ function EncabezadoSala({ sala, n, ejecutar, accion }: { sala: Sala; n: number; 
 }
 
 function TarjetaSala({ sala, dentro, datos, ejecutar }: { sala: Sala; dentro: Estudiante[]; datos: Datos; ejecutar: Ejecutar }) {
-  const { pendiente, mover } = useMover()
+  const { pendiente } = useMover()
   const [editando, setEditando] = useState(false)
-  const plan = planDe(sala.contenidos)
   const pasoDe = (id: string) => avanceEn(sala, datos.progresoDe.get(id))?.paso ?? 0
-  const terminaron = dentro.filter((e) => plan.length > 0 && pasoDe(e.id) >= plan.length)
   const conAvance = dentro.filter((e) => pasoDe(e.id) > 0).length
-  const playground = datos.salas.find((s) => s.tipo === 'playground')
 
   return (
-    <ZonaSoltar destino={sala.id} nombre={sala.nombre} className="grid gap-4 p-4">
+    <ZonaSoltar destino={sala.id} nombre={sala.nombre} className="grid w-80 content-start gap-4 p-4">
       <EncabezadoSala
         sala={sala}
         n={dentro.length}
@@ -482,31 +547,57 @@ function TarjetaSala({ sala, dentro, datos, ejecutar }: { sala: Sala; dentro: Es
       <ResumenPlan sala={sala} alEditar={() => setEditando(true)} />
       {editando && <EditorPlan sala={sala} conAvance={conAvance} ejecutar={ejecutar} alCerrar={() => setEditando(false)} />}
 
-      {dentro.length > 0 && terminaron.length === dentro.length && (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl bg-menta-fondo px-3 py-2 text-sm font-semibold text-menta-oscuro">
-          <span aria-hidden="true">🎉</span>
-          <span className="min-w-0 flex-1">Todos terminaron.</span>
-          {playground && (
-            <button type="button" className="underline" onClick={() => terminaron.forEach((e) => mover(e.id, playground.id))}>
-              Llevar a «{playground.nombre}»
-            </button>
-          )}
-        </div>
-      )}
-
       <ListaNinos sala={sala} dentro={dentro} datos={datos} ejecutar={ejecutar} vacia="Arrastra aquí a los niños.">
         {(e) => {
           const destino = pendiente(e.id)
           return destino !== undefined ? <Conectando destino={destino} /> : <EstadoAvance sala={sala} p={avanceEn(sala, datos.progresoDe.get(e.id))} />
         }}
       </ListaNinos>
+      <AlTerminar sala={sala} datos={datos} ejecutar={ejecutar} />
     </ZonaSoltar>
   )
 }
 
-// El plan de un vistazo: los contenidos como íconos en fila y los juegos al final.
+// A dónde pasan los niños al terminar el plan. Lo más común, un recreo, se crea
+// y conecta de una vez.
+function AlTerminar({ sala, datos, ejecutar }: { sala: Sala; datos: Datos; ejecutar: Ejecutar }) {
+  const opciones = datos.salas.filter((s) => !hariaCirculo(datos.salas, sala.id, s.id))
+  const crearRecreo = () =>
+    ejecutar(async () => {
+      const nombres = new Set(datos.salas.map((s) => s.nombre))
+      let nombre = 'Recreo'
+      for (let n = 2; nombres.has(nombre); n++) nombre = `Recreo ${n}`
+      const recreo = await repo.crearSala(sala.cursoId, nombre, 'recreo')
+      await repo.conectarSalas(sala.id, recreo.id)
+    })
+  return (
+    <div className="mt-auto grid gap-1.5 border-t border-borde pt-3">
+      <label className="grid gap-1 text-xs font-bold text-tinta-suave">
+        Al terminar pasan a
+        <select
+          value={sala.siguienteSala ?? ''}
+          onChange={(e) => void ejecutar(() => repo.conectarSalas(sala.id, e.target.value || null))}
+          className={claseEntrada}
+        >
+          <option value="">Nadie: esperan a la docente</option>
+          {opciones.map((s) => (
+            <option key={s.id} value={s.id}>
+              {TIPOS[s.tipo].icono} {s.nombre}
+            </option>
+          ))}
+        </select>
+      </label>
+      {!sala.siguienteSala && (
+        <button type="button" onClick={() => void crearRecreo()} className="justify-self-start text-sm font-semibold text-menta-oscuro underline">
+          + Crear un recreo y conectarlo
+        </button>
+      )}
+    </div>
+  )
+}
+
+// El plan de un vistazo: los contenidos como íconos en fila.
 function ResumenPlan({ sala, alEditar }: { sala: Sala; alEditar: () => void }) {
-  const juegos = JUEGOS.filter((j) => sala.juegos.includes(j.id))
   if (sala.contenidos.length === 0)
     return (
       <button type="button" onClick={alEditar} className="rounded-xl border-2 border-dashed border-borde px-3 py-2.5 text-sm font-semibold text-tinta-suave hover:border-menta hover:text-menta-oscuro">
@@ -525,17 +616,6 @@ function ResumenPlan({ sala, alEditar }: { sala: Sala; alEditar: () => void }) {
           </li>
         )
       })}
-      {juegos.length > 0 && (
-        <li className="ml-1 flex items-center gap-1 rounded-full bg-[#fff3c4] px-2 py-1" title={`Juegos: ${juegos.map((j) => j.titulo).join(', ')}`}>
-          <span aria-hidden="true" className="text-tinta-suave/60">🏁</span>
-          {juegos.map((j) => (
-            <span key={j.id} aria-hidden="true">
-              {j.icono}
-            </span>
-          ))}
-          <span className="sr-only">Juegos: {juegos.map((j) => j.titulo).join(', ')}</span>
-        </li>
-      )}
     </ol>
   )
 }
@@ -559,7 +639,7 @@ function ListaNinos({
   if (dentro.length === 0) return <p className="rounded-2xl border-2 border-dashed border-borde px-4 py-6 text-center text-sm text-tinta-suave">{vacia}</p>
   return (
     <div className="grid gap-2">
-      <ul className="grid gap-1.5">
+      <ul className="grid max-h-96 gap-1.5 overflow-y-auto">
         {dentro.map((e) => (
           <FilaNino key={e.id} e={e} datos={datos} ejecutar={ejecutar}>
             {children(e)}
@@ -582,7 +662,7 @@ function EstadoAvance({ sala, p }: { sala: Sala; p: ProgresoSala | undefined }) 
   const plan = planDe(sala.contenidos)
   const paso = p?.paso ?? 0
   if (plan.length === 0) return <span className="text-xs text-tinta-suave">Sin contenidos</span>
-  if (paso >= plan.length) return <span className="text-xs font-semibold text-menta-oscuro">✓ Terminó · en los juegos</span>
+  if (paso >= plan.length) return <span className="text-xs font-semibold text-menta-oscuro">✓ Terminó{sala.siguienteSala ? ' · pasando' : ' · esperando'}</span>
   const actual = plan[paso]
   return (
     <span className="flex items-center gap-1.5 text-xs text-tinta-suave" title={`${actual.contenido.titulo}, actividad ${actual.numero}`}>
@@ -648,11 +728,9 @@ function IconoContenido({ c, className = 'size-10 text-xl' }: { c: Contenido; cl
 }
 
 // Plan de la sala, en una ventana aparte para que la tarjeta no crezca: contenidos
-// en orden (cada uno trae sus 3 actividades) y los juegos a los que llegan al
-// terminar. Guardar un plan nuevo reinicia el avance.
+// en orden (cada uno trae sus 3 actividades). Guardar un plan nuevo reinicia el avance.
 function EditorPlan({ sala, conAvance, ejecutar, alCerrar }: { sala: Sala; conAvance: number; ejecutar: Ejecutar; alCerrar: () => void }) {
   const [contenidos, setContenidos] = useState(sala.contenidos)
-  const [juegos, setJuegos] = useState(sala.juegos)
 
   useEffect(() => {
     const alTeclear = (e: KeyboardEvent) => e.key === 'Escape' && alCerrar()
@@ -667,7 +745,7 @@ function EditorPlan({ sala, conAvance, ejecutar, alCerrar }: { sala: Sala; conAv
       return r
     })
   const guardar = async () => {
-    await ejecutar(() => repo.asignarPlan(sala.id, contenidos, juegos))
+    await ejecutar(() => repo.asignarPlan(sala.id, contenidos))
     alCerrar()
   }
 
@@ -727,29 +805,6 @@ function EditorPlan({ sala, conAvance, ejecutar, alCerrar }: { sala: Sala; conAv
           </div>
         )}
 
-        <fieldset>
-          <legend className="mb-2 text-sm font-bold text-tinta">Juegos al terminar</legend>
-          <div className="flex flex-wrap gap-2">
-            {JUEGOS.map((j) => {
-              const activo = juegos.includes(j.id)
-              return (
-                <label
-                  key={j.id}
-                  className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold ${activo ? 'border-menta bg-menta-fondo' : 'border-borde bg-white'}`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={activo}
-                    onChange={() => setJuegos((x) => (activo ? x.filter((y) => y !== j.id) : [...x, j.id]))}
-                    className="accent-[var(--color-menta)]"
-                  />
-                  <span aria-hidden="true" className="text-lg">{j.icono}</span> {j.titulo}
-                </label>
-              )
-            })}
-          </div>
-        </fieldset>
-
         {conAvance > 0 && (
           <p className="rounded-xl bg-[#fdf1e4] px-3 py-2 text-sm font-semibold text-[#9a4d00]">
             Al guardar, {conAvance} {conAvance === 1 ? 'niño vuelve' : 'niños vuelven'} a empezar.
@@ -768,51 +823,89 @@ function EditorPlan({ sala, conAvance, ejecutar, alCerrar }: { sala: Sala; conAv
   )
 }
 
-function TarjetaPlayground({ sala, dentro, datos, ejecutar }: { sala: Sala; dentro: Estudiante[]; datos: Datos; ejecutar: Ejecutar }) {
+// Recreo: la docente elige qué se hace; quienes están dentro cambian al instante.
+function TarjetaRecreo({ sala, dentro, datos, ejecutar }: { sala: Sala; dentro: Estudiante[]; datos: Datos; ejecutar: Ejecutar }) {
   const { pendiente } = useMover()
-  const { datos: mensajes, recargar } = useConsulta(() => repo.mensajesSala(sala.id), [sala.id])
-  useEffect(() => {
-    const t = window.setInterval(recargar, REFRESCO_MS)
-    return () => window.clearInterval(t)
-  })
-
+  const actividad = ACTIVIDADES_RECREO[sala.actividad]
+  const origenes = datos.salas.filter((s) => s.siguienteSala === sala.id).length
   return (
-    <ZonaSoltar destino={sala.id} nombre={sala.nombre} className="grid gap-4 p-4">
+    <ZonaSoltar destino={sala.id} nombre={sala.nombre} className="grid w-80 content-start gap-4 p-4">
       <EncabezadoSala sala={sala} n={dentro.length} ejecutar={ejecutar} />
-      {mensajes?.length ? (
-        <ul className="flex flex-wrap gap-1.5" aria-label="Últimos mensajes">
-          {mensajes.slice(0, 8).map((m) => (
-            <li key={m.id} className="flex items-center gap-1 rounded-full bg-fondo py-0.5 pr-2 pl-0.5 text-sm" title={`${m.nombre} · ${new Date(m.enviadoEn).toLocaleTimeString('es-CL')}`}>
-              <Avatar estudiante={m} className="size-6 text-sm" />
-              <span aria-label={pictoMensaje(m.picto)?.voz}>{pictoMensaje(m.picto)?.emoji}</span>
-            </li>
+      <fieldset>
+        <legend className="mb-1.5 text-xs font-bold text-tinta-suave">¿Qué se hace en este recreo?</legend>
+        <div className="grid grid-cols-4 gap-1.5">
+          {(Object.keys(ACTIVIDADES_RECREO) as ActividadRecreo[]).map((valor) => (
+            <label
+              key={valor}
+              title={ACTIVIDADES_RECREO[valor].ayuda}
+              className={`grid cursor-pointer justify-items-center gap-0.5 rounded-xl border px-1 py-1.5 text-xs font-semibold text-tinta ${sala.actividad === valor ? 'border-menta bg-menta-fondo' : 'border-borde bg-white'}`}
+            >
+              <span aria-hidden="true" className="text-lg leading-none">{ACTIVIDADES_RECREO[valor].icono}</span>
+              <input
+                type="radio"
+                name={`actividad-${sala.id}`}
+                value={valor}
+                checked={sala.actividad === valor}
+                onChange={() => void ejecutar(() => repo.configurarRecreo(sala.id, valor, sala.juegos))}
+                className="sr-only"
+              />
+              {ACTIVIDADES_RECREO[valor].nombre}
+            </label>
           ))}
-        </ul>
-      ) : (
-        <p className="text-sm text-tinta-suave">Espacio común con pictogramas. Aún no hay mensajes.</p>
-      )}
-      <ListaNinos sala={sala} dentro={dentro} datos={datos} ejecutar={ejecutar} vacia="Arrastra aquí a quienes terminaron.">
+        </div>
+        <p className="mt-1.5 text-xs text-tinta-suave">{actividad.ayuda}</p>
+      </fieldset>
+      {sala.actividad === 'juegos' && <ElegirJuegos sala={sala} ejecutar={ejecutar} />}
+      {sala.actividad === 'parque' && <UltimosSaludos sala={sala} />}
+      <ListaNinos sala={sala} dentro={dentro} datos={datos} ejecutar={ejecutar} vacia={origenes ? 'Aquí llegan solos al terminar.' : 'Conecta una sala a este recreo o arrastra niños aquí.'}>
         {(e) => {
           const destino = pendiente(e.id)
-          return destino !== undefined ? <Conectando destino={destino} /> : <span className="text-xs text-tinta-suave">En el playground</span>
+          return destino !== undefined ? <Conectando destino={destino} /> : <span className="text-xs text-tinta-suave">{actividad.estado}</span>
         }}
       </ListaNinos>
     </ZonaSoltar>
   )
 }
 
-function TarjetaDibujo({ sala, dentro, datos, ejecutar }: { sala: Sala; dentro: Estudiante[]; datos: Datos; ejecutar: Ejecutar }) {
-  const { pendiente } = useMover()
+function ElegirJuegos({ sala, ejecutar }: { sala: Sala; ejecutar: Ejecutar }) {
   return (
-    <ZonaSoltar destino={sala.id} nombre={sala.nombre} className="grid gap-4 p-4">
-      <EncabezadoSala sala={sala} n={dentro.length} ejecutar={ejecutar} />
-      <p className="text-sm text-tinta-suave">Dibujo libre con colores, sellos y letras para repasar con el dedo.</p>
-      <ListaNinos sala={sala} dentro={dentro} datos={datos} ejecutar={ejecutar} vacia="Arrastra aquí a quienes van a dibujar.">
-        {(e) => {
-          const destino = pendiente(e.id)
-          return destino !== undefined ? <Conectando destino={destino} /> : <span className="text-xs text-tinta-suave">Dibujando</span>
-        }}
-      </ListaNinos>
-    </ZonaSoltar>
+    <fieldset>
+      <legend className="sr-only">Juegos de este recreo</legend>
+      <div className="flex flex-wrap gap-1.5">
+        {JUEGOS.map((j) => {
+          const activo = sala.juegos.includes(j.id)
+          return (
+            <label key={j.id} className={`flex cursor-pointer items-center gap-1.5 rounded-xl border px-2 py-1 text-xs font-semibold ${activo ? 'border-menta bg-menta-fondo' : 'border-borde bg-white'}`}>
+              <input
+                type="checkbox"
+                checked={activo}
+                onChange={() => void ejecutar(() => repo.configurarRecreo(sala.id, sala.actividad, activo ? sala.juegos.filter((y) => y !== j.id) : [...sala.juegos, j.id]))}
+                className="accent-[var(--color-menta)]"
+              />
+              <span aria-hidden="true">{j.icono}</span> {j.titulo}
+            </label>
+          )
+        })}
+      </div>
+    </fieldset>
+  )
+}
+
+function UltimosSaludos({ sala }: { sala: Sala }) {
+  const { datos: mensajes, recargar } = useConsulta(() => repo.mensajesSala(sala.id), [sala.id])
+  useEffect(() => {
+    const t = window.setInterval(recargar, REFRESCO_MS)
+    return () => window.clearInterval(t)
+  })
+  if (!mensajes?.length) return null
+  return (
+    <ul className="flex flex-wrap gap-1.5" aria-label="Últimos saludos">
+      {mensajes.slice(0, 6).map((m) => (
+        <li key={m.id} className="flex items-center gap-1 rounded-full bg-white py-0.5 pr-2 pl-0.5 text-sm" title={`${m.nombre} · ${new Date(m.enviadoEn).toLocaleTimeString('es-CL')}`}>
+          <Avatar estudiante={m} className="size-6 text-sm" />
+          <span aria-label={pictoMensaje(m.picto)?.voz}>{pictoMensaje(m.picto)?.emoji}</span>
+        </li>
+      ))}
+    </ul>
   )
 }

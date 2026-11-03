@@ -26,12 +26,11 @@ export function useConsulta<T>(cargar: () => Promise<T>, deps: unknown[]) {
     }
   }, [cargarMemo, version])
 
-  return {
-    datos,
-    error,
-    recargar: () => {
-      setError(null)
-      setVersion((v) => v + 1)
-    },
-  }
+  // Estable: se puede usar como dependencia de un temporizador sin reiniciarlo en cada render.
+  const recargar = useCallback(() => {
+    setError(null)
+    setVersion((v) => v + 1)
+  }, [])
+
+  return { datos, error, recargar }
 }

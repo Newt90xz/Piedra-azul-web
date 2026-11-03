@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import type {
+  ActividadRecreo,
   Ajustes,
   Conectado,
   Curso,
@@ -12,6 +13,8 @@ import type {
   Nivel,
   Observacion,
   PerfilAlumno,
+  Personaje,
+  PosicionParque,
   ProgresoSala,
   RegistroEmocion,
   ResultadoActividad,
@@ -19,7 +22,7 @@ import type {
   TipoSala,
 } from '../dominio/tipos.ts'
 import { capitalizar } from '../lib/texto.ts'
-import type { Database } from './baseDatos.ts'
+import type { Database, Json } from './baseDatos.ts'
 import { guardarCredencial, leerCredencial, olvidarCredencial } from './dispositivo.ts'
 import { AJUSTES_POR_DEFECTO, type Repositorio } from './repositorio.ts'
 
@@ -53,6 +56,9 @@ function sinError<T>({ data, error }: { data: T; error: { message: string; code?
   return data as NonNullable<T>
 }
 
+// Lo valida la base (guardar_personaje); null: aún no tiene uno guardado.
+const aPersonaje = (j: Json | null | undefined) => (j ? (j as unknown as Personaje) : undefined)
+
 // Los nombres (de niños y salas) se muestran siempre con mayúscula inicial,
 // también los que se guardaron antes en minúscula.
 const aEstudiante = (f: FilaEstudiante): Estudiante => ({
@@ -65,7 +71,7 @@ const aEstudiante = (f: FilaEstudiante): Estudiante => ({
   activo: f.activo,
   nivelHabilitado: f.nivel_habilitado as Nivel,
   monedas: f.monedas,
-  avatarTienda: f.avatar_tienda ?? undefined,
+  personaje: aPersonaje(f.personaje),
   ajustes: { ...AJUSTES_POR_DEFECTO, ...(f.ajustes as Partial<Ajustes>) },
 })
 
@@ -78,6 +84,7 @@ const aFila = (e: Omit<Estudiante, 'id' | 'monedas'>) => ({
   foto_url: e.fotoUrl ?? null,
   activo: e.activo,
   nivel_habilitado: e.nivelHabilitado,
+  personaje: (e.personaje ?? null) as unknown as Json,
   ajustes: { ...e.ajustes },
 })
 
@@ -87,6 +94,8 @@ const aSala = (f: FilaSala): Sala => ({
   cursoId: f.curso_id,
   nombre: capitalizar(f.nombre),
   tipo: f.tipo as TipoSala,
+  actividad: f.actividad as ActividadRecreo,
+  siguienteSala: f.siguiente_sala ?? undefined,
   contenidos: f.contenidos,
   juegos: f.juegos,
   asignacion: f.asignacion,
@@ -95,7 +104,7 @@ const aSala = (f: FilaSala): Sala => ({
 type FilaAlumno = Database['public']['Functions']['alumno_actual']['Returns'][number]
 
 // Dispositivo del alumno: ajustes y datos llegan por la función del alumno (sin foto).
-const aEstudianteDelDispositivo = (f: FilaAlumno): Estudiante => aEstudiante({ ...f, foto_url: null, creado_en: '' })
+const aEstudianteDelDispositivo = (f: FilaAlumno): Estudiante => aEstudiante({ ...f, foto_url: null, creado_en: '' } as FilaEstudiante)
 
 const aEstadoAlumno = (f: FilaAlumno): EstadoAlumno => ({
   estudiante: aEstudianteDelDispositivo(f),
@@ -104,22 +113,23 @@ const aEstadoAlumno = (f: FilaAlumno): EstadoAlumno => ({
         id: f.sala_id,
         nombre: capitalizar(f.sala_nombre ?? ''),
         tipo: (f.sala_tipo ?? 'trabajo') as TipoSala,
+        actividad: (f.sala_actividad ?? 'parque') as ActividadRecreo,
+        siguienteSala: f.siguiente_sala ?? undefined,
+        siguienteTipo: (f.siguiente_tipo ?? undefined) as TipoSala | undefined,
         contenidos: f.contenidos ?? [],
         juegos: f.juegos ?? [],
         asignacion: f.asignacion ?? '',
       }
     : null,
   progreso: { paso: f.paso, repeticiones: f.repeticiones },
-  avataresComprados: f.comprados,
+  articulosComprados: f.comprados,
 })
 
-type FilaMensaje = Database['public']['Functions']['mensajes_playground']['Returns'][number]
-const aMensaje = (f: FilaMensaje): MensajeSala => ({
+const aMensaje = (f: { id: number; estudiante_id: string; nombre: string; personaje: Json | null; color: string; picto: string; enviado_en: string }): MensajeSala => ({
   id: f.id,
   estudianteId: f.estudiante_id,
   nombre: capitalizar(f.nombre),
-  avatar: f.avatar,
-  avatarTienda: f.avatar_tienda ?? undefined,
+  personaje: aPersonaje(f.personaje),
   color: f.color,
   picto: f.picto,
   enviadoEn: f.enviado_en,
@@ -350,8 +360,14 @@ export const repositorioSupabase: Repositorio = {
   async renombrarSala(id, nombre) {
     sinError(await supabase.from('salas').update({ nombre: capitalizar(nombre.trim()) }).eq('id', id))
   },
-  async asignarPlan(salaId, contenidos, juegos) {
-    sinError(await supabase.from('salas').update({ contenidos, juegos, asignacion: crypto.randomUUID() }).eq('id', salaId))
+  async asignarPlan(salaId, contenidos) {
+    sinError(await supabase.from('salas').update({ contenidos, asignacion: crypto.randomUUID() }).eq('id', salaId))
+  },
+  async configurarRecreo(salaId, actividad, juegos) {
+    sinError(await supabase.from('salas').update({ actividad, juegos }).eq('id', salaId))
+  },
+  async conectarSalas(salaId, destino) {
+    sinError(await supabase.from('salas').update({ siguiente_sala: destino }).eq('id', salaId))
   },
   async eliminarSala(id) {
     sinError(await supabase.from('salas').delete().eq('id', id))
@@ -410,7 +426,7 @@ export const repositorioSupabase: Repositorio = {
     const filas = sinError(
       await supabase
         .from('mensajes_sala')
-        .select('id, estudiante_id, picto, enviado_en, estudiantes!inner(nombre, avatar, avatar_tienda, color)')
+        .select('id, estudiante_id, picto, enviado_en, estudiantes!inner(nombre, personaje, color)')
         .eq('sala_id', salaId)
         .order('id', { ascending: false })
         .limit(40),
@@ -424,8 +440,7 @@ export const repositorioSupabase: Repositorio = {
       (f): PerfilAlumno => ({
         id: f.id,
         nombre: capitalizar(f.nombre),
-        avatar: f.avatar,
-        avatarTienda: f.avatar_tienda ?? undefined,
+        personaje: aPersonaje(f.personaje),
         color: f.color,
         ocupado: f.ocupado,
       }),
@@ -464,17 +479,54 @@ export const repositorioSupabase: Repositorio = {
     )
     return { paso: filas[0].paso, repeticiones: filas[0].repeticiones }
   },
-  async comprarAvatar(avatarId) {
-    sinError(await supabase.rpc('comprar_avatar', { ...credencial(), p_avatar: avatarId }))
+  async pasarSalaConectada() {
+    sinError(await supabase.rpc('pasar_sala_conectada', credencial()))
   },
-  async usarAvatar(avatarId) {
-    sinError(await supabase.rpc('usar_avatar', { ...credencial(), p_avatar: avatarId }))
+  async comprarArticulo(articuloId) {
+    sinError(await supabase.rpc('comprar_articulo', { ...credencial(), p_articulo: articuloId }))
   },
-  async mensajesPlayground() {
-    const filas = sinError(await supabase.rpc('mensajes_playground', credencial()))
-    return filas.map(aMensaje)
+  async guardarPersonaje(personaje) {
+    sinError(await supabase.rpc('guardar_personaje', { ...credencial(), p_personaje: personaje as unknown as Json }))
   },
   async enviarMensaje(picto) {
     sinError(await supabase.rpc('enviar_mensaje', { ...credencial(), p_picto: picto }))
+  },
+  async datosParque() {
+    const filas = sinError(await supabase.rpc('parque_alumno', credencial()))
+    return {
+      canal: filas[0]?.canal ?? null,
+      miembros: filas.map((f) => ({ ficha: f.ficha, mia: f.mia, nombre: capitalizar(f.nombre), color: f.color, personaje: aPersonaje(f.personaje) })),
+    }
+  },
+  // Presence entrega a cada niño quiénes están y a dónde van, también a quien
+  // llega tarde; nada pasa por la base (RNF-09). El nombre del canal es secreto y
+  // lo entrega parque_alumno: los niños no tienen sesión para un canal privado.
+  conectarParque(canal, ficha, inicio, avisos) {
+    let posicion = inicio
+    const sala = supabase.channel(`parque:${canal}`, { config: { presence: { key: ficha } } })
+    sala
+      .on('presence', { event: 'sync' }, () => {
+        const estado = sala.presenceState<{ x: number; y: number }>()
+        avisos.alMoverse(
+          Object.entries(estado).flatMap(([f, [p]]): PosicionParque[] => (p ? [{ ficha: f, x: p.x, y: p.y }] : [])),
+        )
+      })
+      .on('broadcast', { event: 'picto' }, ({ payload }: { payload: { ficha: string; picto: string } }) => avisos.alDecir(payload.ficha, payload.picto))
+      // También al reconectar: el canal olvida la posición de quien se cayó.
+      .subscribe((estado) => {
+        if (estado === 'SUBSCRIBED') void sala.track(posicion)
+      })
+    return {
+      mover(x, y) {
+        posicion = { x, y }
+        void sala.track(posicion)
+      },
+      decir(picto) {
+        void sala.send({ type: 'broadcast', event: 'picto', payload: { ficha, picto } })
+      },
+      cerrar() {
+        void supabase.removeChannel(sala)
+      },
+    }
   },
 }

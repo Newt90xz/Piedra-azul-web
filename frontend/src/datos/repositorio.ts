@@ -1,7 +1,11 @@
 import type {
+  ActividadRecreo,
   Ajustes,
+  AvisosParque,
   Conectado,
+  ConexionParque,
   Curso,
+  DatosParque,
   Docente,
   Emocion,
   EstadoAlumno,
@@ -10,6 +14,7 @@ import type {
   MiembroSala,
   Observacion,
   PerfilAlumno,
+  Personaje,
   Progreso,
   ProgresoSala,
   RegistroEmocion,
@@ -64,7 +69,11 @@ export interface Repositorio {
   renombrarSala(id: string, nombre: string): Promise<void>
   // Plan de una sala de trabajo. Genera una asignación nueva: el avance de
   // quienes están en ella vuelve a la primera actividad.
-  asignarPlan(salaId: string, contenidos: string[], juegos: string[]): Promise<void>
+  asignarPlan(salaId: string, contenidos: string[]): Promise<void>
+  // Lo que se hace en un recreo. Quienes están dentro cambian de actividad al instante.
+  configurarRecreo(salaId: string, actividad: ActividadRecreo, juegos: string[]): Promise<void>
+  // A qué sala pasan los niños al terminar el plan; null: se quedan esperando a la docente.
+  conectarSalas(salaId: string, destino: string | null): Promise<void>
   eliminarSala(id: string): Promise<void>
   // Miembros de todas las salas del curso.
   listarMiembros(cursoId: string): Promise<MiembroSala[]>
@@ -100,12 +109,17 @@ export interface Repositorio {
   // (reenviar el mismo no cuenta dos veces). Si el plan cambió entretanto rechaza
   // con Error('plan_cambiado'). Devuelve el avance actualizado.
   registrarProgreso(asignacion: string, paso: number, aprobado: boolean, resultadoId: string): Promise<Progreso>
-  // Compra (y se pone) un avatar de la tienda. Rechaza con Error('monedas_insuficientes').
-  comprarAvatar(avatarId: string): Promise<void>
-  // Se pone un avatar ya comprado; null vuelve al que eligió la docente.
-  usarAvatar(avatarId: string | null): Promise<void>
-  mensajesPlayground(): Promise<MensajeSala[]>
+  // Terminó el plan: pasa a la sala conectada. Rechaza con Error('sin_terminar') si
+  // el servidor aún no registra su avance.
+  pasarSalaConectada(): Promise<void>
+  // Compra un artículo (si ya lo tiene, no cobra). Rechaza con Error('monedas_insuficientes').
+  comprarArticulo(articuloId: string): Promise<void>
+  // Guarda lo que lleva puesto. Rechaza con Error('personaje_invalido') si incluye algo que no tiene.
+  guardarPersonaje(personaje: Personaje): Promise<void>
   enviarMensaje(picto: string): Promise<void>
+  // Parque: quiénes están en la sala y su canal en tiempo real. Las posiciones no se guardan (RNF-09).
+  datosParque(): Promise<DatosParque>
+  conectarParque(canal: string, ficha: string, inicio: { x: number; y: number }, avisos: AvisosParque): ConexionParque
 }
 
 export type NuevoEstudiante = Omit<Estudiante, 'id' | 'monedas'>

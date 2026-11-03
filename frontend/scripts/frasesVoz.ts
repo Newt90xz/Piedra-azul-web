@@ -17,7 +17,9 @@ import { fonemaDe } from '../src/contenido/banco.ts'
 import { CONTENIDOS } from '../src/contenido/contenidos.ts'
 import { COLORES, GROSORES, LETRAS } from '../src/contenido/dibujo.ts'
 import { PICTOS_MENSAJE } from '../src/contenido/mensajes.ts'
-import { AVATARES_TIENDA, faltanMonedas } from '../src/contenido/tienda.ts'
+import { JUEGOS_PARQUE } from '../src/contenido/parque.ts'
+import { COLORES_PELO, EXPRESIONES, PIELES } from '../src/contenido/personaje.ts'
+import { ARTICULOS, faltanMonedas } from '../src/contenido/tienda.ts'
 import { EMOCIONES } from '../src/lib/avance.ts'
 import { claveFrase, normalizarFrase, trozosFrase } from '../src/lib/claveVoz.ts'
 
@@ -79,18 +81,49 @@ agregar(
   ...Object.values(EMOCIONES).map((e) => e.texto),
   'Mientras esperas a tu profe, ¡revienta los globos!',
   'Globos',
-  'Tienda de avatares',
+  'Tienda',
   'Apagar la música',
   'Poner música',
-  '¡La tienda! Toca un avatar para ponértelo.',
-  '¡Listo!',
+  '¡La tienda! Toca algo para probártelo.',
+  '¡Ya es tuyo!',
   'No se pudo cambiar. Intenta otra vez.',
   '¡Te faltan monedas!',
   'No se pudo comprar. Intenta otra vez.',
-  'Mi avatar de siempre',
   'No, gracias',
   '¡Sí, comprar!',
-  '¡Llegaste al patio! Toca un dibujo para saludar a tus amigos.',
+  'Quitar',
+  'Anteriores',
+  'Siguientes',
+  'Volver al parque',
+  'Yo',
+  'Piel',
+  'Color de pelo',
+  'Mi cara',
+  'Lo que uso',
+  'Cabeza',
+  'Pelo',
+  'Ojos',
+  'Gorros y coronas',
+  'Lentes y antifaces',
+  'Ropa',
+  'Poleras',
+  'Trajes',
+  'Zapatos',
+  'Capas y alas',
+  'Amigos y juguetes',
+  'En la mano',
+  'Mascotas',
+  'Vehículos',
+  'Levantar la mano',
+  ...EXPRESIONES.map((x) => x.nombre),
+  ...COLORES_PELO.map((c) => c.nombre),
+  ...PIELES.map((_, i) => `Color de piel ${i + 1}`),
+  '¡Llegaste al recreo! Toca el pasto para caminar.',
+  '¡Al recreo!',
+  '¡Seguimos!',
+  '¡Es hora de recreo! ¡Revienta los globos!',
+  ...JUEGOS_PARQUE.map((j) => j.voz),
+  'Otros dibujos',
   ...PICTOS_MENSAJE.map((p) => p.voz),
   'Mi inicio',
   'Activar la voz',
@@ -98,10 +131,11 @@ agregar(
   'Salir',
 )
 for (let n = 10; n <= 300; n += 10) agregar(`¡Muy bien! ¡${n} globos!`)
-const maxPrecio = Math.max(...AVATARES_TIENDA.map((a) => a.precio))
+const maxPrecio = Math.max(...ARTICULOS.map((a) => a.precio))
 for (let n = 1; n <= maxPrecio; n++) agregar(faltanMonedas(n))
-for (const a of AVATARES_TIENDA) {
-  agregar(a.nombre, `${a.nombre}, ${a.precio} monedas`, `¿Quieres el ${a.nombre}? Cuesta ${a.precio} monedas.`, `¡Ahora eres un ${a.nombre}!`)
+for (const a of ARTICULOS) {
+  agregar(a.nombre)
+  if (a.precio) agregar(`${a.nombre}, ${a.precio} monedas`)
 }
 
 // ---------- Sala de dibujo (paginas/aula/Dibujo.tsx) ----------

@@ -13,8 +13,8 @@ type SalaTrabajo = NonNullable<EstadoAlumno['sala']>
 
 // Sala de trabajo: el niño recorre en orden las actividades de los contenidos
 // que asignó la docente. Con 60 % o más pasa a la siguiente; si no, la repite
-// con otras rondas del mismo pool. Al terminar todas ve un resumen y llega a
-// los juegos de la sala. El niño nunca elige qué contenido trabajar.
+// con otras rondas del mismo pool. Al terminar todas ve un resumen y pasa solo a
+// la sala conectada. El niño nunca elige qué contenido trabajar.
 export default function Secuencia({ sala }: { sala: SalaTrabajo }) {
   const { estado, recargar } = useNino()
   const plan = planDe(sala.contenidos)
@@ -75,8 +75,10 @@ export default function Secuencia({ sala }: { sala: SalaTrabajo }) {
   }
 
   if (!actual) {
-    if (verResumen) return <Resumen plan={plan} estrellas={estrellas} alSeguir={() => setVerResumen(false)} />
-    return <Juegos sala={sala} />
+    if (verResumen) return <Resumen plan={plan} estrellas={estrellas} recreo={sala.siguienteTipo === 'recreo'} alSeguir={() => setVerResumen(false)} />
+    // Sin sala conectada: terminó y espera a la docente.
+    if (!sala.siguienteSala) return <MiniJuego />
+    return <PasarDeSala recreo={sala.siguienteTipo === 'recreo'} avanceGuardado={estado.progreso.paso >= plan.length} />
   }
 
   return <Camino plan={plan} paso={paso} repeticion={estado.progreso.paso === paso ? estado.progreso.repeticiones : 0} alEmpezar={empezar} />
@@ -158,7 +160,7 @@ function Camino({ plan, paso, repeticion, alEmpezar }: { plan: PasoPlan[]; paso:
 
 // Retroalimentación breve al terminar el plan: cada contenido con sus estrellas.
 // Sin números ni texto; el detalle (tiempos, intentos) queda para la docente.
-function Resumen({ plan, estrellas, alSeguir }: { plan: PasoPlan[]; estrellas: Record<string, number>; alSeguir: () => void }) {
+function Resumen({ plan, estrellas, recreo, alSeguir }: { plan: PasoPlan[]; estrellas: Record<string, number>; recreo: boolean; alSeguir: () => void }) {
   const contenidos = plan.filter((p) => p.numero === 1).map((p) => p.contenido)
 
   useEffect(() => hablar('¡Terminaste todo! Mira tus estrellas.'), [])
@@ -189,18 +191,42 @@ function Resumen({ plan, estrellas, alSeguir }: { plan: PasoPlan[]; estrellas: R
           )
         })}
       </ul>
-      <BotonNino voz="¡A jugar!" onClick={alSeguir} className="grid size-28 place-items-center border-[#e6c84d] bg-nino-amarillo">
+      <BotonNino voz={recreo ? '¡Al recreo!' : 'Seguir'} onClick={alSeguir} className="grid size-28 place-items-center border-[#e6c84d] bg-nino-amarillo">
         <Icono nombre="derecha" className="size-14" />
       </BotonNino>
     </main>
   )
 }
 
-// Juegos de la sala: el punto de llegada tras los contenidos. Se juegan las
-// veces que quiera, siempre con rondas nuevas del pool, hasta que la docente
-// lo mueva de sala.
-function Juegos({ sala }: { sala: SalaTrabajo }) {
-  const juegos = JUEGOS.filter((j) => sala.juegos.includes(j.id))
+// Pasa a la sala conectada; el estado del niño lo lleva allá en cuanto el servidor
+// lo confirma. Se reintenta porque su último avance puede venir aún en camino.
+const REINTENTO_PASAR_MS = 2500
+function PasarDeSala({ recreo, avanceGuardado }: { recreo: boolean; avanceGuardado: boolean }) {
+  const { recargar } = useNino()
+
+  useEffect(() => hablar(recreo ? '¡Al recreo!' : '¡Seguimos!'), [recreo])
+
+  useEffect(() => {
+    if (!avanceGuardado) return
+    const pasar = () => void repo.pasarSalaConectada().then(recargar, (e: unknown) => console.warn('[sala] Aún no puede pasar.', e))
+    pasar()
+    const t = window.setInterval(pasar, REINTENTO_PASAR_MS)
+    return () => window.clearInterval(t)
+  }, [avanceGuardado, recargar])
+
+  return (
+    <main className="grid h-full place-items-center">
+      <span role="img" aria-label={recreo ? 'Al recreo' : 'Seguimos'} className="animate-pop text-[5em] leading-none">
+        {recreo ? '🌳' : '🚀'}
+      </span>
+    </main>
+  )
+}
+
+// Juegos del recreo: se juegan las veces que quiera, siempre con rondas nuevas
+// del pool, hasta que la docente lo mueva de sala.
+export function Juegos({ ids }: { ids: string[] }) {
+  const juegos = JUEGOS.filter((j) => ids.includes(j.id))
   const [jugando, setJugando] = useState<{ juego: Actividad; rondas: Ronda[]; n: number } | null>(null)
   const [premio, setPremio] = useState<number | null>(null)
   const solo = juegos.length === 1 ? juegos[0] : null
@@ -216,8 +242,8 @@ function Juegos({ sala }: { sala: SalaTrabajo }) {
 
   const terminar = useCallback((fin: FinPartida) => setPremio(fin.monedas), [])
 
-  // Sin juegos asignados: terminó y espera a la docente.
-  if (juegos.length === 0) return <MiniJuego />
+  // La docente aún no elige juegos para este recreo.
+  if (juegos.length === 0) return <MiniJuego voz="¡Es hora de recreo! ¡Revienta los globos!" />
 
   if (jugando && premio !== null) {
     return (
