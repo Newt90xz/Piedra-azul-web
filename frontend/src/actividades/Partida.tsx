@@ -4,7 +4,7 @@ import { categoriaDe } from '../contenido/contenidos.ts'
 import { nivelDe } from '../contenido/exigencia.ts'
 import { guardarResultadoConRespaldo } from '../datos/pendientes.ts'
 import type { ContextoPartida, IntentoRonda } from '../dominio/tipos.ts'
-import { efecto, hablar, hablarPocket } from '../lib/audio.ts'
+import { callarAlApuntar, efecto, hablar, precargar } from '../lib/audio.ts'
 import { Moneda } from '../ui/Dibujos.tsx'
 import { Icono } from '../ui/Icono.tsx'
 import { BotonNino, useNino } from '../ui/nino.tsx'
@@ -82,10 +82,19 @@ export function Partida({
 
   const ronda = rondas[estado.indice]
 
+  // En la actividad solo habla el enunciado: apuntar opciones o botones no dice nada.
+  useEffect(callarAlApuntar, [])
+
   useEffect(() => {
-    if (!ronda || verInstrucciones) return
+    if (!ronda) return
+    if (verInstrucciones) return precargar([ronda.instruccion])
     inicioRonda.current = Date.now()
-    hablarPocket(ronda.instruccion)
+    hablar(ronda.instruccion)
+    // Mientras el niño responde, se deja lista la voz de lo que viene.
+    const siguiente = rondas[estado.indice + 1]
+    precargar([ronda.refuerzo ?? '', siguiente?.instruccion ?? ''])
+    // Solo al cambiar de ronda (o al cerrar las instrucciones), nunca en cada render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ronda, verInstrucciones])
 
   // Fin: RF-12, se guarda fecha, intentos por ronda y tiempo empleado. El id se
@@ -175,7 +184,7 @@ export function Partida({
             <Icono nombre="izquierda" className="size-9" />
           </BotonNino>
         )}
-        <BotonNino voz="Escuchar otra vez" onClick={() => hablarPocket(ronda.instruccion)} className="grid size-20 place-items-center border-nino-ok bg-nino-menta">
+        <BotonNino voz="Escuchar otra vez" onClick={() => hablar(ronda.instruccion)} className="grid size-20 place-items-center border-nino-ok bg-nino-menta">
           <Icono nombre="altavoz" className="size-10" />
         </BotonNino>
         {comoSeJuega && (

@@ -1,5 +1,19 @@
+// Voz de la plataforma: solo Pocket-TTS (voz Lola o la voz clonada), generada en
+// tiempo real por el backend (GET /api/voz) y guardada allá para la próxima vez.
+// No hay voz de respaldo del navegador: si el servidor de voz no responde, la
+// app sigue en silencio (ver frontend/scripts/voz/README.md).
+
+import { nombreLetra } from '../contenido/banco.ts'
+
 let reproduciendo: HTMLAudioElement | null = null
+// Cada llamada a hablar() deja sin efecto a la anterior.
 let turno = 0
+// Lo que está sonando (o cargando) y desde cuándo: para no repetir la misma frase
+// si se pide dos veces seguidas (p. ej. un efecto que se vuelve a ejecutar).
+let actual: { texto: string; desde: number } | null = null
+const REPETIDA_MS = 1500
+// Si la voz no empieza en este tiempo (servidor apagado o muy ocupado), se sigue sin voz.
+const ESPERA_MAXIMA_MS = 20_000
 
 export interface OpcionesVoz {
   alTerminar?: () => void
@@ -7,10 +21,23 @@ export interface OpcionesVoz {
 
 const API = ((import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:3000').replace(/\/$/, '')
 
+// Los sonidos alargados («uuuu», «mmmm») la voz los dice mal: se cambian por el
+// nombre de la letra. Es un resguardo: los textos de las actividades ya no los usan.
+export function paraVoz(texto: string) {
+  return texto
+    .replace(/(?<![\p{L}])(\p{L})\1{2,}(?![\p{L}])/giu, (_, l: string) => nombreLetra(l))
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+const urlVoz = (texto: string) => `${API}/api/voz?texto=${encodeURIComponent(texto)}`
+
 // Voz apagada hasta que el niño la active con el botón del altavoz. Solo calla
 // la voz: los efectos dependen del ajuste «silenciar efectos» de la docente.
 let mudo = true
 let temporizadorApuntar: number | undefined
+// Dentro de una actividad solo se dice el enunciado: apuntar los botones no habla.
+let apuntarCallado = 0
 
 export function fijarMudo(valor: boolean) {
   mudo = valor
@@ -20,6 +47,7 @@ export function fijarMudo(valor: boolean) {
 // Un solo temporizador para toda la página: apuntar otra caja reemplaza a la anterior, no se encola.
 export function hablarAlApuntar(texto: string) {
   window.clearTimeout(temporizadorApuntar)
+  if (apuntarCallado > 0) return
   temporizadorApuntar = window.setTimeout(() => hablar(texto), 350)
 }
 
@@ -27,40 +55,93 @@ export function cancelarApuntar() {
   window.clearTimeout(temporizadorApuntar)
 }
 
-export function hablarPocket(texto: string, opciones: OpcionesVoz = {}) {
+// Calla la voz al apuntar mientras dure la actividad. Devuelve cómo deshacerlo
+// (sirve directo como limpieza de un useEffect).
+export function callarAlApuntar() {
+  apuntarCallado++
+  cancelarApuntar()
+  return () => {
+    apuntarCallado--
+  }
+}
+
+export function hablar(texto: string, opciones: OpcionesVoz = {}) {
+  const frase = paraVoz(texto)
+  // La misma frase pedida otra vez enseguida: se deja sonar la que ya va.
+  if (!opciones.alTerminar && actual?.texto === frase && Date.now() - actual.desde < REPETIDA_MS && reproduciendo) return
   detener()
-  if (mudo) {
+  if (mudo || !frase) {
     opciones.alTerminar?.()
     return
   }
 
   const mio = ++turno
-  const audio = new Audio(`${API}/api/voz?texto=${encodeURIComponent(texto)}`)
+  const audio = new Audio(urlVoz(frase))
   reproduciendo = audio
+  actual = { texto: frase, desde: Date.now() }
   let finalizado = false
   const terminar = () => {
+    window.clearTimeout(limite)
     if (mio !== turno || finalizado) return
     finalizado = true
+    reproduciendo = null
+    actual = null
     opciones.alTerminar?.()
   }
-
-  const avisarFallo = () => {
+  const fallar = () => {
     if (mio !== turno || finalizado) return
-    console.warn(`[audio] Pocket-TTS no pudo reproducir: ${texto}`)
+    console.warn(`[audio] La voz no respondió: «${frase}». ¿Está corriendo el backend con Pocket-TTS?`)
+    audio.pause()
     terminar()
   }
-
-  audio.onerror = avisarFallo
+  const limite = window.setTimeout(fallar, ESPERA_MAXIMA_MS)
+  audio.addEventListener('playing', () => window.clearTimeout(limite), { once: true })
+  audio.onerror = fallar
   audio.onended = terminar
-  void audio.play().catch(avisarFallo)
+  void audio.play().catch(fallar)
 }
-
-export const hablar = hablarPocket
 
 export function detener() {
   turno++
-  reproduciendo?.pause()
+  actual = null
+  if (reproduciendo) {
+    reproduciendo.pause()
+    // Corta también la descarga de la frase anterior.
+    reproduciendo.removeAttribute('src')
+    reproduciendo.load()
+  }
   reproduciendo = null
+}
+
+// Pide al backend que genere de antemano frases que sonarán pronto (la
+// siguiente ronda): cuando llegue el momento ya están guardadas y suenan al tiro.
+// De a una, para no ocupar al servidor de voz con muchas a la vez.
+const porPrecargar: string[] = []
+const precargadas = new Set<string>()
+let precargando = false
+
+export function precargar(textos: string[]) {
+  if (mudo) return
+  for (const t of textos.map(paraVoz)) {
+    if (t && !precargadas.has(t) && !porPrecargar.includes(t)) porPrecargar.push(t)
+  }
+  void siguientePrecarga()
+}
+
+async function siguientePrecarga() {
+  if (precargando) return
+  precargando = true
+  try {
+    for (let t = porPrecargar.shift(); t; t = porPrecargar.shift()) {
+      const r = await fetch(`${urlVoz(t)}&precarga=1`).catch(() => null)
+      if (!r?.ok) break
+      await r.arrayBuffer()
+      precargadas.add(t)
+    }
+  } finally {
+    porPrecargar.length = 0
+    precargando = false
+  }
 }
 
 // Efectos suaves generados (sin archivos). La regla de oro 6 permite

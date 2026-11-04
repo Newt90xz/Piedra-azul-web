@@ -120,9 +120,12 @@ function Camino({ plan, paso, repeticion, alEmpezar }: { plan: PasoPlan[]; paso:
   const actual = plan[paso]
   const contenidos = plan.flatMap((p, inicio) => (p.numero === 1 ? [{ c: p.contenido, inicio }] : []))
 
+  // Depende del texto y no de `actual`: el plan se arma de nuevo en cada refresco
+  // del estado (cada pocos segundos) y la frase se repetía en bucle.
+  const titulo = actual.contenido.pasos[actual.numero - 1].titulo
   useEffect(() => {
-    hablar(repeticion > 0 ? `¡Vamos otra vez! ${actual.contenido.pasos[actual.numero - 1].titulo}.` : `¡Vamos! ${actual.contenido.pasos[actual.numero - 1].titulo}.`)
-  }, [actual, repeticion])
+    hablar(repeticion > 0 ? `¡Vamos otra vez! ${titulo}.` : `¡Vamos! ${titulo}.`)
+  }, [titulo, repeticion])
 
   return (
     <main className="mx-auto grid h-full max-w-5xl content-center justify-items-center gap-10 px-6 py-6">

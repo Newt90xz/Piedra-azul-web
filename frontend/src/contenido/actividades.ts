@@ -6,7 +6,8 @@ import {
   PALABRAS,
   PALABRAS_NIVEL_3,
   VOCALES,
-  fonemaDe,
+  laLetra,
+  nombreLetra,
   palabra,
   quitarTildes,
 } from './banco.ts'
@@ -139,7 +140,7 @@ function explorarSonido(): Ronda[] {
     apoyo: l.apoyoArticulatorio,
     ejemplo: palabra(l.ejemplos[0]),
     instruccion: 'Toca la letra y escucha su sonido.',
-    refuerzo: `¡Muy bien! ${l.fonema}, de ${palabra(l.ejemplos[0]).texto}.`,
+    refuerzo: `¡Muy bien! La ${nombreLetra(l.id)}, de ${palabra(l.ejemplos[0]).texto}.`,
   }))
 }
 
@@ -153,9 +154,9 @@ function sonidoInicial(): Ronda[] {
       estimulo: { texto: l.grafema },
       opciones: mezclar([correcta, ...distractores].map(opcionPalabra)),
       correctaId: correcta.id,
-      instruccion: `Escucha: ${l.fonema}. Toca el dibujo que empieza con ${l.fonema}.`,
-      pista: `¡Casi! Escucha bien: ${l.fonema}… ${correcta.texto}. ¡Inténtalo otra vez!`,
-      refuerzo: `¡Excelente! ${l.fonema}, de ${correcta.texto}.`,
+      instruccion: `Toca el dibujo que empieza con ${laLetra(l.id)}.`,
+      pista: `¡Casi! Busca el que empieza con ${laLetra(l.id)}. ¡Inténtalo otra vez!`,
+      refuerzo: `¡Excelente! ${correcta.texto} empieza con ${laLetra(l.id)}.`,
     }
   })
 }
@@ -167,11 +168,11 @@ function cazaDeLetras(): Ronda[] {
       tipo: 'elegir',
       item: l.grafema,
       estimulo: {},
-      opciones: mezclar([l, ...otras]).map((x) => ({ id: x.id, texto: x.grafema, audio: x.fonema })),
+      opciones: mezclar([l, ...otras]).map((x) => ({ id: x.id, texto: x.grafema, audio: nombreLetra(x.id) })),
       correctaId: l.id,
-      instruccion: `Toca la letra que suena ${l.fonema}.`,
-      pista: `¡Casi! Busca la que suena ${l.fonema}. ¡Otra vez!`,
-      refuerzo: `¡Bien! La ${l.grafema} suena ${l.fonema}.`,
+      instruccion: `Toca la letra ${nombreLetra(l.id)}.`,
+      pista: `¡Casi! Busca ${laLetra(l.id)}. ¡Otra vez!`,
+      refuerzo: `¡Bien! Esa es ${laLetra(l.id)}.`,
     }
   })
 }
@@ -186,7 +187,7 @@ function choqueDeSonidos(): Ronda[] {
     consonante: c,
     vocal: v,
     instruccion: 'Toca el botón y mira cómo se juntan los sonidos.',
-    refuerzo: `${fonemaDe(c)}… ${fonemaDe(v)}… ¡${c + v}!`,
+    refuerzo: `¡Se juntaron! ${c + v}.`,
   }))
 }
 
@@ -235,12 +236,12 @@ export function escuchaLaLetra(ids: readonly string[] = ALFABETO.map((l) => l.id
     return {
       tipo: 'elegir',
       item: l.grafema,
-      estimulo: { audio: l.fonema },
-      opciones: mezclar([l, ...distractores]).map((x) => ({ id: x.id, texto: x.grafema, audio: x.fonema })),
+      estimulo: { audio: laLetra(l.id) },
+      opciones: mezclar([l, ...distractores]).map((x) => ({ id: x.id, texto: x.grafema, audio: nombreLetra(x.id) })),
       correctaId: l.id,
-      instruccion: `Escucha: ${l.fonema}. Toca la letra que suena ${l.fonema}.`,
-      pista: `¡Casi! Escucha otra vez: ${l.fonema}.`,
-      refuerzo: `¡Muy bien! ${l.fonema}.`,
+      instruccion: `Toca la letra ${nombreLetra(l.id)}.`,
+      pista: `¡Casi! Busca ${laLetra(l.id)}. ¡Otra vez!`,
+      refuerzo: `¡Muy bien! Es ${laLetra(l.id)}.`,
     }
   })
 }

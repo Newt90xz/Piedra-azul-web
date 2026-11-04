@@ -1,9 +1,9 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import type { Opcion, Ronda } from '../contenido/actividades.ts'
-import { fonemaDe } from '../contenido/banco.ts'
-import { hablar, hablarPocket } from '../lib/audio.ts'
+import { nombreLetra } from '../contenido/banco.ts'
+import { hablar } from '../lib/audio.ts'
 import { Icono } from '../ui/Icono.tsx'
-import { BotonNino, ImagenNino, useVozAlApuntar } from '../ui/nino.tsx'
+import { BotonNino, ImagenNino } from '../ui/nino.tsx'
 
 interface PropsRonda<T extends Ronda['tipo']> {
   ronda: Extract<Ronda, { tipo: T }>
@@ -97,7 +97,7 @@ function RondaElegir({ ronda, resuelta, revelar, errores, alIntentar }: PropsRon
                 voz={o.audio}
                 leerAlApuntar={false}
                 disabled={descartada || resuelta}
-                onClick={() => hablarPocket(o.audio, { alTerminar: () => tocar(o) })}
+                onClick={() => tocar(o)}
                 className={`grid w-full place-items-center p-4 ${conImagen ? 'min-h-[5.2em]' : 'min-h-[3.6em]'} ${descartada ? 'opacity-35 grayscale' : ''} ${
                   sacudir === o.id ? 'animate-sacudir' : ''
                 } ${resuelta && correcta ? 'animate-pop border-nino-ok bg-nino-menta' : ''} ${revelar && correcta ? 'revelada border-[#e6c84d] bg-nino-amarillo' : ''}`}
@@ -140,7 +140,6 @@ function Estimulo({
   palabraVisible: boolean
 }) {
   const { estimulo } = ronda
-  const voz = useVozAlApuntar(estimulo.audio ?? '')
   const soloAudio = !estimulo.imagen && !estimulo.texto
   const contenido = estimulo.imagen ? (
     <PictogramaPalabra
@@ -156,7 +155,7 @@ function Estimulo({
   const clase = `${tile} relative ${soloAudio ? 'min-h-[3.6em] min-w-[3.6em] px-2 py-2' : 'min-h-[3.4em] min-w-[3.4em] px-8 py-4'} ${resuelta ? 'animate-pop border-nino-ok bg-nino-menta' : 'border-nino-azul bg-white'}`
   if (!estimulo.audio) return <span className={clase}>{contenido}</span>
   return (
-    <button {...voz} onClick={() => hablar(estimulo.audio!)} aria-label={`Escuchar: ${estimulo.audio}`} className={`${clase} hover:-translate-y-1`}>
+    <button onClick={() => hablar(estimulo.audio!)} aria-label={`Escuchar: ${estimulo.audio}`} className={`${clase} hover:-translate-y-1`}>
       {contenido}
       <span aria-hidden="true" className={`absolute ${soloAudio ? '-right-2 -bottom-2 size-9 border-2 text-[0.5em]' : '-right-3 -bottom-3 size-12 border-3 text-[0.6em]'} grid place-items-center rounded-full border-nino-ok bg-nino-menta`}>
         🔊
@@ -188,9 +187,8 @@ function PictogramaPalabra({
 }
 
 function SilabaTocable({ silaba }: { silaba: string }) {
-  const voz = useVozAlApuntar(silaba.toLowerCase())
   return (
-    <button {...voz} onClick={() => hablar(silaba.toLowerCase())} className={`${tile} ${normal} min-h-[2.4em] min-w-[3em] px-4 text-[1.6em]`} aria-label={`Escuchar ${silaba}`}>
+    <button onClick={() => hablar(silaba.toLowerCase())} className={`${tile} ${normal} min-h-[2.4em] min-w-[3em] px-4 text-[1.6em]`} aria-label={`Escuchar ${silaba}`}>
       {silaba}
     </button>
   )
@@ -207,7 +205,6 @@ function RondaConstruir({ ronda, resuelta, revelar, errores, alIntentar }: Props
 
   const tocar = (ficha: string, i: number) => {
     if (resuelta || usadas.includes(i)) return
-    hablar(ficha)
     if (ficha !== siguiente) {
       setSacudir(i)
       window.setTimeout(() => setSacudir(null), 450)
@@ -326,12 +323,12 @@ function RondaExplorar({ ronda, resuelta, alIntentar }: PropsRonda<'explorar'>) 
 
   const tocar = () => {
     setEscuchada(true)
-    hablar(ronda.fonema, { alTerminar: () => window.setTimeout(() => hablar(ronda.ejemplo.texto), 300) })
+    hablar(`La ${nombreLetra(ronda.grafema)}, de ${ronda.ejemplo.texto}.`)
   }
 
   return (
     <div className="grid justify-items-center gap-8">
-      <BotonNino voz={ronda.fonema} onClick={tocar} className="grid size-[4.5em] place-items-center text-[2.2em] font-bold">
+      <BotonNino voz={`Letra ${nombreLetra(ronda.grafema)}`} onClick={tocar} className="grid size-[4.5em] place-items-center text-[2.2em] font-bold">
         {ronda.grafema}
       </BotonNino>
       {escuchada && (
@@ -361,7 +358,7 @@ function RondaChoque({ ronda, resuelta, alIntentar }: PropsRonda<'choque'>) {
   const juntar = () => {
     if (fase !== 'separadas') return
     setFase('juntando')
-    hablar(`${fonemaDe(ronda.consonante)}${fonemaDe(ronda.vocal)}… ${ronda.consonante + ronda.vocal}`)
+    hablar(ronda.consonante + ronda.vocal)
     window.setTimeout(() => setFase('unidas'), 1100)
   }
 
@@ -401,12 +398,10 @@ function RondaEscribir({ ronda, resuelta, revelar, alIntentar }: PropsRonda<'esc
   const [revisando, setRevisando] = useState(false)
   const largo = ronda.respuesta.length
   const siguiente = ronda.respuesta[escrito.length]
-  const voz = useVozAlApuntar(ronda.audio)
 
   const teclear = (l: string) => {
     if (resuelta || revisando || escrito.length >= largo) return
     const nuevo = escrito + l
-    hablar(fonemaDe(l.toLowerCase()))
     setEscrito(nuevo)
     if (nuevo.length < largo) return
     setRevisando(true)
@@ -443,7 +438,6 @@ function RondaEscribir({ ronda, resuelta, revelar, alIntentar }: PropsRonda<'esc
     <div className="grid justify-items-center gap-4">
       {ronda.imagen && (
         <button
-          {...voz}
           onClick={() => hablar(ronda.audio)}
           aria-label={`Escuchar: ${ronda.audio}`}
           className={`${tile} ${resuelta ? 'animate-pop border-nino-ok bg-nino-menta' : normal} relative px-5 py-2 hover:-translate-y-1`}
@@ -474,7 +468,7 @@ function RondaEscribir({ ronda, resuelta, revelar, alIntentar }: PropsRonda<'esc
         {ronda.letras.map((l) => (
           <BotonNino
             key={l}
-            voz={fonemaDe(l.toLowerCase())}
+            voz={l}
             disabled={resuelta || revisando}
             onClick={() => teclear(l)}
             className={`grid size-[2em] place-items-center text-[1.4em] font-bold ${revelar && l === siguiente ? 'revelada border-[#e6c84d] bg-nino-amarillo' : ''}`}
@@ -537,7 +531,6 @@ function RondaGlobos({ ronda, resuelta, revelar, errores, alIntentar }: PropsRon
 
   const reventar = (g: GloboSilaba) => {
     if (resuelta || g.estado) return
-    hablar(g.ficha)
     const bien = g.ficha === siguiente
     setGlobos((lista) => lista.map((x) => (x.id === g.id ? { ...x, estado: bien ? 'bien' : 'mal' } : x)))
     window.setTimeout(() => {

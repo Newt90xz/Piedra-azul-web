@@ -11,7 +11,7 @@ import {
   type Opcion,
   type Ronda,
 } from './actividades.ts'
-import { CONSONANTES_SILABAS, LETRAS, PALABRAS, PALABRAS_NIVEL_3, VOCALES, fonemaDe, palabra, quitarTildes } from './banco.ts'
+import { CONSONANTES_SILABAS, LETRAS, PALABRAS, PALABRAS_NIVEL_3, VOCALES, laLetra, nombreLetra, palabra, quitarTildes } from './banco.ts'
 import { juegoConfigurable } from './plantillas.ts'
 
 // Contenidos de las Bases Curriculares de la Educación Parvularia (MINEDUC,
@@ -106,12 +106,12 @@ function escucharVocal(): Ronda[] {
   return tomar(LETRAS_VOCALES, RONDAS).map((v) => ({
     tipo: 'elegir',
     item: v.grafema,
-    estimulo: { audio: v.fonema },
-    opciones: mezclar([v, ...tomar(LETRAS_VOCALES.filter((x) => x.id !== v.id), 2)]).map((x) => opcionTexto(x.id, x.grafema, x.fonema)),
+    estimulo: { audio: laLetra(v.id) },
+    opciones: mezclar([v, ...tomar(LETRAS_VOCALES.filter((x) => x.id !== v.id), 2)]).map((x) => opcionTexto(x.id, x.grafema, nombreLetra(x.id))),
     correctaId: v.id,
-    instruccion: `Escucha: ${v.fonema}. Toca la letra que suena ${v.fonema}.`,
-    pista: `¡Casi! Escucha otra vez: ${v.fonema}.`,
-    refuerzo: `¡Muy bien! ${v.fonema}.`,
+    instruccion: `Toca la letra ${nombreLetra(v.id)}.`,
+    pista: `¡Casi! Busca ${laLetra(v.id)}. ¡Otra vez!`,
+    refuerzo: `¡Muy bien! Es ${laLetra(v.id)}.`,
   }))
 }
 
@@ -122,11 +122,11 @@ function vocalInicial(): Ronda[] {
       tipo: 'elegir',
       item: v.grafema,
       estimulo: { imagen: w.imagen, audio: w.texto },
-      opciones: mezclar([v, ...tomar(LETRAS_VOCALES.filter((x) => x.id !== v.id), 2)]).map((x) => opcionTexto(x.id, x.grafema, x.fonema)),
+      opciones: mezclar([v, ...tomar(LETRAS_VOCALES.filter((x) => x.id !== v.id), 2)]).map((x) => opcionTexto(x.id, x.grafema, nombreLetra(x.id))),
       correctaId: v.id,
-      instruccion: `${w.texto}. ¿Con qué sonido empieza ${w.texto}?`,
-      pista: `¡Casi! Escucha: ${v.fonema}… ${w.texto}.`,
-      refuerzo: `¡Sí! ${v.fonema}, de ${w.texto}.`,
+      instruccion: `${w.texto}. ¿Con qué letra empieza ${w.texto}?`,
+      pista: `¡Casi! Escucha bien: ${w.texto}. ¡Otra vez!`,
+      refuerzo: `¡Sí! ${w.texto} empieza con ${laLetra(v.id)}.`,
     }
   })
 }
@@ -138,12 +138,12 @@ function imagenConVocal(): Ronda[] {
     return {
       tipo: 'elegir',
       item: v.grafema,
-      estimulo: { texto: v.grafema, audio: v.fonema },
+      estimulo: { texto: v.grafema, audio: laLetra(v.id) },
       opciones: mezclar([correcta, ...distractores]).map(opcionPalabra),
       correctaId: correcta.id,
-      instruccion: `Escucha: ${v.fonema}. Toca el dibujo que empieza con ${v.fonema}.`,
-      pista: `¡Casi! ${v.fonema}… ${correcta.texto}. ¡Otra vez!`,
-      refuerzo: `¡Excelente! ${v.fonema}, de ${correcta.texto}.`,
+      instruccion: `Toca el dibujo que empieza con ${laLetra(v.id)}.`,
+      pista: `¡Casi! Busca el que empieza con ${laLetra(v.id)}. ¡Otra vez!`,
+      refuerzo: `¡Excelente! ${correcta.texto} empieza con ${laLetra(v.id)}.`,
     }
   })
 }
@@ -164,7 +164,7 @@ function escucharSilaba(c: string): Ronda[] {
       .map((x) => opcionTexto(x, MAYUS(x), x)),
     correctaId: s,
     instruccion: `Toca la sílaba ${s}.`,
-    pista: `¡Casi! Escucha: ${fonemaDe(c)}${fonemaDe(s[1])}… ${s}. ¡Otra vez!`,
+    pista: `¡Casi! Escucha otra vez: ${s}.`,
   }))
 }
 
@@ -338,8 +338,8 @@ function empiezanIgual(): Ronda[] {
       opciones: SI_NO,
       correctaId: igual ? 'si' : 'no',
       instruccion: `Escucha: ${a.texto}… ${b.texto}. ¿Empiezan con el mismo sonido?`,
-      pista: `¡Casi! ${fonemaDe(ia)}… ${a.texto}. ${fonemaDe(ib)}… ${b.texto}. ¡Otra vez!`,
-      refuerzo: igual ? `¡Sí! Las dos empiezan con ${fonemaDe(ia)}.` : `¡Muy bien! ${fonemaDe(ia)} y ${fonemaDe(ib)} suenan distinto.`,
+      pista: `¡Casi! Escucha otra vez: ${a.texto}… ${b.texto}.`,
+      refuerzo: igual ? `¡Sí! Las dos empiezan con ${laLetra(ia)}.` : `¡Muy bien! ${a.texto} y ${b.texto} empiezan distinto.`,
     }
   })
 }
@@ -356,8 +356,8 @@ function mismoSonidoInicial(): Ronda[] {
       opciones: mezclar([correcta, ...distractores]).map(opcionPalabra),
       correctaId: correcta.id,
       instruccion: `Escucha: ${w.texto}. Toca el dibujo que empieza con el mismo sonido.`,
-      pista: `¡Casi! ${fonemaDe(inicial(w))}… ${w.texto}. ¿Cuál empieza igual?`,
-      refuerzo: `¡Sí! ${w.texto} y ${correcta.texto} empiezan con ${fonemaDe(inicial(w))}.`,
+      pista: `¡Casi! Escucha otra vez: ${w.texto}. ¿Cuál empieza igual?`,
+      refuerzo: `¡Sí! ${w.texto} y ${correcta.texto} empiezan igual.`,
     }
   })
 }
@@ -390,8 +390,8 @@ function escribeVocal(): Ronda[] {
       w,
       v,
       `${w.texto}. Escribe la vocal con que empieza ${w.texto}.`,
-      `¡Casi! ${fonemaDe(v.toLowerCase())}… ${w.texto}. ¡Otra vez!`,
-      `¡Sí! ${v}, de ${w.texto}.`,
+      `¡Casi! Escucha bien: ${w.texto}. ¡Otra vez!`,
+      `¡Sí! ${w.texto} empieza con ${laLetra(v)}.`,
       'AEIOU',
     )
   })

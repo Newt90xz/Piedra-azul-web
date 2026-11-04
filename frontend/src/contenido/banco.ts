@@ -156,6 +156,15 @@ export function letra(id: string): Letra {
   return encontrada
 }
 
+// Nombre de cada letra, para la voz. Los sonidos sueltos («mmmm», «uuuu») la voz
+// sintética los alarga o los deletrea mal: la voz dice «la eme», no «mmmm».
+const NOMBRES_LETRAS: Record<string, string> = {
+  a: 'a', b: 'be', c: 'ce', d: 'de', e: 'e', f: 'efe', g: 'ge', h: 'hache', i: 'i', j: 'jota', k: 'ka', l: 'ele', m: 'eme', n: 'ene',
+  ñ: 'eñe', o: 'o', p: 'pe', q: 'cu', r: 'erre', s: 'ese', t: 'te', u: 'u', v: 've', w: 'doble ve', x: 'equis', y: 'ye', z: 'zeta',
+}
+export const nombreLetra = (l: string) => NOMBRES_LETRAS[l.toLowerCase()] ?? l.toLowerCase()
+export const laLetra = (l: string) => `la ${nombreLetra(l)}`
+
 export function fonemaDe(l: string) {
   return LETRAS.find((x) => x.id === l)?.fonema ?? l
 }

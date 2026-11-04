@@ -6,8 +6,16 @@ no se reproduce ninguna voz alternativa.
 
 ```
 PC del niño ──GET /api/voz?texto=…──▶ backend (Express) ──POST /tts──▶ pocket-tts serve
-            ◀── audio mientras se genera ──┘  guarda cada frase en .cache-voz/
+            ◀──────── audio WAV ───────────┘  guarda cada frase en .cache-voz/
 ```
+
+- `pnpm dev` levanta Pocket-TTS solo (comando `POCKET_TTS_COMANDO`, por defecto
+  `pocket-tts serve --language spanish --host 127.0.0.1 --port 8000`). Las primeras frases esperan a que
+  cargue el modelo (unos segundos) en vez de fallar.
+- El modelo genera una frase a la vez: lo que el niño está esperando pasa antes que la precarga.
+- Durante una actividad la app precarga el refuerzo y el enunciado de la ronda siguiente.
+- Solo se dice el enunciado: las opciones, teclas, fichas y globos no hablan. Los sonidos de las letras
+  se dicen por su nombre («la eme»), porque la voz sintética alarga mal los sonidos sueltos («mmmm»).
 
 El modelo corre en **un solo computador** (el servidor o el PC de la docente), no en los del colegio:
 ellos solo reproducen. Medido en un i5 de escritorio: la frase empieza a sonar en ~1,5 s la primera
@@ -30,13 +38,16 @@ vez y al instante desde la segunda (queda guardada en `backend/.cache-voz/`).
    pocket-tts serve --language spanish --default-voice voz.safetensors --host 0.0.0.0 --port 8000
    ```
    Sin `--default-voice` usa a Lola. `--language spanish_24l` suena más natural pero es ~3 veces más lento.
-5. Configurar la app:
-   - `backend/.env`: `POCKET_TTS_URL=http://<computador-del-servidor>:8000`
+5. Configurar la app (`backend/.env`):
+   - `POCKET_TTS_URL=http://127.0.0.1:8000` (usar `127.0.0.1`, no `localhost`: con `localhost` Node puede
+     intentar por IPv6 y el fetch falla con «TypeError: fetch failed»).
+   - Si `pocket-tts` no está en el PATH (p. ej. está en un venv), poner la ruta completa, sin comillas:
+     `POCKET_TTS_COMANDO=C:\ruta\venv\Scripts\pocket-tts.exe serve --language spanish --host 127.0.0.1 --port 8000`.
+utaenv\Scripts\pocket-tts.exe serve --language spanish --host 127.0.0.1 --port 8000`.
+     Con `POCKET_TTS_COMANDO=no` el backend no lo levanta (se levanta aparte).
 
 Al cambiar la voz de referencia, borrar `backend/.cache-voz/` para que las frases se generen de nuevo
 con la voz nueva.
-
-- **Cambiar la voz o la calidad**: borrar `public/voz/` y generar todo con las opciones nuevas.
 
 ## Audios grabados por una persona
 
