@@ -21,6 +21,20 @@ const enCurso = new Map<string, Promise<void>>()
 const normalizar = (t: string) => t.replace(/\s+/g, ' ').trim()
 const clave = (t: string) => createHash('sha1').update(normalizar(t)).digest('hex').slice(0, 20)
 
+function detalleError(error: unknown, vistos = new Set<Error>()): string {
+  if (!(error instanceof Error)) return String(error)
+  if (vistos.has(error)) return error.name
+  vistos.add(error)
+
+  const detalle = [`${error.name}: ${error.message}`]
+  if (error instanceof AggregateError && error.errors.length > 0) {
+    detalle.push(...Array.from(error.errors, (causa) => detalleError(causa, vistos)))
+  } else if (error.cause !== undefined) {
+    detalle.push(detalleError(error.cause, vistos))
+  }
+  return detalle.join(' → ')
+}
+
 // ---------- Números en palabras (el modelo lee mejor «cincuenta» que «50») ----------
 
 const UNIDADES =
@@ -83,13 +97,14 @@ export async function voz(req: Request, res: Response) {
   if (existsSync(archivo)) return enviarGuardado()
   const pendiente = enCurso.get(texto)
   if (pendiente) {
-    await pendiente.catch(() => {})
+    await pendiente
     if (existsSync(archivo)) return enviarGuardado()
+    res.status(503).json({ error: 'voz_no_disponible' })
+    return
   }
 
   let terminar!: () => void
-  let fallar!: (e: unknown) => void
-  enCurso.set(texto, new Promise<void>((ok, mal) => ((terminar = ok), (fallar = mal))))
+  enCurso.set(texto, new Promise<void>((ok) => (terminar = ok)))
   const temporal = `${archivo}.${process.pid}.tmp`
   try {
     const formulario = new FormData()
@@ -117,8 +132,8 @@ export async function voz(req: Request, res: Response) {
     terminar()
   } catch (e) {
     rmSync(temporal, { force: true })
-    fallar(e)
-    console.warn('[voz] No se pudo generar:', (e as Error).message)
+    terminar()
+    console.warn(`[voz] No se pudo generar desde ${config.pocketTtsUrl}: ${detalleError(e)}`)
     if (!res.headersSent) res.status(503).json({ error: 'voz_no_disponible' })
     else res.end()
   } finally {

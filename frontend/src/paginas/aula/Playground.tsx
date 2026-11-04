@@ -315,7 +315,7 @@ function Monito({ miembro, destino, picto, reducido, alLlegar }: { miembro: Miem
       {/* Tocar a un compañero dice su nombre; el propio no tapa el pasto. */}
       <div
         {...(miembro.mia ? {} : voz)}
-        onClick={miembro.mia ? undefined : () => hablar(miembro.nombre, { respaldo: '¡Hola!' })}
+        onClick={miembro.mia ? undefined : () => hablar(miembro.nombre)}
         className={`relative ${miembro.mia ? '' : 'pointer-events-auto'} ${caminando ? (conPiernas ? 'monito-camina' : 'monito-desliza') : ''} ${juego ? `juega-${juego.tipo} juega-puesto-${juego.puesto}` : ''}`}
       >
         <div style={{ transform: `scaleX(${mirada})` }}>

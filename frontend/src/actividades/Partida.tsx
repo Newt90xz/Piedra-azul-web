@@ -4,7 +4,7 @@ import { categoriaDe } from '../contenido/contenidos.ts'
 import { nivelDe } from '../contenido/exigencia.ts'
 import { guardarResultadoConRespaldo } from '../datos/pendientes.ts'
 import type { ContextoPartida, IntentoRonda } from '../dominio/tipos.ts'
-import { efecto, hablar } from '../lib/audio.ts'
+import { efecto, hablar, hablarPocket } from '../lib/audio.ts'
 import { Moneda } from '../ui/Dibujos.tsx'
 import { Icono } from '../ui/Icono.tsx'
 import { BotonNino, useNino } from '../ui/nino.tsx'
@@ -85,7 +85,7 @@ export function Partida({
   useEffect(() => {
     if (!ronda || verInstrucciones) return
     inicioRonda.current = Date.now()
-    hablar(ronda.instruccion)
+    hablarPocket(ronda.instruccion)
   }, [ronda, verInstrucciones])
 
   // Fin: RF-12, se guarda fecha, intentos por ronda y tiempo empleado. El id se
@@ -175,7 +175,7 @@ export function Partida({
             <Icono nombre="izquierda" className="size-9" />
           </BotonNino>
         )}
-        <BotonNino voz="Escuchar otra vez" onClick={() => hablar(ronda.instruccion)} className="grid size-20 place-items-center border-nino-ok bg-nino-menta">
+        <BotonNino voz="Escuchar otra vez" onClick={() => hablarPocket(ronda.instruccion)} className="grid size-20 place-items-center border-nino-ok bg-nino-menta">
           <Icono nombre="altavoz" className="size-10" />
         </BotonNino>
         {comoSeJuega && (

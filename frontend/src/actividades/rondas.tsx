@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import type { Opcion, Ronda } from '../contenido/actividades.ts'
 import { fonemaDe } from '../contenido/banco.ts'
-import { hablar } from '../lib/audio.ts'
+import { hablar, hablarPocket } from '../lib/audio.ts'
 import { Icono } from '../ui/Icono.tsx'
 import { BotonNino, ImagenNino, useVozAlApuntar } from '../ui/nino.tsx'
 
@@ -95,8 +95,9 @@ function RondaElegir({ ronda, resuelta, revelar, errores, alIntentar }: PropsRon
             <span key={o.id} className="animate-aparecer relative" style={{ animationDelay: `${i * 90}ms`, animationFillMode: 'backwards' }}>
               <BotonNino
                 voz={o.audio}
+                leerAlApuntar={false}
                 disabled={descartada || resuelta}
-                onClick={() => tocar(o)}
+                onClick={() => hablarPocket(o.audio, { alTerminar: () => tocar(o) })}
                 className={`grid w-full place-items-center p-4 ${conImagen ? 'min-h-[5.2em]' : 'min-h-[3.6em]'} ${descartada ? 'opacity-35 grayscale' : ''} ${
                   sacudir === o.id ? 'animate-sacudir' : ''
                 } ${resuelta && correcta ? 'animate-pop border-nino-ok bg-nino-menta' : ''} ${revelar && correcta ? 'revelada border-[#e6c84d] bg-nino-amarillo' : ''}`}

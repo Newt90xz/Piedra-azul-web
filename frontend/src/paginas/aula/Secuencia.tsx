@@ -126,32 +126,37 @@ function Camino({ plan, paso, repeticion, alEmpezar }: { plan: PasoPlan[]; paso:
 
   return (
     <main className="mx-auto grid h-full max-w-5xl content-center justify-items-center gap-10 px-6 py-6">
-      <ol className="flex flex-wrap justify-center gap-5" aria-label={`Actividad ${paso + 1} de ${plan.length}`}>
+      <ol className="flex flex-wrap justify-center gap-4" aria-label={`Actividad ${paso + 1} de ${plan.length}`}>
         {contenidos.map(({ c, inicio }, ci) => (
           <li
             key={`${c.id}-${ci}`}
-            className="caja-entra flex items-center gap-2 rounded-full border-3 border-nino-borde bg-white/80 py-2 pr-4 pl-2"
+            className="caja-entra flex items-center gap-3 rounded-[1.75rem] border-3 border-nino-borde bg-white/80 py-3 pr-5 pl-3"
             style={{ animationDelay: `${ci * RETRASO_CAJA_MS}ms` }}
           >
-            <span aria-hidden="true" className="grid size-14 place-items-center rounded-full text-[1.4em]" style={{ background: c.color }}>
+            <span aria-hidden="true" className="grid size-16 place-items-center rounded-full text-[1.5em]" style={{ background: c.color }}>
               {c.icono}
             </span>
-            {c.pasos.map((_, k) => {
-              const i = inicio + k
-              const hecho = i < paso
-              const aqui = i === paso
-              return (
-                <span
-                  key={k}
-                  aria-hidden="true"
-                  className={`grid size-10 place-items-center rounded-full border-3 text-[0.6em] font-bold ${
-                    hecho ? 'border-nino-ok bg-nino-ok' : aqui ? 'camino-aqui border-nino-borde bg-nino-amarillo' : 'border-nino-borde bg-white'
-                  }`}
-                >
-                  {hecho ? '✓' : ''}
-                </span>
-              )
-            })}
+            <span className="flex items-center gap-1.5">
+              {c.pasos.map((_, k) => {
+                const i = inicio + k
+                const hecho = i < paso
+                const aqui = i === paso
+                return (
+                  <span key={k} className="flex items-center gap-1.5">
+                    {k > 0 && <Icono nombre="derecha" className="size-5 shrink-0 text-nino-borde" />}
+                    <span
+                      aria-hidden="true"
+                      className={`grid size-12 place-items-center rounded-full border-3 text-[0.7em] font-bold ${
+                        hecho ? 'border-nino-ok bg-nino-ok' : aqui ? 'camino-aqui border-nino-borde bg-nino-amarillo' : 'border-nino-borde bg-white'
+                      }`}
+                    >
+                      {hecho ? '✓' : ''}
+                    </span>
+                  </span>
+                )
+              })}
+            </span>
+            {ci < contenidos.length - 1 && <Icono nombre="derecha" className="size-6 shrink-0 text-nino-borde" />}
           </li>
         ))}
       </ol>

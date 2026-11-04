@@ -44,9 +44,16 @@ function conBase(className: string) {
   return `tarjeta-nino rounded-[1.75rem] border-3 transition-transform hover:-translate-y-1 ${fondo} ${borde} ${className}`
 }
 
-export function BotonNino({ voz, className = '', children, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { voz: string }) {
+export function BotonNino({
+  voz,
+  leerAlApuntar = true,
+  className = '',
+  children,
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & { voz: string; leerAlApuntar?: boolean }) {
+  const eventosVoz = useVozAlApuntar(voz)
   return (
-    <button aria-label={voz} {...useVozAlApuntar(voz)} className={`${conBase(className)} disabled:hover:translate-y-0`} {...props}>
+    <button aria-label={voz} {...(leerAlApuntar ? eventosVoz : {})} className={`${conBase(className)} disabled:hover:translate-y-0`} {...props}>
       {children}
     </button>
   )
