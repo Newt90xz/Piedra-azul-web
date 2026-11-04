@@ -39,7 +39,6 @@ describe('avancePorItem', () => {
     const items = avancePorItem([
       resultado('vocales-2', [['A', 2]]),
       resultado('silabas-m-1', [['MA', 2]]),
-      resultado('largas-cortas-1', [['Más larga', 2]]),
       resultado('rimas-3', [['-TO', 2]]),
       resultado('aplausos', [['elefante', 2]]),
       resultado('constructor', [['mano', 2]]),
@@ -47,7 +46,6 @@ describe('avancePorItem', () => {
     expect(Object.fromEntries(items.map((a) => [a.item, a.categoria]))).toEqual({
       A: 'letras',
       MA: 'silabas',
-      'Más larga': 'conteo',
       '-TO': 'rimas',
       elefante: 'conteo',
       mano: 'palabras',
@@ -85,5 +83,16 @@ describe('deEstaSemana', () => {
     const justoElLunes = { fecha: lunes.toISOString().replace('.000Z', '+00:00') }
     const domingoAnterior = { fecha: new Date(lunes.getTime() - 1000).toISOString() }
     expect(deEstaSemana([justoElLunes, domingoAnterior], miercoles)).toEqual([justoElLunes])
+  })
+})
+
+describe('rótulos genéricos', () => {
+  it('no muestra «Más larga», «Más corta» ni «La más larga» en los reportes', () => {
+    const items = avancePorItem([
+      resultado('largas-cortas-1', [['Más larga', 2], ['Más corta', 1]]),
+      resultado('largas-cortas-3', [['La más larga', 1]]),
+      resultado('aplausos', [['mariposa', 2]]),
+    ])
+    expect(items.map((a) => a.item)).toEqual(['mariposa'])
   })
 })

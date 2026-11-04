@@ -13,12 +13,19 @@ export interface AvanceItem {
 
 // RF-13: tasa de acierto al primer intento por letra, sílaba, rima o palabra.
 // La categoría sale de la actividad que generó la ronda, no del texto del ítem.
+// Rondas de «Palabras largas y cortas»: comparan dos o tres palabras y se
+// guardan con un rótulo genérico, no con una letra, sílaba o palabra. En los
+// reportes no dicen qué le cuesta al niño, así que no se muestran (sí cuentan
+// para pasar de actividad).
+const SIN_DETALLE = new Set(['Más larga', 'Más corta', 'La más larga'])
+
 export function avancePorItem(resultados: ResultadoActividad[]): AvanceItem[] {
   const mapa = new Map<string, AvanceItem>()
   for (const r of resultados) {
     // En la práctica siempre se acierta al primer intento: inflaría la tasa.
     if (r.contexto?.practica ?? actividad(r.actividadId)?.practica) continue
     for (const ronda of r.rondas) {
+      if (SIN_DETALLE.has(ronda.item)) continue
       // La de la ronda; las partidas antiguas no la traen y se deduce del catálogo.
       // Sin categoría (cuentos, actividades desconocidas) no hay letra o sílaba que medir.
       const categoria = ronda.categoria ?? categoriaDe(r.actividadId)
