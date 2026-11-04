@@ -291,8 +291,10 @@ function cualTerminaIgual(opciones: number): () => Ronda[] {
         opciones: mezclar([correcta, ...distractores]).map(opcionPalabra),
         correctaId: correcta.id,
         instruccion: `Escucha: ${w.texto}. ¿Cuál termina igual que ${w.texto}?`,
-        pista: `¡Casi! ${w.texto} termina en ${fin}… ¡Otra vez!`,
-        refuerzo: `¡Sí! ${w.texto} y ${correcta.texto} terminan en ${fin}.`,
+        // La sílaba sola al final de la frase o junto a «en» la voz la pierde o la
+        // pega («terminento»): va al medio y después de dos puntos.
+        pista: `¡Casi! Escucha el final de ${w.texto}: ${fin}. ¡Otra vez!`,
+        refuerzo: `¡Sí! Las dos terminan en ${fin}: ${w.texto} y ${correcta.texto}.`,
       }
     })
 }

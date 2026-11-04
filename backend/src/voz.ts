@@ -54,6 +54,11 @@ function enPalabras(n: number): string {
 
 export function paraLeer(texto: string) {
   return normalizar(texto)
+    // Con «…» entre palabras o sílabas («sol… elefante», «ma… ri… po… sa») el
+    // modelo inventa palabras («sol y fría en mi sante»). Con punto las dice limpias.
+    .replace(/\s*(…|\.\.\.)\s*/g, '. ')
+    .replace(/\.\s*([.!?¡¿])/g, (_, s: string) => (s === '¡' || s === '¿' ? `. ${s}` : s))
+    .trim()
     .replace(/\d+/g, (d) => enPalabras(Number(d)))
     .replace(/\buno(?= sílaba)/g, 'una')
     .replace(/\b(veinti)?uno(?= (monedas|globos))/g, (_, v) => (v ? 'veintiún' : 'un'))
@@ -136,7 +141,8 @@ export async function voz(req: Request, res: Response) {
     res.status(400).json({ error: 'texto_invalido' })
     return
   }
-  const archivo = resolve(config.vozCache, `${clave(texto)}.wav`)
+  // La clave sale del texto que de verdad lee el modelo: si cambia cómo se prepara, se genera de nuevo.
+  const archivo = resolve(config.vozCache, `${clave(paraLeer(texto))}.wav`)
   // Con el largo correcto y soporte de rangos: el navegador sabe cuándo termina
   // y no vuelve a pedir (ni a repetir) el audio.
   const enviar = () =>

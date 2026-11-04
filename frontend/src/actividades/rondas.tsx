@@ -128,6 +128,10 @@ function RondaElegir({ ronda, resuelta, revelar, errores, alIntentar }: PropsRon
   )
 }
 
+// Una palabra o sílaba sola la voz la dice mal muchas veces («mano» → «mando»):
+// dentro de una frase corta sale clara.
+const enFrase = (audio: string) => `Escucha: ${audio}.`
+
 // Lo que se pregunta: una imagen, una letra o sílaba, o solo un sonido. Se toca
 // para escucharlo otra vez (sin depender de la lectura).
 function Estimulo({
@@ -155,7 +159,7 @@ function Estimulo({
   const clase = `${tile} relative ${soloAudio ? 'min-h-[3.6em] min-w-[3.6em] px-2 py-2' : 'min-h-[3.4em] min-w-[3.4em] px-8 py-4'} ${resuelta ? 'animate-pop border-nino-ok bg-nino-menta' : 'border-nino-azul bg-white'}`
   if (!estimulo.audio) return <span className={clase}>{contenido}</span>
   return (
-    <button onClick={() => hablar(estimulo.audio!)} aria-label={`Escuchar: ${estimulo.audio}`} className={`${clase} hover:-translate-y-1`}>
+    <button onClick={() => hablar(enFrase(estimulo.audio!))} aria-label={`Escuchar: ${estimulo.audio}`} className={`${clase} hover:-translate-y-1`}>
       {contenido}
       <span aria-hidden="true" className={`absolute ${soloAudio ? '-right-2 -bottom-2 size-9 border-2 text-[0.5em]' : '-right-3 -bottom-3 size-12 border-3 text-[0.6em]'} grid place-items-center rounded-full border-nino-ok bg-nino-menta`}>
         🔊
@@ -188,7 +192,7 @@ function PictogramaPalabra({
 
 function SilabaTocable({ silaba }: { silaba: string }) {
   return (
-    <button onClick={() => hablar(silaba.toLowerCase())} className={`${tile} ${normal} min-h-[2.4em] min-w-[3em] px-4 text-[1.6em]`} aria-label={`Escuchar ${silaba}`}>
+    <button onClick={() => hablar(enFrase(silaba.toLowerCase()))} className={`${tile} ${normal} min-h-[2.4em] min-w-[3em] px-4 text-[1.6em]`} aria-label={`Escuchar ${silaba}`}>
       {silaba}
     </button>
   )
@@ -438,7 +442,7 @@ function RondaEscribir({ ronda, resuelta, revelar, alIntentar }: PropsRonda<'esc
     <div className="grid justify-items-center gap-4">
       {ronda.imagen && (
         <button
-          onClick={() => hablar(ronda.audio)}
+          onClick={() => hablar(enFrase(ronda.audio))}
           aria-label={`Escuchar: ${ronda.audio}`}
           className={`${tile} ${resuelta ? 'animate-pop border-nino-ok bg-nino-menta' : normal} relative px-5 py-2 hover:-translate-y-1`}
         >
