@@ -1,34 +1,54 @@
 import { createContext, use, useEffect, useState, type DragEvent, type FormEvent, type ReactNode } from 'react'
 import { useSesion } from '../../app/Sesion.tsx'
 import { JUEGOS } from '../../contenido/actividades.ts'
-import { AREAS, CONTENIDOS, bloquesDePlan, contenido, planDeBloques, planDeSala, type Area, type BloquePlan, type Contenido } from '../../contenido/contenidos.ts'
+import { AREAS, CONTENIDOS, bloqueContenido, bloquesDePlan, contenido, planDeBloques, planDeSala, type Area, type BloquePlan, type Contenido } from '../../contenido/contenidos.ts'
 import { JUEGOS_CONFIGURABLES, juegoConfigurable } from '../../contenido/plantillas.ts'
+import { EXIGENCIAS } from '../../contenido/exigencia.ts'
 import { pictoMensaje } from '../../contenido/mensajes.ts'
 import { repo } from '../../datos/index.ts'
-import type { ActividadRecreo, Conectado, Emocion, Estudiante, MiembroSala, ProgresoSala, ResultadoActividad, Sala, TipoSala } from '../../dominio/tipos.ts'
+import type { ActividadRecreo, Conectado, Emocion, Estudiante, Exigencia, MiembroSala, ProgresoSala, ResultadoActividad, Sala, TipoSala } from '../../dominio/tipos.ts'
 import { EMOCIONES, inicioDia, minutos } from '../../lib/avance.ts'
+import { avanceEn, enLinea } from '../../lib/clase.ts'
 import { capitalizar } from '../../lib/texto.ts'
 import { useConsulta } from '../../lib/useConsulta.ts'
 import { Avatar } from '../../ui/Avatar.tsx'
 import { IconoParque } from '../../ui/Dibujos.tsx'
 import { Icono } from '../../ui/Icono.tsx'
-import { AvisoError, Boton, Encabezado, claseEntrada, claseTarjeta } from '../../ui/aula.tsx'
+import { AvisoError, Boton, Encabezado, claseEntrada, claseTarjeta, useDialogo } from '../../ui/aula.tsx'
 import { ConfigurarActividad } from './ConfigurarActividad.tsx'
 
 const REFRESCO_MS = 5000
-// Igual que la base: un dispositivo sin señales por 10 minutos se da por apagado.
-const VIGENTE_MS = 10 * 60_000
 const TIPOS: Record<TipoSala, { nombre: string; icono: string; color: string }> = {
   trabajo: { nombre: 'Actividades', icono: '📚', color: 'text-menta-oscuro' },
   recreo: { nombre: 'Recreo', icono: '🌳', color: 'text-[#7a5b00]' },
 }
 const ACTIVIDADES_RECREO: Record<ActividadRecreo, { nombre: string; icono: ReactNode; ayuda: string; estado: string }> = {
-  parque: { nombre: 'Parque', icono: <IconoParque className="size-[1.25em]" />, ayuda: 'Caminan con su personaje, se ven en vivo y se saludan.', estado: 'En el parque' },
-  dibujo: { nombre: 'Dibujo', icono: '🎨', ayuda: 'Dibujo libre, sellos y letras para repasar.', estado: 'Dibujando' },
-  globos: { nombre: 'Globos', icono: '🎈', ayuda: 'Revientan globos y pueden ir a la tienda.', estado: 'Con los globos' },
-  juegos: { nombre: 'Juegos', icono: '🎲', ayuda: 'Los juegos que elijas, las veces que quieran.', estado: 'Jugando' },
+  parque: {
+    nombre: 'Parque',
+    icono: <IconoParque className="size-[1.25em]" />,
+    ayuda: 'Caminan con su personaje, se ven en vivo y se saludan.',
+    estado: 'En el parque',
+  },
+  dibujo: {
+    nombre: 'Dibujo',
+    icono: '🎨',
+    ayuda: 'Dibujo libre, sellos y letras para repasar.',
+    estado: 'Dibujando',
+  },
+  globos: {
+    nombre: 'Globos',
+    icono: '🎈',
+    ayuda: 'Revientan globos y pueden ir a la tienda.',
+    estado: 'Con los globos',
+  },
+  juegos: {
+    nombre: 'Juegos',
+    icono: '🎲',
+    ayuda: 'Los juegos que elijas, las veces que quieran.',
+    estado: 'Jugando',
+  },
 }
-// Destino «Recreo» (sin sala): soltar ahí saca al niño de su sala y lo manda al recreo.
+// Destino «Sin sala»: soltar ahí saca al niño de su sala (en su tablet ve la espera con globos).
 const ESPERA = ''
 // Si el servidor nunca confirma un movimiento, el aviso «Conectándolo…» se quita igual.
 const OLVIDAR_PENDIENTE_MS = 20_000
@@ -44,13 +64,6 @@ interface Datos {
 }
 
 type Ejecutar = (accion: () => Promise<unknown>) => Promise<void>
-
-const enLinea = (c: Conectado | undefined) => !!c && Date.now() - new Date(c.vistoEn).getTime() < VIGENTE_MS
-
-// Avance que vale para la sala y el plan actuales; otro plan o sala parte en cero.
-function avanceEn(sala: Sala, p: ProgresoSala | undefined) {
-  return p && p.salaId === sala.id && p.asignacion === sala.asignacion ? p : undefined
-}
 
 // Salas de una ruta en orden: cada una seguida de la sala a la que pasan al terminar.
 // Un recreo al que llegan varias rutas se muestra entero solo en la primera.
@@ -197,6 +210,7 @@ export default function Salas() {
   const enEspera = sinSala.filter((e) => enLinea(datos?.conectados.get(e.id)))
   const enSalas = (datos?.estudiantes.length ?? 0) - sinSala.length
   const { rutas, sueltas } = armarRutas(datos?.salas ?? [])
+  const anuncio = useAnuncioCambios(datos)
 
   // Ya llegó el recreo conectado: el esqueleto deja su lugar a la tarjeta real.
   if (creandoRecreo && datos?.salas.find((s) => s.id === creandoRecreo)?.siguienteSala) setCreandoRecreo(null)
@@ -206,8 +220,9 @@ export default function Salas() {
     let listo = false
     await ejecutar(async () => {
       const nombres = new Set(datos?.salas.map((s) => s.nombre))
-      let nombre = 'Recreo'
-      for (let n = 2; nombres.has(nombre); n++) nombre = `Recreo ${n}`
+      // Un recreo nuevo empieza con el parque (caminar con su personaje): se llama así.
+      let nombre = 'Parque'
+      for (let n = 2; nombres.has(nombre); n++) nombre = `Parque ${n}`
       const recreo = await repo.crearSala(sala.cursoId, nombre, 'recreo')
       await repo.conectarSalas(sala.id, recreo.id)
       listo = true
@@ -228,12 +243,12 @@ export default function Salas() {
       <Encabezado
         antetitulo="Trabajo en aula"
         titulo="Salas"
-        descripcion="Cada fila es una ruta: al terminar sus actividades, el niño pasa solo a la sala siguiente. Arrastra a cada niño a donde empieza."
+        descripcion="Cada fila es una ruta: al terminar sus actividades, el niño pasa solo a la sala siguiente. Para mover a un niño, arrástralo o toca su manilla ⠿ y luego la sala."
         accion={
           datos && (
             <p className="flex items-center gap-2 text-sm font-semibold text-tinta">
               <span className={`size-2.5 rounded-full ${enEspera.length + enSalas ? 'bg-menta' : 'bg-borde'}`} aria-hidden="true" />
-              {[...datos.conectados.values()].filter(enLinea).length} con dispositivo · {enEspera.length} en recreo · {enSalas} en salas
+              {[...datos.conectados.values()].filter(enLinea).length} con dispositivo · {enSalas} en salas · {sinSala.length} sin sala
             </p>
           )
         }
@@ -243,6 +258,10 @@ export default function Salas() {
           {accionError.includes('duplicate') ? 'Ya existe una sala con ese nombre.' : accionError}
         </p>
       )}
+      {/* Lo que cambió con el último refresco, para lectores de pantalla. */}
+      <p role="status" aria-live="polite" className="sr-only">
+        {anuncio}
+      </p>
       {error && !datos && <AvisoError alReintentar={recargar} />}
       {error && datos && (
         <p role="status" className="mb-4 rounded-xl bg-[#fdf1e4] px-4 py-3 text-sm font-semibold text-[#9a4d00]">
@@ -292,6 +311,34 @@ export default function Salas() {
       )}
     </MoverContexto>
   )
+}
+
+// Los niños entran, avanzan y salen solos y la vista se refresca sin aviso:
+// esto dice en una frase quién cambió de sala o necesita apoyo desde el último
+// refresco, para quien usa lector de pantalla.
+function useAnuncioCambios(datos: Datos | undefined) {
+  const [anuncio, setAnuncio] = useState('')
+  // Los datos ya comparados: al llegar otros se compara durante el render, sin efecto.
+  const [vistos, setVistos] = useState(datos)
+  if (datos !== vistos) {
+    setVistos(datos)
+    const frase = datos && vistos ? cambiosEntre(vistos, datos) : ''
+    if (frase) setAnuncio(frase)
+  }
+  return anuncio
+}
+
+function cambiosEntre(antes: Datos, datos: Datos) {
+  const salaEn = (d: Datos, id: string) => d.miembros.find((m) => m.estudianteId === id)?.salaId ?? ESPERA
+  const ayuda = (d: Datos, id: string) => Boolean(d.progresoDe.get(id)?.necesitaAyuda)
+  const frases: string[] = []
+  for (const e of datos.estudiantes) {
+    const [desde, hacia] = [salaEn(antes, e.id), salaEn(datos, e.id)]
+    if (desde !== hacia) frases.push(hacia === ESPERA ? `${e.nombre} quedó sin sala` : `${e.nombre} pasó a ${datos.salas.find((s) => s.id === hacia)?.nombre ?? 'otra sala'}`)
+    if (ayuda(datos, e.id) && !ayuda(antes, e.id)) frases.push(`${e.nombre} necesita apoyo`)
+  }
+  if (frases.length === 0) return ''
+  return frases.length > 4 ? `${frases.slice(0, 3).join('. ')}. Y ${frases.length - 3} cambios más.` : `${frases.join('. ')}.`
 }
 
 // La tarjeta del recreo mientras se crea: mismo tamaño, para que nada salte al llegar.
@@ -347,7 +394,7 @@ function Avisos({ datos, ejecutar }: { datos: Datos; ejecutar: Ejecutar }) {
               <b className="text-tinta">{e.nombre}</b> <span className="text-tinta-suave">· {sala.nombre}</span>
               <span className="flex flex-wrap items-center gap-1.5 text-tinta-suave">
                 {paso && <IconoContenido c={paso.contenido} className="size-5 text-xs" />}
-                {paso ? `${paso.contenido.titulo} · act. ${paso.numero}` : 'Actividad actual'} ·{' '}
+                {paso ? `${paso.contenido.titulo} · ${paso.contenido.pasos[paso.numero - 1]?.titulo ?? `act. ${paso.numero}`}` : 'Actividad actual'} ·{' '}
                 <b className="text-[#9a4d00]">{p.repeticiones} intentos</b>
               </span>
             </span>
@@ -361,7 +408,7 @@ function Avisos({ datos, ejecutar }: { datos: Datos; ejecutar: Ejecutar }) {
   )
 }
 
-// Caja donde se suelta a un niño: una sala o el «Recreo». Resalta al arrastrar
+// Caja donde se suelta a un niño: una sala o «Sin sala». Resalta al arrastrar
 // encima y, si hay un niño elegido con un toque, ofrece moverlo aquí.
 function ZonaSoltar({ destino, nombre, className = '', children }: { destino: string; nombre: string; className?: string; children: ReactNode }) {
   const { elegido, salaDe, mover } = useMover()
@@ -393,7 +440,7 @@ function ZonaSoltar({ destino, nombre, className = '', children }: { destino: st
         <button
           type="button"
           onClick={() => mover(elegido.id, destino)}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-menta bg-menta-fondo px-3 py-2 text-sm font-bold text-menta-oscuro hover:bg-[#d3f0e2]"
+          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-menta bg-menta-fondo px-3 py-2 text-sm font-bold text-menta-oscuro hover:bg-[#d3f0e2]"
         >
           <Avatar estudiante={elegido} className="size-7 text-base" />
           Mover aquí a {elegido.nombre}
@@ -425,7 +472,7 @@ function useArrastrable(e: Estudiante) {
         aria-label={activo ? `Soltar a ${e.nombre}` : `Mover a ${e.nombre}`}
         title="Arrastra a otra sala, o toca aquí y luego toca la sala"
         onClick={() => elegir(activo ? null : e)}
-        className={`grid size-7 shrink-0 cursor-grab place-items-center rounded-lg active:cursor-grabbing ${activo ? 'bg-menta text-white' : 'text-tinta-suave hover:bg-white'}`}
+        className={`grid size-11 shrink-0 cursor-grab place-items-center rounded-lg active:cursor-grabbing ${activo ? 'bg-menta text-white' : 'text-tinta-suave hover:bg-white'}`}
       >
         <Icono nombre="arrastrar" className="size-5 [stroke-width:3.2]" />
       </button>
@@ -438,23 +485,24 @@ function Conectando({ destino }: { destino: string }) {
   return (
     <span role="status" className="flex items-center gap-1.5 text-xs font-semibold text-menta-oscuro">
       <span aria-hidden="true" className="size-3 animate-spin rounded-full border-2 border-menta border-t-transparent" />
-      {destino === ESPERA ? 'Enviándolo al recreo…' : 'Conectándolo…'}
+      {destino === ESPERA ? 'Sacándolo de la sala…' : 'Conectándolo…'}
     </span>
   )
 }
 
-// Los que no están en ninguna sala, en una franja que queda a la vista al bajar
-// por las salas: así siempre hay dónde soltar. Primero los que ya esperan.
+// «Sin sala»: los que no están en ninguna sala, en una franja que queda a la
+// vista al bajar por las salas: así siempre hay dónde soltar. No confundir con
+// las salas de recreo (Parque, Dibujo…). Primero los que tienen dispositivo.
 function SinSala({ ninos, datos }: { ninos: Estudiante[]; datos: Datos }) {
   const ordenados = [...ninos].sort((a, b) => Number(enLinea(datos.conectados.get(b.id))) - Number(enLinea(datos.conectados.get(a.id))))
   return (
-    <ZonaSoltar destino={ESPERA} nombre="Recreo" className="sticky top-2 z-20 mb-5 grid gap-3 px-4 py-3">
+    <ZonaSoltar destino={ESPERA} nombre="Sin sala" className="sticky top-2 z-20 mb-5 grid gap-3 px-4 py-3">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <h2 className="shrink-0 font-bold text-tinta">
-          <span aria-hidden="true">🎠</span> Recreo <span className="text-tinta-suave">({ninos.length})</span>
+          <span aria-hidden="true">⏳</span> Sin sala <span className="text-tinta-suave">({ninos.length})</span>
         </h2>
         {ninos.length === 0 ? (
-          <p className="text-sm text-tinta-suave">Nadie en recreo: todos están en una sala. Arrastra aquí a quien termine.</p>
+          <p className="text-sm text-tinta-suave">Todos están en una sala. Arrastra aquí a quien quieras sacar.</p>
         ) : (
           <ul className="flex flex-wrap gap-2">
             {ordenados.map((e) => (
@@ -480,7 +528,7 @@ function FichaSinSala({ e, online }: { e: Estudiante; online: boolean }) {
       <EnLinea e={e} online={online} className="size-8 text-lg" />
       <span className="leading-tight">
         <span className="block font-semibold text-tinta">{e.nombre}</span>
-        {destino !== undefined ? <Conectando destino={destino} /> : <span className="block text-xs text-tinta-suave">{online ? 'En recreo' : 'Sin conectar'}</span>}
+        {destino !== undefined ? <Conectando destino={destino} /> : <span className="block text-xs text-tinta-suave">{online ? 'Esperando sala' : 'Sin dispositivo'}</span>}
       </span>
     </li>
   )
@@ -490,7 +538,8 @@ function EnLinea({ e, online, className = 'size-9 text-xl' }: { e: Estudiante; o
   return (
     <span className="relative shrink-0" title={online ? 'Con dispositivo' : 'Sin dispositivo'}>
       <Avatar estudiante={e} className={className} />
-      <span className={`absolute -right-0.5 -bottom-0.5 size-3 rounded-full border-2 border-white ${online ? 'bg-menta' : 'bg-borde'}`} />
+      <span aria-hidden="true" className={`absolute -right-0.5 -bottom-0.5 size-3 rounded-full border-2 border-white ${online ? 'bg-menta' : 'bg-borde'}`} />
+      <span className="sr-only">{online ? 'Con dispositivo' : 'Sin dispositivo'}</span>
     </span>
   )
 }
@@ -540,7 +589,7 @@ function EncabezadoSala({ sala, n, ejecutar, accion }: { sala: Sala; n: number; 
   if (confirmar)
     return (
       <div className="grid gap-2 rounded-xl bg-red-50 p-3 text-sm font-semibold text-tinta">
-        ¿Eliminar «{sala.nombre}»? Los niños vuelven a la espera.
+        ¿Eliminar «{sala.nombre}»? Los niños quedan sin sala.
         <span className="flex gap-2">
           <Boton variante="secundario" onClick={() => void ejecutar(() => repo.eliminarSala(sala.id))}>
             Sí, eliminar
@@ -567,7 +616,7 @@ function EncabezadoSala({ sala, n, ejecutar, accion }: { sala: Sala; n: number; 
         aria-label={`Eliminar ${sala.nombre}`}
         title="Eliminar sala"
         onClick={() => setConfirmar(true)}
-        className="grid size-9 shrink-0 place-items-center rounded-xl text-tinta-suave hover:bg-red-50 hover:text-[#b42318]"
+        className="grid size-11 shrink-0 place-items-center rounded-xl text-tinta-suave hover:bg-red-50 hover:text-[#b42318]"
       >
         ✕
       </button>
@@ -607,7 +656,7 @@ function TarjetaSala({
           </Boton>
         }
       />
-      <ResumenPlan sala={sala} alEditar={() => setEditando(true)} />
+      <ResumenPlan sala={sala} pasos={dentro.map((e) => pasoDe(e.id))} alEditar={() => setEditando(true)} />
       {editando && <EditorPlan sala={sala} conAvance={conAvance} ejecutar={ejecutar} alCerrar={() => setEditando(false)} />}
 
       <ListaNinos sala={sala} dentro={dentro} datos={datos} ejecutar={ejecutar} vacia="Arrastra aquí a los niños.">
@@ -672,29 +721,71 @@ function AlTerminar({ sala, datos, ejecutar, creandoRecreo, alCrearRecreo }: { s
 function datosBloque(b: BloquePlan) {
   if ('contenido' in b) {
     const c = contenido(b.contenido)
-    return { titulo: c?.titulo ?? b.contenido, detalle: c?.pasos.map((p, k) => `${k + 1}. ${p.titulo}`).join('\n'), icono: c?.icono ?? '❔', color: c?.color ?? 'var(--color-fondo)' }
+    const titulos = b.pasos.map((n) => c?.pasos[n - 1]?.titulo ?? `Actividad ${n}`)
+    return {
+      titulo: c?.titulo ?? b.contenido,
+      detalle: titulos.map((t, k) => `${k + 1}. ${t}`).join('\n'),
+      icono: c?.icono ?? '❔',
+      color: c?.color ?? 'var(--color-fondo)',
+      resumen: undefined as string | undefined,
+    }
   }
   const j = juegoConfigurable(b.paso.juego)
   const resumen = j?.resumen(b.paso.parametros ?? j.porDefecto) ?? ''
-  return { titulo: b.paso.titulo ?? j?.titulo ?? b.paso.juego, detalle: resumen, icono: j?.icono ?? '❔', color: j?.color ?? 'var(--color-fondo)', resumen }
+  return {
+    titulo: b.paso.titulo ?? j?.titulo ?? b.paso.juego,
+    detalle: resumen,
+    icono: j?.icono ?? '❔',
+    color: j?.color ?? 'var(--color-fondo)',
+    resumen,
+  }
 }
 
-function ResumenPlan({ sala, alEditar }: { sala: Sala; alEditar: () => void }) {
+// El plan de la sala en palabras: cada contenido o actividad con su nombre, lo
+// que trae y cuántos niños de la sala van en él ahora.
+function ResumenPlan({ sala, pasos, alEditar }: { sala: Sala; pasos: number[]; alEditar: () => void }) {
   if (sala.plan.length === 0)
     return (
-      <button type="button" onClick={alEditar} className="rounded-xl border-2 border-dashed border-borde px-3 py-2.5 text-sm font-semibold text-tinta-suave hover:border-menta hover:text-menta-oscuro">
+      <button
+        type="button"
+        onClick={alEditar}
+        className="min-h-11 rounded-xl border-2 border-dashed border-borde px-3 py-2.5 text-sm font-semibold text-tinta-suave hover:border-menta hover:text-menta-oscuro"
+      >
         Sin contenidos · elegir plan
       </button>
     )
+  // Qué pasos del plan (desde, hasta) corresponden a cada bloque.
+  const largos = bloquesDePlan(sala.plan).map((b) => ({
+    b,
+    largo: planDeSala(planDeBloques([b])).length,
+  }))
+  const bloques = largos.map(({ b, largo }, i) => {
+    const desde = largos.slice(0, i).reduce((n, x) => n + x.largo, 0)
+    return { b, desde, hasta: desde + largo }
+  })
   return (
-    <ol className="flex flex-wrap items-center gap-1.5" aria-label="Plan de la sala">
-      {bloquesDePlan(sala.plan).map((b, i) => {
-        const { titulo, icono, color } = datosBloque(b)
+    <ol className="grid gap-1" aria-label="Plan de la sala">
+      {bloques.map(({ b, desde, hasta }, i) => {
+        const { titulo, icono, color, resumen } = datosBloque(b)
+        const actividades = 'contenido' in b ? b.pasos.length : 1
+        const aqui = pasos.filter((p) => p >= desde && p < hasta).length
         return (
-          <li key={i} title={titulo} className="flex items-center gap-1.5">
-            {i > 0 && <span aria-hidden="true" className="text-tinta-suave/50">›</span>}
-            <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full text-lg" style={{ background: color }}>{icono}</span>
-            <span className="sr-only">{titulo}</span>
+          <li key={i} className="flex items-center gap-2 rounded-xl bg-fondo px-2 py-1.5">
+            <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-full text-base" style={{ background: color }}>
+              {icono}
+            </span>
+            <span className="min-w-0 flex-1 leading-tight">
+              <span className="block truncate text-sm font-semibold text-tinta">{titulo}</span>
+              <span className="block truncate text-xs text-tinta-suave">
+                {resumen || `${actividades} ${actividades === 1 ? 'actividad' : 'actividades'}`}
+                {exigenciaDe(b) && ` · ${EXIGENCIAS[exigenciaDe(b)!].nombre}`}
+              </span>
+            </span>
+            {aqui > 0 && (
+              <span className="shrink-0 rounded-full bg-menta-fondo px-2 py-0.5 text-xs font-bold text-menta-oscuro">
+                {aqui} {aqui === 1 ? 'niño' : 'niños'}
+              </span>
+            )}
           </li>
         )
       })}
@@ -718,6 +809,7 @@ function ListaNinos({
   children: (e: Estudiante) => ReactNode
 }) {
   const { mover } = useMover()
+  const [confirmar, setConfirmar] = useState(false)
   if (dentro.length === 0) return <p className="rounded-2xl border-2 border-dashed border-borde px-4 py-6 text-center text-sm text-tinta-suave">{vacia}</p>
   return (
     <div className="grid gap-2">
@@ -728,14 +820,36 @@ function ListaNinos({
           </FilaNino>
         ))}
       </ul>
-      <button
-        type="button"
-        onClick={() => dentro.forEach((e) => mover(e.id, ESPERA))}
-        className="justify-self-end text-xs font-semibold text-tinta-suave underline hover:text-tinta"
-        aria-label={`Enviar a todos los de ${sala.nombre} al recreo`}
-      >
-        Todos al recreo
-      </button>
+      {/* Mueve a todo el grupo: se confirma antes. */}
+      {confirmar ? (
+        <div role="group" aria-label="Confirmar" className="grid gap-2 rounded-xl bg-[#fdf1e4] p-3 text-sm font-semibold text-tinta">
+          ¿Sacar a {dentro.length === 1 ? 'el niño' : `los ${dentro.length} niños`} de «{sala.nombre}»? Quedan sin sala.
+          <span className="flex flex-wrap gap-2">
+            <Boton
+              variante="secundario"
+              className="min-h-11"
+              onClick={() => {
+                dentro.forEach((e) => mover(e.id, ESPERA))
+                setConfirmar(false)
+              }}
+            >
+              Sí, sacarlos
+            </Boton>
+            <Boton variante="suave" className="min-h-11" onClick={() => setConfirmar(false)}>
+              Cancelar
+            </Boton>
+          </span>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setConfirmar(true)}
+          className="min-h-11 justify-self-end rounded-xl px-3 text-xs font-semibold text-tinta-suave underline hover:bg-fondo hover:text-tinta"
+          aria-label={`Sacar a todos de ${sala.nombre}`}
+        >
+          Sacar a todos de la sala
+        </button>
+      )}
     </div>
   )
 }
@@ -746,13 +860,24 @@ function EstadoAvance({ sala, p }: { sala: Sala; p: ProgresoSala | undefined }) 
   if (plan.length === 0) return <span className="text-xs text-tinta-suave">Sin contenidos</span>
   if (paso >= plan.length) return <span className="text-xs font-semibold text-menta-oscuro">✓ Terminó{sala.siguienteSala ? ' · pasando' : ' · esperando'}</span>
   const actual = plan[paso]
+  const actividad = actual.contenido.pasos[actual.numero - 1]?.titulo ?? `Actividad ${actual.numero}`
   return (
-    <span className="flex items-center gap-1.5 text-xs text-tinta-suave" title={`${actual.contenido.titulo}, actividad ${actual.numero}`}>
-      <span className="inline-block h-1.5 w-12 overflow-hidden rounded-full bg-white" aria-hidden="true">
-        <span className="block h-full rounded-full bg-menta" style={{ width: `${(paso / plan.length) * 100}%` }} />
+    <span className="grid gap-0.5 text-xs text-tinta-suave">
+      <span className="flex items-center gap-1.5 truncate text-tinta">
+        <span aria-hidden="true">{actual.contenido.icono}</span>
+        <span className="truncate">{actividad}</span>
       </span>
-      {paso}/{plan.length} · <span aria-hidden="true">{actual.contenido.icono}</span> act. {actual.numero}
-      {p && p.repeticiones > 0 && <b className={p.necesitaAyuda ? 'text-[#9a4d00]' : ''}>· intento {p.repeticiones + 1}</b>}
+      <span className="flex flex-wrap items-center gap-1.5">
+        <span className="inline-block h-1.5 w-12 overflow-hidden rounded-full bg-white" aria-hidden="true">
+          <span className="block h-full rounded-full bg-menta" style={{ width: `${(paso / plan.length) * 100}%` }} />
+        </span>
+        Actividad {paso + 1} de {plan.length}
+        {p?.necesitaAyuda ? (
+          <b className="rounded-full bg-[#fdf1e4] px-1.5 text-[#9a4d00]">🙋 Necesita apoyo · intento {p.repeticiones + 1}</b>
+        ) : (
+          p && p.repeticiones > 0 && <b>· intento {p.repeticiones + 1}</b>
+        )}
+      </span>
     </span>
   )
 }
@@ -769,16 +894,16 @@ function FilaNino({ e, datos, ejecutar, children }: { e: Estudiante; datos: Dato
       ? 'Aún no juega hoy'
       : `Hoy: ${partidas.length} ${partidas.length === 1 ? 'partida' : 'partidas'} · ${minutos(partidas.reduce((n, r) => n + r.duracionMs, 0))} min`
   return (
-    <li
-      {...fila}
-      title={hoy}
-      className={`flex items-center gap-2 rounded-xl py-1.5 pr-2 pl-1 ${activo ? 'bg-menta-fondo ring-2 ring-menta' : 'bg-fondo'} ${pendiente(e.id) !== undefined ? 'animate-pulse' : ''}`}
-    >
+    <li {...fila} className={`flex items-center gap-2 rounded-xl py-1.5 pr-2 pl-1 ${activo ? 'bg-menta-fondo ring-2 ring-menta' : 'bg-fondo'} ${pendiente(e.id) !== undefined ? 'animate-pulse' : ''}`}>
       {asa}
       <EnLinea e={e} online={online} className="size-9 text-xl" />
       <span className="min-w-0 flex-1 leading-tight">
-        <span className="block truncate font-semibold text-tinta">{e.nombre}</span>
+        <span className="flex items-baseline gap-1.5">
+          <span className="truncate font-semibold text-tinta">{e.nombre}</span>
+          {!online && <span className="shrink-0 text-xs text-tinta-suave">· sin dispositivo</span>}
+        </span>
         {children}
+        <span className="block text-xs text-tinta-suave">{hoy}</span>
       </span>
       {emocion && (
         <span title={`Se siente: ${EMOCIONES[emocion].texto}`} className="grid size-8 shrink-0 place-items-center rounded-lg" style={{ background: EMOCIONES[emocion].color }}>
@@ -792,7 +917,7 @@ function FilaNino({ e, datos, ejecutar, children }: { e: Estudiante; datos: Dato
           aria-label={`Cerrar el dispositivo de ${e.nombre}`}
           title="Cerrar dispositivo: el niño vuelve a elegir su perfil"
           onClick={() => void ejecutar(() => repo.cerrarDispositivo(e.id))}
-          className="grid size-8 shrink-0 place-items-center rounded-lg text-tinta-suave hover:bg-white hover:text-tinta"
+          className="grid size-11 shrink-0 place-items-center rounded-lg text-tinta-suave hover:bg-white hover:text-tinta"
         >
           <Icono nombre="salir" className="size-4" />
         </button>
@@ -814,8 +939,12 @@ function IconoContenido({ c, className = 'size-10 text-xl' }: { c: Contenido; cl
 // docente. Guardar un plan nuevo reinicia el avance.
 function EditorPlan({ sala, conAvance, ejecutar, alCerrar }: { sala: Sala; conAvance: number; ejecutar: Ejecutar; alCerrar: () => void }) {
   const [bloques, setBloques] = useState(() => bloquesDePlan(sala.plan))
+  const dialogo = useDialogo<HTMLDivElement>()
   // La actividad que se está configurando: nueva, o una del plan si trae `indice`.
-  const [configurando, setConfigurando] = useState<{ juegoId: string; indice?: number } | null>(null)
+  const [configurando, setConfigurando] = useState<{
+    juegoId: string
+    indice?: number
+  } | null>(null)
 
   useEffect(() => {
     const alTeclear = (e: KeyboardEvent) => e.key === 'Escape' && alCerrar()
@@ -839,15 +968,22 @@ function EditorPlan({ sala, conAvance, ejecutar, alCerrar }: { sala: Sala; conAv
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-tinta/40 p-4" onClick={(e) => e.target === e.currentTarget && alCerrar()}>
-      <div role="dialog" aria-modal="true" aria-labelledby={`plan-${sala.id}`} className="grid max-h-[90dvh] w-full max-w-2xl gap-5 overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
+      <div
+        ref={dialogo}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`plan-${sala.id}`}
+        className="grid max-h-[90dvh] outline-none w-full max-w-2xl gap-5 overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"
+      >
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
             <h2 id={`plan-${sala.id}`} className="text-xl font-bold text-tinta">
               Plan de «{sala.nombre}»
             </h2>
-            <p className="text-sm text-tinta-suave">En orden: contenidos, que traen 3 actividades cada uno, y actividades que configuras tú.</p>
+            <p className="text-sm text-tinta-suave">En orden: contenidos y actividades que configuras tú. En cada contenido toca una actividad para quitarla o cambiarla de lugar. Cada uno trae su dificultad (intermedia si no eliges otra).</p>
           </div>
-          <button type="button" aria-label="Cerrar" onClick={alCerrar} className="grid size-9 place-items-center rounded-xl text-tinta-suave hover:bg-fondo">
+          <button type="button" aria-label="Cerrar" onClick={alCerrar} className="grid size-11 place-items-center rounded-xl text-tinta-suave hover:bg-fondo">
             ✕
           </button>
         </div>
@@ -861,18 +997,20 @@ function EditorPlan({ sala, conAvance, ejecutar, alCerrar }: { sala: Sala; conAv
                 <li key={i} className="flex items-center gap-2 rounded-xl bg-fondo px-2 py-1.5 text-sm" title={detalle}>
                   <span className="grid size-6 place-items-center rounded-full bg-white text-xs font-bold">{i + 1}</span>
                   <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full text-lg" style={{ background: color }}>{icono}</span>
-                  <span className="min-w-0 flex-1 leading-tight">
+                  <span className="grid min-w-0 flex-1 gap-1 leading-tight">
                     <b className="block text-tinta">{titulo}</b>
                     {resumen && <span className="block truncate text-xs text-tinta-suave">{resumen}</span>}
+                    {'contenido' in b && <ElegirPasos bloque={b} alCambiar={(pasos) => setBloques((x) => x.map((y, k) => (k === i ? { ...b, pasos } : y)))} />}
+                    <ElegirDificultad valor={exigenciaDe(b)} alCambiar={(e) => setBloques((x) => x.map((y, k) => (k === i ? conExigencia(b, e) : y)))} />
                   </span>
                   {juegoId && (
-                    <Boton variante="suave" aria-label={`Configurar ${titulo}`} onClick={() => setConfigurando({ juegoId, indice: i })}>
+                    <Boton variante="suave" className="min-h-11 min-w-11" aria-label={`Configurar ${titulo}`} onClick={() => setConfigurando({ juegoId, indice: i })}>
                       <Icono nombre="lapiz" />
                     </Boton>
                   )}
-                  <Boton variante="suave" aria-label="Subir" disabled={i === 0} onClick={() => mover(i, -1)}>↑</Boton>
-                  <Boton variante="suave" aria-label="Bajar" disabled={i === bloques.length - 1} onClick={() => mover(i, 1)}>↓</Boton>
-                  <Boton variante="suave" aria-label={`Quitar ${titulo}`} onClick={() => setBloques((x) => x.filter((_, k) => k !== i))}>✕</Boton>
+                  <Boton variante="suave" className="min-h-11 min-w-11" aria-label="Subir" disabled={i === 0} onClick={() => mover(i, -1)}>↑</Boton>
+                  <Boton variante="suave" className="min-h-11 min-w-11" aria-label="Bajar" disabled={i === bloques.length - 1} onClick={() => mover(i, 1)}>↓</Boton>
+                  <Boton variante="suave" className="min-h-11 min-w-11" aria-label={`Quitar ${titulo}`} onClick={() => setBloques((x) => x.filter((_, k) => k !== i))}>✕</Boton>
                 </li>
               )
             })}
@@ -926,17 +1064,23 @@ function EditorPlan({ sala, conAvance, ejecutar, alCerrar }: { sala: Sala; conAv
                     <span aria-hidden="true">{AREAS[area].icono}</span> {AREAS[area].nombre}
                     <span className="text-xs font-normal text-tinta-suave">{AREAS[area].descripcion}</span>
                   </h4>
-                  <ul className="grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-2">
+                  <ul className="grid grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] gap-2">
                     {delArea.map((c) => (
                       <li key={c.id}>
+                        {/* La descripción va a la vista: en tablet no hay tooltip. */}
                         <button
                           type="button"
-                          title={`${c.descripcion}\n${c.pasos.map((p, k) => `${k + 1}. ${p.titulo}`).join('\n')}`}
-                          onClick={() => setBloques((x) => [...x, { contenido: c.id }])}
-                          className="grid h-full w-full justify-items-center gap-1.5 rounded-xl border border-borde bg-white px-2 py-3 text-center text-sm font-semibold text-tinta transition-colors hover:border-menta hover:bg-menta-fondo"
+                          onClick={() => setBloques((x) => [...x, bloqueContenido(c.id)])}
+                          className="flex h-full w-full items-start gap-2.5 rounded-xl border border-borde bg-white px-3 py-2.5 text-left text-tinta transition-colors hover:border-menta hover:bg-menta-fondo"
                         >
                           <IconoContenido c={c} className="size-11 text-2xl" />
-                          {c.titulo}
+                          <span className="min-w-0 leading-tight">
+                            <b className="block text-sm">{c.titulo}</b>
+                            <span className="mt-0.5 line-clamp-3 block text-xs text-tinta-suave">{c.descripcion}</span>
+                            <span className="mt-1 block text-xs font-semibold text-menta-oscuro">
+                              {c.pasos.length} {c.pasos.length === 1 ? 'actividad' : 'actividades'}
+                            </span>
+                          </span>
                         </button>
                       </li>
                     ))}
@@ -962,6 +1106,68 @@ function EditorPlan({ sala, conAvance, ejecutar, alCerrar }: { sala: Sala; conAv
         </div>
       </div>
     </div>
+  )
+}
+
+// Las actividades de un contenido, en el orden en que se juegan. Tocar una
+// encendida la quita; tocar una apagada la agrega al final. Así «Escucha y toca»
+// puede ir al final o no ir. Siempre queda al menos una.
+function ElegirPasos({ bloque, alCambiar }: { bloque: { contenido: string; pasos: number[] }; alCambiar: (pasos: number[]) => void }) {
+  const c = contenido(bloque.contenido)
+  if (!c || c.pasos.length < 2) return null
+  const apagadas = c.pasos.map((_, k) => k + 1).filter((n) => !bloque.pasos.includes(n))
+  const ficha = (n: number) => {
+    const orden = bloque.pasos.indexOf(n)
+    const encendida = orden >= 0
+    const unica = encendida && bloque.pasos.length === 1
+    return (
+      <li key={n}>
+        <button
+          type="button"
+          aria-pressed={encendida}
+          disabled={unica}
+          title={unica ? 'Debe quedar al menos una actividad' : encendida ? 'Quitar esta actividad' : 'Agregarla al final'}
+          onClick={() => alCambiar(encendida ? bloque.pasos.filter((x) => x !== n) : [...bloque.pasos, n])}
+          className={`flex min-h-9 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed ${
+            encendida ? 'border-menta bg-white text-tinta hover:bg-menta-fondo' : 'border-dashed border-borde bg-transparent text-tinta-suave line-through hover:text-tinta'
+          }`}
+        >
+          <span aria-hidden="true" className={`grid size-4 place-items-center rounded-full text-[10px] ${encendida ? 'bg-menta text-white' : 'bg-borde text-white'}`}>
+            {encendida ? orden + 1 : '+'}
+          </span>
+          {c.pasos[n - 1].titulo}
+        </button>
+      </li>
+    )
+  }
+  return (
+    <ol className="flex flex-wrap gap-1" aria-label={`Actividades de ${c.titulo}, en orden`}>
+      {bloque.pasos.map(ficha)}
+      {apagadas.map(ficha)}
+    </ol>
+  )
+}
+
+// Dificultad de un contenido o actividad en esta sala (intermedia si no se elige otra).
+const exigenciaDe = (b: BloquePlan) => ('paso' in b ? b.paso.exigencia : b.exigencia)
+const conExigencia = (b: BloquePlan, exigencia?: Exigencia): BloquePlan => ('paso' in b ? { paso: { ...b.paso, exigencia } } : { ...b, exigencia })
+
+function ElegirDificultad({ valor, alCambiar }: { valor?: Exigencia; alCambiar: (e?: Exigencia) => void }) {
+  return (
+    <label className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-tinta-suave">
+      Dificultad
+      <select
+        value={valor ?? ''}
+        onChange={(e) => alCambiar((e.target.value || undefined) as Exigencia | undefined)}
+        className="min-h-9 rounded-lg border border-borde bg-white px-2 text-xs font-semibold text-tinta"
+      >
+        {(Object.keys(EXIGENCIAS) as Exigencia[]).map((e) => (
+          <option key={e} value={e === 'intermedio' ? '' : e}>
+            {EXIGENCIAS[e].nombre}
+          </option>
+        ))}
+      </select>
+    </label>
   )
 }
 
@@ -1017,7 +1223,7 @@ function ElegirJuegos({ sala, ejecutar }: { sala: Sala; ejecutar: Ejecutar }) {
         {JUEGOS.map((j) => {
           const activo = sala.juegos.includes(j.id)
           return (
-            <label key={j.id} className={`flex cursor-pointer items-center gap-1.5 rounded-xl border px-2 py-1 text-xs font-semibold ${activo ? 'border-menta bg-menta-fondo' : 'border-borde bg-white'}`}>
+            <label key={j.id} className={`flex min-h-11 cursor-pointer items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold ${activo ? 'border-menta bg-menta-fondo' : 'border-borde bg-white'}`}>
               <input
                 type="checkbox"
                 checked={activo}

@@ -55,7 +55,7 @@ El parque hoy no tiene requisito. Conviene agregarlo y ajustar RF-24.
    - `20261103120000_salas_conectadas_recreo.sql`: **pendiente**. Convierte playground y dibujo en recreos, y crea un recreo con los juegos de cada sala que tenía juegos al final, conectado a ella.
    - Avisar a quienes trabajan en otras ramas, que deben traer estos cambios.
 2. **Regenerar los tipos** de `frontend/src/datos/baseDatos.ts` (hoy están ajustados a mano).
-3. **Generar las voces nuevas** (ver `frontend/scripts/voz/README.md`). Mientras tanto, esas frases usan la voz del navegador.
+3. **Generar las voces nuevas:** `pnpm voz:precargar` en `backend/` (ver `frontend/scripts/voz/README.md`). Mientras tanto, esas frases se generan en vivo la primera vez que suenan.
 4. **Probar en un PC de la sala de computación** con el curso completo. Se simularon 20 niños en un PC de desarrollo; falta confirmar la fluidez en los equipos reales.
 5. **Actualizar el manual** (`docs/Manual_de_usuario_Leer_para_Todos.docx`), que aún describe los emojis, la tienda antigua y el chat.
 6. **Ajustar precios** con datos reales del piloto (`resultados_actividad`). Hoy se basan en una estimación de 30 a 60 monedas por partida.

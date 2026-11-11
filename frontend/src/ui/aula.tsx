@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Icono, type NombreIcono } from './Icono.tsx'
 
@@ -67,7 +67,7 @@ export function Campo({ etiqueta, error, children }: { etiqueta: string; error?:
   )
 }
 
-export const claseEntrada = 'w-full rounded-xl border border-borde bg-white px-3.5 py-2.5 text-tinta placeholder:text-tinta-suave/70 focus:border-menta focus:outline-none focus:ring-2 focus:ring-menta/30'
+export const claseEntrada = 'w-full rounded-xl border border-borde bg-white px-3.5 py-2.5 text-tinta placeholder:text-tinta-suave focus:border-menta focus:outline-none focus:ring-2 focus:ring-menta/30'
 
 // Aviso de consulta fallida en el panel docente, con opción de reintentar.
 export function AvisoError({ alReintentar }: { alReintentar: () => void }) {
@@ -91,4 +91,38 @@ export function FondoAula({ children }: { children: ReactNode }) {
       {children}
     </div>
   )
+}
+
+const ENFOCABLES = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
+// Cuadro de diálogo accesible: al abrir lleva el foco adentro (al campo con
+// autoFocus o al cuadro mismo), Tab no sale de él y al cerrar el foco vuelve a
+// donde estaba. El cuadro debe tener tabIndex={-1}. Escape lo maneja cada cuadro.
+export function useDialogo<T extends HTMLElement>() {
+  const ref = useRef<T>(null)
+  useEffect(() => {
+    const nodo = ref.current
+    if (!nodo) return
+    const previo = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    if (!nodo.contains(document.activeElement)) nodo.focus()
+    const alTeclear = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return
+      const lista = [...nodo.querySelectorAll<HTMLElement>(ENFOCABLES)]
+      if (lista.length === 0) return e.preventDefault()
+      const [primero, ultimo] = [lista[0], lista[lista.length - 1]]
+      if (e.shiftKey && (document.activeElement === primero || document.activeElement === nodo)) {
+        e.preventDefault()
+        ultimo.focus()
+      } else if (!e.shiftKey && document.activeElement === ultimo) {
+        e.preventDefault()
+        primero.focus()
+      }
+    }
+    document.addEventListener('keydown', alTeclear)
+    return () => {
+      document.removeEventListener('keydown', alTeclear)
+      if (previo?.isConnected) previo.focus()
+    }
+  }, [])
+  return ref
 }

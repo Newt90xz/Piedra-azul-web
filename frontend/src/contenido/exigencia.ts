@@ -1,8 +1,8 @@
 import type { Exigencia } from '../dominio/tipos.ts'
 import { mezclar, type Ronda } from './actividades.ts'
 
-// Desafíos por nivel de exigencia: la docente elige uno por niño (Perfil y
-// apoyos) y todas sus actividades se ajustan solas. La actividad es la misma;
+// Dificultad de las actividades: la docente la fija por contenido o actividad
+// en el plan de cada sala (intermedia si no elige). La actividad es la misma;
 // cambian las ayudas y lo que hay que lograr para pasar.
 
 export interface NivelExigencia {
@@ -55,6 +55,25 @@ export const EXIGENCIAS: Record<Exigencia, NivelExigencia> = {
 
 export const nivelDe = (e: Exigencia | undefined) => EXIGENCIAS[e ?? 'intermedio'] ?? EXIGENCIAS.intermedio
 
+// Ciclo de una micro-partida (anatomía de las actividades, sección 2):
+// 1.er intento = 3 estrellas y +10 monedas; tras una pista = 2 y +5;
+// con la respuesta revelada = 1 y +2. Tres aciertos seguidos dan bono de racha.
+export const PUNTAJE = [
+  { estrellas: 3, monedas: 10 },
+  { estrellas: 2, monedas: 5 },
+  { estrellas: 1, monedas: 2 },
+]
+export const BONO_RACHA = 2
+// Práctica (no se puede fallar): solo la recompensa base por completar, sin racha.
+export const PRACTICA = { estrellas: 3, monedas: 2 }
+
+// Monedas posibles al terminar una partida: lo dice el premio («Ganaste 35 monedas»).
+const rondasPosibles = Object.values(EXIGENCIAS).map((n) => n.rondas)
+export const MONEDAS_PARTIDA = {
+  min: Math.min(...rondasPosibles) * Math.min(PRACTICA.monedas, ...PUNTAJE.map((p) => p.monedas)),
+  max: Math.max(...rondasPosibles) * (PUNTAJE[0].monedas + BONO_RACHA),
+}
+
 const ALFABETO = [...'ABCDEFGHIJLMNÑOPRSTUVZ']
 
 // Ajusta una ronda al nivel: menos opciones, teclas o globos que sobran.
@@ -79,15 +98,27 @@ function ajustarRonda(r: Ronda, n: NivelExigencia): Ronda {
       const sobran = r.fichas.filter((f) => !propias.includes(f)).slice(0, n.globosExtra)
       return { ...r, fichas: mezclar([...propias, ...sobran]) }
     }
+    case 'marcar': {
+      // Menos tarjetas en los niveles bajos (4, 6 u 8), con al menos una que
+      // corresponda y una que no.
+      const cuantas = Math.min(r.tarjetas.length, n.maxOpciones * 2)
+      if (r.tarjetas.length <= cuantas) return r
+      const si = r.tarjetas.filter((t) => t.corresponde)
+      const no = r.tarjetas.filter((t) => !t.corresponde)
+      const deSi = Math.max(1, Math.min(si.length, cuantas - 1, Math.round((cuantas * si.length) / r.tarjetas.length)))
+      const quedan = new Set([...si.slice(0, deSi), ...no.slice(0, cuantas - deSi)])
+      return { ...r, tarjetas: r.tarjetas.filter((t) => quedan.has(t)) }
+    }
     default:
       return r
   }
 }
 
-// Arma la partida al nivel del niño: ajusta cada ronda y completa (o recorta)
+// Arma la partida al nivel de la sala: ajusta cada ronda y completa (o recorta)
 // hasta el número de rondas del nivel sin repetir lo trabajado.
-export function partidaConExigencia(generar: () => Ronda[], e: Exigencia | undefined): Ronda[] {
-  const n = nivelDe(e)
+// Recibe el nivel (o su nombre; sin nada, intermedio).
+export function partidaConExigencia(generar: () => Ronda[], e: Exigencia | NivelExigencia | undefined): Ronda[] {
+  const n = typeof e === 'object' ? e : nivelDe(e)
   const rondas = generar()
   for (let intento = 0; rondas.length < n.rondas && intento < 4; intento++) {
     const vistos = new Set(rondas.map((r) => r.item))

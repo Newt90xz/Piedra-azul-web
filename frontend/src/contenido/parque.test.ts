@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DECORADO, JUEGOS_PARQUE, LIMITES, escalaEn, juegoEn, puestoLibre, rutaEntre } from './parque.ts'
+import { DECORADO, JUEGOS_PARQUE, LIMITES, capaDe, escalaEn, juegoEn, profundidad, puestoLibre, rutaEntre } from './parque.ts'
 
 const pisa = (p: { x: number; y: number }) =>
   [...DECORADO, ...JUEGOS_PARQUE].some((o) => o.pie && p.x > o.x - o.pie[0] / 2 + 0.6 && p.x < o.x + o.pie[0] / 2 - 0.6 && p.y > o.y - o.pie[1] + 0.6 && p.y < o.y - 0.6)
@@ -44,5 +44,16 @@ describe('mapa del parque', () => {
   it('elige un puesto libre', () => {
     const columpio = JUEGOS_PARQUE.find((j) => j.id === 'columpio')!
     expect(puestoLibre(columpio, [columpio.puestos[0]])).toEqual(columpio.puestos[1])
+  })
+
+  it('quien juega en la cama o el arenero queda encima, no detrás', () => {
+    for (const id of ['cama', 'arenero', 'columpio', 'balancin']) {
+      const j = JUEGOS_PARQUE.find((o) => o.id === id)!
+      for (const p of j.puestos) expect(profundidad(p), id).toBeGreaterThan(capaDe(j))
+    }
+  })
+
+  it('quien pasa lejos de los juegos se ordena por su altura en el mapa', () => {
+    expect(profundidad({ x: 50, y: 88 })).toBeGreaterThan(profundidad({ x: 50, y: 80 }))
   })
 })

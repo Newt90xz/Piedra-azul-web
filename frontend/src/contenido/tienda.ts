@@ -170,6 +170,13 @@ const PORID = new Map(ARTICULOS.map((a) => [a.id, a]))
 export const articulo = (id: string | undefined) => (id ? PORID.get(id) : undefined)
 export const articulosDe = (espacio: Espacio) => ARTICULOS.filter((a) => a.espacio === espacio)
 
-// Lo que oye el niño si no le alcanza (también lo usa scripts/frasesVoz.ts).
+// Lo que oye el niño si no le alcanza (también lo usa lib/catalogoVoz.ts).
+// El número solo ayuda si es chico: «te faltan 237» no le dice nada a un niño de
+// cuatro años (y así son pocas frases, que quedan generadas de antemano).
+export const MAX_FALTAN_CON_NUMERO = 10
 export const faltanMonedas = (n: number) =>
-  n === 1 ? 'Te falta 1 moneda. ¡Juega para ganar más!' : `Te faltan ${n} monedas. ¡Juega para ganar más!`
+  n === 1
+    ? 'Te falta 1 moneda. ¡Juega para ganar más!'
+    : n <= MAX_FALTAN_CON_NUMERO
+      ? `Te faltan ${n} monedas. ¡Juega para ganar más!`
+      : '¡Te faltan muchas monedas! Juega para ganar más.'

@@ -74,6 +74,69 @@ export const PALABRAS: Palabra[] = [
   p('galleta', ['ga', 'lle', 'ta'], '🍪'),
   p('dado', ['da', 'do'], '🎲'),
   p('noche', ['no', 'che'], '🌃'),
+  // Personas y cosas (antes, para las oraciones).
+  p('niño', ['ni', 'ño'], '👦'),
+  p('niña', ['ni', 'ña'], '👧'),
+  p('agua', ['a', 'gua'], '💧'),
+  p('libro', ['li', 'bro'], '📚'),
+  p('pez', ['pez'], '🐟'),
+  // Familias silábicas con pocas palabras (ME, MI, MU, PI, PO, PA, LA, LO, LE, SA, SE, SU).
+  p('melón', ['me', 'lón'], '🍈'),
+  p('medusa', ['me', 'du', 'sa'], '🪼'),
+  p('micrófono', ['mi', 'cró', 'fo', 'no'], '🎙️'),
+  p('mochila', ['mo', 'chi', 'la'], '🎒'),
+  p('música', ['mú', 'si', 'ca'], '🎵'),
+  p('piña', ['pi', 'ña'], '🍍'),
+  p('pino', ['pi', 'no'], '🌲'),
+  p('pollo', ['po', 'llo'], '🍗'),
+  p('polera', ['po', 'le', 'ra'], '👕'),
+  p('paloma', ['pa', 'lo', 'ma'], '🕊️'),
+  p('payaso', ['pa', 'ya', 'so'], '🤡'),
+  p('paraguas', ['pa', 'ra', 'guas'], '☂️'),
+  p('lata', ['la', 'ta'], '🥫'),
+  p('lana', ['la', 'na'], '🧶'),
+  p('loro', ['lo', 'ro'], '🦜'),
+  p('lechuga', ['le', 'chu', 'ga'], '🥬'),
+  p('salero', ['sa', 'le', 'ro'], '🧂'),
+  p('semáforo', ['se', 'má', 'fo', 'ro'], '🚦'),
+  p('serrucho', ['se', 'rru', 'cho'], '🪚'),
+  p('sushi', ['su', 'shi'], '🍣'),
+  // Vocal inicial (E, I, O y U tenían solo dos palabras).
+  p('escoba', ['es', 'co', 'ba'], '🧹'),
+  p('espejo', ['es', 'pe', 'jo'], '🪞'),
+  p('erizo', ['e', 'ri', 'zo'], '🦔'),
+  p('imán', ['i', 'mán'], '🧲'),
+  p('iguana', ['i', 'gua', 'na'], '🦎'),
+  p('oreja', ['o', 're', 'ja'], '👂'),
+  p('oveja', ['o', 've', 'ja'], '🐑'),
+  p('ola', ['o', 'la'], '🌊'),
+  p('uña', ['u', 'ña'], '💅'),
+  p('araña', ['a', 'ra', 'ña'], '🕷️'),
+  p('anillo', ['a', 'ni', 'llo'], '💍'),
+  p('ardilla', ['ar', 'di', 'lla'], '🐿️'),
+  p('auto', ['au', 'to'], '🚗'),
+  // Palabras de 1 y de 4 sílabas, para contar y comparar largos.
+  p('tren', ['tren'], '🚆'),
+  p('pie', ['pie'], '🦶'),
+  p('mar', ['mar'], '⛵'),
+  p('mariquita', ['ma', 'ri', 'qui', 'ta'], '🐞'),
+  p('bicicleta', ['bi', 'ci', 'cle', 'ta'], '🚲'),
+  p('cocodrilo', ['co', 'co', 'dri', 'lo'], '🐊'),
+  p('calabaza', ['ca', 'la', 'ba', 'za'], '🎃'),
+  p('dinosaurio', ['di', 'no', 'sau', 'rio'], '🦕'),
+  p('fresa', ['fre', 'sa'], '🍓'),
+  // Palabras de dos sílabas directas (formar, completar y escribir palabras).
+  p('mesa', ['me', 'sa'], '🟫'),
+  p('foca', ['fo', 'ca'], '🦭'),
+  p('vaca', ['va', 'ca'], '🐄'),
+  p('nube', ['nu', 'be'], '☁️'),
+  p('dedo', ['de', 'do'], '☝️'),
+  p('cama', ['ca', 'ma'], '🛏️'),
+  p('bota', ['bo', 'ta'], '👢'),
+  // Más personas y animales para las oraciones. «Guagua»: bebé, en Chile.
+  p('guagua', ['gua', 'gua'], '👶'),
+  p('pájaro', ['pá', 'ja', 'ro'], '🐦'),
+  p('abuela', ['a', 'bue', 'la'], '👵'),
 ]
 
 // Nivel 1: vocales y consonantes de fácil articulación (M, P, L, S, T).
@@ -138,10 +201,20 @@ export const CONSONANTES_SILABAS = ['m', 'p', 'l', 's'] as const
 export const VOCALES = ['a', 'e', 'i', 'o', 'u'] as const
 
 // Nivel 3: palabras bisílabas CV + CV del MVP.
-export const PALABRAS_NIVEL_3 = ['mama', 'papa', 'mano', 'mapa', 'mono', 'pato', 'puma', 'luna', 'lupa', 'sapo', 'sopa', 'taza', 'gato', 'casa']
+export const PALABRAS_NIVEL_3 = [
+  'mama', 'papa', 'mano', 'mapa', 'mono', 'pato', 'puma', 'luna', 'lupa', 'sapo', 'sopa', 'taza', 'gato', 'casa',
+  'mesa', 'foca', 'vaca', 'nube', 'dedo', 'cama', 'bota', 'pina', 'pino', 'lata', 'lana', 'loro',
+]
 
+// Para ids y búsquedas: «niño» \u2192 «nino».
 export function quitarTildes(s: string) {
   return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+}
+
+// Para comparar cómo suena o se escribe: quita los acentos pero no la Ñ, que es
+// otra letra («piña» no rima con «luna»).
+export function sinAcentos(s: string) {
+  return s.toLowerCase().replace(/[áéíóúü]/g, (c) => 'aeiouu'['áéíóúü'.indexOf(c)])
 }
 
 export function palabra(id: string): Palabra {

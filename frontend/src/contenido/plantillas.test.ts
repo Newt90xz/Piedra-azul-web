@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { Ronda } from './actividades.ts'
-import { actividad } from './actividades.ts'
+import { JUEGOS } from './actividades.ts'
 import { ALFABETO, PALABRAS, aplicarBanco } from './banco.ts'
-import { bloquesDePlan, categoriaDe, contenidosDePlan, nombreActividad, pasosDeContenidos, planDe, planDeBloques, planDeSala } from './contenidos.ts'
+import { bloqueContenido, bloquesDePlan, categoriaDe, gruposDePlan, contenidosDePlan, nombreActividad, pasosDeContenidos, planDe, planDeBloques, planDeSala } from './contenidos.ts'
 import { PLANTILLAS_SISTEMA, juegoConfigurable, letrasDe } from './plantillas.ts'
 
 const juego = juegoConfigurable('escucha-letra')!
@@ -71,7 +71,8 @@ describe('Escucha y toca la letra', () => {
   })
 
   it('aparece en los reportes con su nombre y categoría', () => {
-    expect(actividad('escucha-letra')?.juego).toBeFalsy()
+    // Es una actividad de sala, no un juego del recreo.
+    expect(JUEGOS.some((j) => j.id === 'escucha-letra')).toBe(false)
     expect(nombreActividad('escucha-letra')).toBe('Escucha y toca la letra')
     expect(categoriaDe('escucha-letra')).toBe('letras')
   })
@@ -106,6 +107,18 @@ describe('plan por pasos', () => {
     expect(bloques).toHaveLength(3)
     expect(planDeBloques(bloques)).toEqual(pasos)
     expect(contenidosDePlan(pasos)).toEqual(['silabas-m', 'vocales'])
+  })
+
+  it('un contenido puede saltarse la actividad de escuchar o dejarla al final', () => {
+    const sinEscuchar = [{ juego: 'silabas-s-2' }, { juego: 'silabas-s-3' }, { juego: 'silabas-s-1' }]
+    const bloques = bloquesDePlan(sinEscuchar)
+    expect(bloques).toEqual([{ contenido: 'silabas-s', pasos: [2, 3, 1] }])
+    expect(planDeBloques(bloques)).toEqual(sinEscuchar)
+    expect(contenidosDePlan(sinEscuchar)).toEqual(['silabas-s'])
+
+    const grupos = gruposDePlan(planDeSala(planDeBloques([{ contenido: 'silabas-l', pasos: [3] }, bloqueContenido('vocales')])))
+    expect(grupos.map((g) => g.pasos.map((p) => p.numero))).toEqual([[3], [1, 2, 3]])
+    expect(grupos.map((g) => g.inicio)).toEqual([0, 1])
   })
 })
 

@@ -122,8 +122,16 @@ export default function Inicio() {
         </nav>
       </main>
 
-      <footer className="mx-auto w-full max-w-6xl px-6 pb-6 text-xs text-tinta-suave">
-        Bases Curriculares de Educación Parvularia · Lenguaje Verbal, nivel Transición
+      <footer className="mx-auto grid w-full max-w-6xl gap-1 px-6 pb-6 text-xs text-tinta-suave">
+        <span>Bases Curriculares de Educación Parvularia · Lenguaje Verbal, nivel Transición</span>
+        {/* Lo exige la licencia de los pictogramas (CC BY-NC-SA). */}
+        <span>
+          Pictogramas: Sergio Palao. Origen:{' '}
+          <a href="https://arasaac.org" className="underline" target="_blank" rel="noreferrer">
+            ARASAAC
+          </a>
+          . Licencia: CC (BY-NC-SA). Propiedad: Gobierno de Aragón (España).
+        </span>
       </footer>
     </div>
   )

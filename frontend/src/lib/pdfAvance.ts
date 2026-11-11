@@ -222,7 +222,6 @@ interface DatosEstudiante {
   observaciones: Observacion[]
 }
 
-const NIVELES = { 1: 'Sonidos', 2: 'Sílabas', 3: 'Palabras' } as const
 
 export async function descargarEstudiantePdf({ curso, estudiante, resultados, emociones, observaciones }: DatosEstudiante) {
   const { doc, autoTable, ancho, alto, finalY } = await nuevoDocumento()
@@ -232,7 +231,7 @@ export async function descargarEstudiantePdf({ curso, estudiante, resultados, em
     doc,
     ancho,
     `Informe de avance: ${estudiante.nombre}`,
-    `${curso} · Nivel ${estudiante.nivelHabilitado} (${NIVELES[estudiante.nivelHabilitado]})${desde ? ` · Desde el ${fechaLarga(desde)}` : ''}`,
+    `${curso}${desde ? ` · Desde el ${fechaLarga(desde)}` : ''}`,
   )
 
   const semana = deEstaSemana(resultados)

@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as EventoPuntero } from 'react'
 import { COLORES, GROSORES, LETRAS, SELLOS } from '../../contenido/dibujo.ts'
+import { letraParaRepasar } from '../../contenido/frases.ts'
 import { efecto, hablar } from '../../lib/audio.ts'
 import { Icono } from '../../ui/Icono.tsx'
 import { BotonNino, useNino } from '../../ui/nino.tsx'
@@ -199,7 +200,7 @@ export default function Dibujo() {
                     ...LETRAS.map((l) => (
                       <BotonNino
                         key={l}
-                        voz={`Letra ${l}`}
+                        voz={letraParaRepasar(l)}
                         onClick={() => {
                           setLetra(l)
                           setBandeja(null)

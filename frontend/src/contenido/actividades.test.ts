@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { ACTIVIDADES, CANCION_RATON, JUEGOS, MAX_OPCIONES, actividad, ordenarSilabas } from './actividades.ts'
-import { quitarTildes } from './banco.ts'
+import { JUEGOS, MAX_OPCIONES, actividad, completaLaSilaba, ordenarSilabas } from './actividades.ts'
 
 // Las rondas se arman al azar: se generan varias veces para cubrir combinaciones.
 const VECES = 30
 
-describe.each(ACTIVIDADES.filter((a) => a.id !== CANCION_RATON.id))('$id', (a) => {
+describe.each(JUEGOS)('$id', (a) => {
   it('genera una micro-partida válida', () => {
     expect(a.objetivo.trim()).not.toBe('')
     for (let n = 0; n < VECES; n++) {
@@ -22,50 +21,36 @@ describe.each(ACTIVIDADES.filter((a) => a.id !== CANCION_RATON.id))('$id', (a) =
           expect(new Set(ids).size).toBe(ids.length)
           expect(ids).toContain(r.correctaId)
         }
-        if (r.tipo === 'construir') {
-          expect(r.fichas.length).toBeLessThanOrEqual(MAX_OPCIONES)
-          expect(r.fichas).toEqual(expect.arrayContaining(r.palabra.silabas))
-        }
       }
     }
   })
 })
 
-describe('sonido-inicial', () => {
-  it('solo una imagen empieza con el sonido pedido', () => {
-    for (let n = 0; n < VECES; n++) {
-      for (const r of actividad('sonido-inicial')!.generar()) {
-        if (r.tipo !== 'elegir') throw new Error('se esperaba una ronda de elegir')
-        const empiezan = r.opciones.filter((o) => quitarTildes(o.audio).startsWith(r.item.toLowerCase()))
-        expect(empiezan.map((o) => o.id)).toEqual([r.correctaId])
-      }
-    }
-  })
-})
-
-describe('práctica', () => {
-  it('solo explorar y choque son práctica: el resto mide avance', () => {
-    expect(ACTIVIDADES.filter((a) => a.practica).map((a) => a.id)).toEqual(['explorar-sonido', 'choque-sonidos'])
-  })
-})
-
-describe('categorías', () => {
-  it('toda actividad con rondas que miden avance tiene categoría (solo los cuentos no)', () => {
-    const sin = ACTIVIDADES.filter((a) => !a.categoria).map((a) => a.id)
-    expect(sin).toEqual(['cuento-tito', CANCION_RATON.id])
-  })
-})
-
-describe('juegos', () => {
-  it('se asignan el choque de sonidos, los aplausos silábicos y los globos de palabras', () => {
+describe('juegos del recreo', () => {
+  it('son el choque de sonidos, los aplausos silábicos y los globos de palabras', () => {
     expect(JUEGOS.map((a) => a.id)).toEqual(['choque-sonidos', 'aplausos', 'globos-palabras'])
+  })
+
+  it('todos miden una categoría; solo el choque es práctica', () => {
+    expect(JUEGOS.every((a) => a.categoria)).toBe(true)
+    expect(JUEGOS.filter((a) => a.practica).map((a) => a.id)).toEqual(['choque-sonidos'])
+  })
+})
+
+describe('actividades retiradas', () => {
+  it('se siguen nombrando y clasificando para las partidas antiguas', () => {
+    expect(actividad('caza-letras')).toMatchObject({ titulo: 'Caza de letras', categoria: 'letras' })
+    expect(actividad('explorar-sonido')?.practica).toBe(true)
+    // Los cuentos no miden avance.
+    expect(actividad('cuento-tito')?.categoria).toBeUndefined()
+    // No se pueden jugar.
+    expect(actividad('caza-letras')?.generar).toBeUndefined()
   })
 })
 
 describe('sílabas con opciones', () => {
   it('ordena de la A a la U las opciones para completar palabras', () => {
-    const rondas = actividad('falta-silaba')!.generar()
-    for (const ronda of rondas) {
+    for (const ronda of completaLaSilaba()) {
       if (ronda.tipo !== 'elegir') throw new Error('se esperaba una ronda de elegir')
       const opciones = ronda.opciones.map((opcion) => opcion.audio)
       expect(opciones).toEqual(ordenarSilabas(opciones))

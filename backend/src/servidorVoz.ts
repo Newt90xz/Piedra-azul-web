@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from 'node:child_process'
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
 import { config } from './config.ts'
 
 // Levanta el servidor de Pocket-TTS junto con el backend (POCKET_TTS_COMANDO,
@@ -75,7 +75,9 @@ export async function levantarServidorVoz() {
   const cerrar = () => {
     if (!proceso?.pid) return
     // En Windows, con shell: true hay que cerrar el árbol entero (cmd → python).
-    if (process.platform === 'win32') spawn('taskkill', ['/pid', String(proceso.pid), '/T', '/F'])
+    // Síncrono: al salir, Node ya no espera a un proceso lanzado con spawn y
+    // Pocket-TTS quedaba vivo ocupando el puerto.
+    if (process.platform === 'win32') spawnSync('taskkill', ['/pid', String(proceso.pid), '/T', '/F'], { stdio: 'ignore' })
     else proceso.kill()
   }
   process.on('exit', cerrar)

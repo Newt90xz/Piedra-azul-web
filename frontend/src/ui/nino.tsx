@@ -147,7 +147,8 @@ export function NinoShell() {
   const conectado = repo.alumnoDelDispositivo() === id
   const { datos: estado, error, recargar } = useConsulta(async () => (conectado ? repo.estadoAlumno() : null), [id, conectado])
   // La voz parte apagada; el niño la enciende con el altavoz. Al salir de la vista vuelve a apagarse.
-  const [mudo, setMudo] = useState(true)
+  // Voz encendida por defecto: el niño puede apagarla con el altavoz.
+  const [mudo, setMudo] = useState(false)
   const [titulo, fijarTitulo] = useState<ReactNode>(null)
   const [emocion, setEmocion] = useState<Emocion | null>(() => emocionGuardada(id))
 

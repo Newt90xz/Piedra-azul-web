@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { articuloConPrecio, colorDePiel, frasePrecio } from '../../contenido/frases.ts'
 import { COLORES_PELO, EXPRESIONES, PIELES, personajePorDefecto, vestir } from '../../contenido/personaje.ts'
 import { articulosDe, faltanMonedas, type Articulo, type EspacioOpcional } from '../../contenido/tienda.ts'
 import { repo } from '../../datos/index.ts'
@@ -11,7 +12,7 @@ import { BotonNino, useNino } from '../../ui/nino.tsx'
 
 // RF-24: tienda y vestidor. Tocar algo lo prueba al instante en el personaje; lo
 // gratis o ya comprado queda puesto, lo demás pide confirmar. Cada pantalla
-// muestra como máximo 4 opciones (RNF-02) y todo se dice en voz alta.
+// muestra como máximo 4 opciones (RNF-02); los nombres de accesorios no se narran.
 
 interface Opcion {
   id: string
@@ -46,7 +47,7 @@ function deArticulos(espacio: EspacioOpcional | 'pelo' | 'ojos'): Opcion[] {
 
 const pieles: Opcion[] = PIELES.map((_, i) => ({
   id: `piel_${i + 1}`,
-  voz: `Color de piel ${i + 1}`,
+  voz: colorDePiel(i),
   aplicar: (p) => ({ ...p, piel: i + 1 }),
   puesto: (p) => p.piel === i + 1,
 }))
@@ -169,14 +170,13 @@ export function Tienda({ alCerrar }: { alCerrar?: () => void }) {
     if (!tiene(o)) {
       const precio = o.articulo!.precio
       setProbando(o)
-      hablar(estudiante.monedas >= precio ? `${o.voz}, ${precio} monedas` : faltanMonedas(precio - estudiante.monedas))
+      hablar(estudiante.monedas >= precio ? frasePrecio(precio) : faltanMonedas(precio - estudiante.monedas))
       return
     }
     setProbando(null)
     setOcupado(true)
     if (await guardar(o.aplicar(guardado))) {
       efecto('toque', silenciado)
-      hablar(o.voz)
     }
     setOcupado(false)
   }
@@ -207,7 +207,7 @@ export function Tienda({ alCerrar }: { alCerrar?: () => void }) {
           className="tarjeta-nino grid min-h-0 w-full flex-1 place-items-end justify-items-center overflow-hidden rounded-[2rem] border-3 border-nino-azul bg-cover bg-bottom"
           style={{ backgroundImage: `url(${import.meta.env.BASE_URL}tienda/escenario.svg)` }}
         >
-          <DibujoPersonaje personaje={lucido} color={estudiante.color} className="mb-[3%] max-h-[86%] w-[72%] max-w-[22rem]" />
+          <DibujoPersonaje personaje={lucido} color={estudiante.color} className="mb-[10%] max-h-[86%] w-[72%] max-w-[22rem]" />
         </div>
         {probando ? (
           <div className="flex shrink-0 items-center gap-4" role="group" aria-label={`Comprar ${probando.voz}`}>
@@ -256,7 +256,8 @@ export function Tienda({ alCerrar }: { alCerrar?: () => void }) {
             return (
               <li key={o.id} className="min-h-0">
                 <BotonNino
-                  voz={propio || !precio ? o.voz : `${o.voz}, ${precio} monedas`}
+                  voz={propio || !precio ? o.voz : articuloConPrecio(o.voz, precio)}
+                  leerAlApuntar={false}
                   aria-pressed={puesto}
                   disabled={ocupado}
                   onClick={() => void tocar(o)}

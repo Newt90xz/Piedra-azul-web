@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { SALUDO_ESPERA } from '../../contenido/frases.ts'
 import { efecto, hablar } from '../../lib/audio.ts'
 import { PERSONAJES } from '../../ui/fondoNino.tsx'
 
@@ -37,11 +38,11 @@ function nuevoGlobo(): Globo {
 
 const sinMovimiento = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 
-export function MiniJuego({ saludo = 'Mientras esperas a tu profe, ¡revienta los globos!' }: { saludo?: string }) {
+// `esperando`: espera a que la docente lo asigne (muestra el reloj); en un recreo, no.
+export function MiniJuego({ saludo = SALUDO_ESPERA, esperando = true }: { saludo?: string; esperando?: boolean }) {
   const [quieto] = useState(sinMovimiento)
   const [globos, setGlobos] = useState<Globo[]>(() => (quieto ? Array.from({ length: 4 }, nuevoGlobo) : []))
   const [puntos, setPuntos] = useState(0)
-  const anunciado = useRef(0)
 
   useEffect(() => hablar(saludo), [saludo])
 
@@ -51,14 +52,6 @@ export function MiniJuego({ saludo = 'Mientras esperas a tu profe, ¡revienta lo
     const t = window.setInterval(() => setGlobos((g) => (g.length < MAX_GLOBOS ? [...g, nuevoGlobo()] : g)), CADA_MS)
     return () => window.clearInterval(t)
   }, [quieto])
-
-  // Cada 10 globos, un refuerzo hablado.
-  useEffect(() => {
-    if (puntos > 0 && puntos % 10 === 0 && anunciado.current !== puntos) {
-      anunciado.current = puntos
-      hablar(`¡Muy bien! ¡${puntos} globos!`)
-    }
-  }, [puntos])
 
   const quitar = (id: number) => setGlobos((g) => g.filter((x) => x.id !== id))
 
@@ -75,10 +68,12 @@ export function MiniJuego({ saludo = 'Mientras esperas a tu profe, ¡revienta lo
   return (
     <main className="mx-auto flex h-full max-w-5xl flex-col px-6 pt-4 pb-5">
       <div className="mb-3 flex shrink-0 flex-wrap items-center justify-center gap-4 text-center">
-        <p className="flex items-center gap-2 text-[1.4em] leading-none" aria-label="Esperando a tu profe">
-          <span aria-hidden="true" className="animate-bounce">⏳</span>
-          <span aria-hidden="true">🧑‍🏫</span>
-        </p>
+        {esperando && (
+          <p className="flex items-center gap-2 text-[1.4em] leading-none" aria-label="Esperando a tu profe">
+            <span aria-hidden="true" className="animate-bounce">⏳</span>
+            <span aria-hidden="true">🧑‍🏫</span>
+          </p>
+        )}
         <p
           aria-live="polite"
           aria-label={`${puntos} globos`}

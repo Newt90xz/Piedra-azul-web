@@ -1,19 +1,22 @@
-import type { Imagen, Nivel, Palabra } from '../dominio/tipos.ts'
-import {
-  ALFABETO,
-  CONSONANTES_SILABAS,
-  LETRAS,
-  PALABRAS,
-  PALABRAS_NIVEL_3,
-  VOCALES,
-  laLetra,
-  nombreLetra,
-  palabra,
-  quitarTildes,
-} from './banco.ts'
+import type { Imagen, Palabra } from '../dominio/tipos.ts'
+import { ALFABETO, CONSONANTES_SILABAS, PALABRAS, PALABRAS_NIVEL_3, VOCALES, laLetra, nombreLetra, palabra, quitarTildes } from './banco.ts'
+
+// Mecánicas de las rondas y los juegos del recreo. Lo que el niño trabaja en una
+// sala de actividades está en contenidos.ts (contenidos de 3 o 4 actividades) y
+// plantillas.ts (actividades que configura la docente).
 
 // Regla de oro 3: nunca más de 4 opciones por pantalla.
 export const MAX_OPCIONES = 4
+
+// Una tarjeta para marcar: un dibujo, lo que se escucha al tocarla (una
+// palabra u oración), el texto escrito si lo lleva, y si corresponde con el dibujo.
+export interface Tarjeta {
+  id: string
+  imagen: Imagen
+  texto?: string
+  audio: string
+  corresponde: boolean
+}
 
 export interface Opcion {
   id: string
@@ -40,20 +43,20 @@ export type Ronda =
     })
   | (RondaBase & { tipo: 'construir'; palabra: Palabra; fichas: string[]; pista: string })
   | (RondaBase & { tipo: 'aplausos'; palabra: Palabra; pista: string })
-  | (RondaBase & { tipo: 'explorar'; grafema: string; fonema: string; apoyo: string; ejemplo: Palabra })
   | (RondaBase & { tipo: 'choque'; consonante: string; vocal: string })
   // Respuesta escrita con el teclado en pantalla, SIEMPRE en mayúscula y sin tildes.
   // `letras`: las teclas que se muestran (las de la respuesta y algunas más).
   | (RondaBase & { tipo: 'escribir'; respuesta: string; imagen?: Imagen; audio: string; letras: string[]; pista: string })
   // Globos con sílabas que suben: se revientan en orden para formar la palabra.
   | (RondaBase & { tipo: 'globos'; palabra: Palabra; fichas: string[]; pista: string })
-
-export type GrupoActividad = Nivel | 'cuentos'
+  // Conciencia léxica: una grilla de tarjetas y se marcan con una X las que corresponden.
+  | (RondaBase & { tipo: 'marcar'; tarjetas: Tarjeta[]; pista: string })
 
 // Qué mide una actividad, para los reportes de la docente: así una letra no se
 // compara con una sílaba, una rima o una palabra. Orden = orden en pantalla.
 export const CATEGORIAS = {
   auditiva: 'Discriminación auditiva',
+  oraciones: 'Conciencia léxica',
   letras: 'Vocales y letras',
   silabas: 'Sílabas',
   conteo: 'Conteo de sílabas',
@@ -64,20 +67,16 @@ export const CATEGORIAS = {
 
 export type Categoria = keyof typeof CATEGORIAS
 
+// Un juego del recreo (la docente elige cuáles en la tarjeta del recreo).
 export interface Actividad {
   id: string
-  grupo: GrupoActividad
   titulo: string
   objetivo: string
   icono: string
-  // Sin categoría no entra al avance (cuentos y canciones: no miden una letra o sílaba).
   categoria?: Categoria
   generar: () => Ronda[]
-  // Sin respuesta incorrecta posible (explorar, choque): no mide avance ni da racha.
+  // Sin respuesta incorrecta posible (choque): no mide avance ni da racha.
   practica?: boolean
-  // Juego que la docente puede asignar a una sala. Las demás mecánicas quedan
-  // deshabilitadas hasta que estén terminadas.
-  juego?: boolean
   // «¿Cómo se juega?» antes de empezar; sin esto se usa el del tipo de ronda.
   instrucciones?: string
 }
@@ -88,20 +87,13 @@ export const COMO_SE_JUEGA: Record<Ronda['tipo'], string> = {
   elegir: 'Escucha con atención y toca la respuesta correcta.',
   construir: 'Toca las sílabas en orden para armar la palabra.',
   aplausos: 'Toca las palmas para contar las sílabas. Después toca el número.',
-  explorar: 'Toca la letra para escuchar cómo suena.',
   choque: 'Toca el botón y mira cómo se juntan los sonidos.',
   escribir: 'Mira el dibujo y escribe con las letras grandes de abajo.',
   globos: 'Revienta los globos con las sílabas en orden para formar la palabra.',
+  marcar: 'Toca cada tarjeta para escucharla. Marca con una X las que corresponden con el dibujo y toca el visto bueno.',
 }
 
 export const instruccionesDe = (rondas: Ronda[], propias?: string) => propias ?? (rondas[0] ? COMO_SE_JUEGA[rondas[0].tipo] : '')
-
-export const GRUPOS: { id: GrupoActividad; titulo: string; icono: string; color: string; audio: string }[] = [
-  { id: 1, titulo: 'Sonidos', icono: '👂', color: 'var(--color-nino-azul)', audio: 'Sonidos' },
-  { id: 2, titulo: 'Sílabas', icono: '👏', color: 'var(--color-nino-menta)', audio: 'Sílabas' },
-  { id: 3, titulo: 'Palabras', icono: '🧩', color: 'var(--color-nino-lila)', audio: 'Palabras' },
-  { id: 'cuentos', titulo: 'Cuentos', icono: '📖', color: 'var(--color-nino-amarillo)', audio: 'Cuentos y canciones' },
-]
 
 // Fisher-Yates: `sort(() => Math.random() - 0.5)` no reparte las posiciones por
 // igual y la respuesta correcta tendería a quedar en el mismo lugar.
@@ -115,7 +107,6 @@ export function mezclar<T>(a: readonly T[]) {
 }
 export const tomar = <T,>(a: readonly T[], n: number) => mezclar(a).slice(0, n)
 const MAYUS = (s: string) => s.toUpperCase()
-const opcionPalabra = (w: Palabra): Opcion => ({ id: w.id, imagen: w.imagen, audio: w.texto })
 
 export function ordenarSilabas(silabas: readonly string[]) {
   const ordenVocal = (silaba: string) => {
@@ -125,59 +116,7 @@ export function ordenarSilabas(silabas: readonly string[]) {
   return [...silabas].sort((a, b) => ordenVocal(a) - ordenVocal(b) || a.localeCompare(b, 'es'))
 }
 
-function empiezaCon(w: Palabra, prefijo: string) {
-  return quitarTildes(w.texto).startsWith(quitarTildes(prefijo))
-}
-
-// ---------- Nivel 1: sonidos ----------
-
-function explorarSonido(): Ronda[] {
-  return tomar(LETRAS, 5).map((l) => ({
-    tipo: 'explorar',
-    item: l.grafema,
-    grafema: l.grafema,
-    fonema: l.fonema,
-    apoyo: l.apoyoArticulatorio,
-    ejemplo: palabra(l.ejemplos[0]),
-    instruccion: 'Toca la letra y escucha su sonido.',
-    refuerzo: `¡Muy bien! La ${nombreLetra(l.id)}, de ${palabra(l.ejemplos[0]).texto}.`,
-  }))
-}
-
-function sonidoInicial(): Ronda[] {
-  return tomar(LETRAS, 5).map((l) => {
-    const correcta = palabra(tomar(l.ejemplos, 1)[0])
-    const distractores = tomar(PALABRAS.filter((w) => !empiezaCon(w, l.id)), 2)
-    return {
-      tipo: 'elegir',
-      item: l.grafema,
-      estimulo: { texto: l.grafema },
-      opciones: mezclar([correcta, ...distractores].map(opcionPalabra)),
-      correctaId: correcta.id,
-      instruccion: `Toca el dibujo que empieza con ${laLetra(l.id)}.`,
-      pista: `¡Casi! Busca el que empieza con ${laLetra(l.id)}. ¡Inténtalo otra vez!`,
-      refuerzo: `¡Excelente! ${correcta.texto} empieza con ${laLetra(l.id)}.`,
-    }
-  })
-}
-
-function cazaDeLetras(): Ronda[] {
-  return tomar(LETRAS, 5).map((l) => {
-    const otras = tomar(LETRAS.filter((x) => x.id !== l.id), 2)
-    return {
-      tipo: 'elegir',
-      item: l.grafema,
-      estimulo: {},
-      opciones: mezclar([l, ...otras]).map((x) => ({ id: x.id, texto: x.grafema, audio: nombreLetra(x.id) })),
-      correctaId: l.id,
-      instruccion: `Toca la letra ${nombreLetra(l.id)}.`,
-      pista: `¡Casi! Busca ${laLetra(l.id)}. ¡Otra vez!`,
-      refuerzo: `¡Bien! Esa es ${laLetra(l.id)}.`,
-    }
-  })
-}
-
-// ---------- Nivel 2: sílabas ----------
+// ---------- Sonidos y sílabas ----------
 
 function choqueDeSonidos(): Ronda[] {
   const pares = CONSONANTES_SILABAS.flatMap((c) => VOCALES.map((v) => [c, v] as const))
@@ -204,24 +143,6 @@ function aplausosSilabicos(): Ronda[] {
   }))
 }
 
-function silabaInicial(): Ronda[] {
-  const candidatas = PALABRAS.filter((w) => w.silabas[0].length === 2 && CONSONANTES_SILABAS.some((c) => w.id.startsWith(c)))
-  return tomar(candidatas, 5).map((correcta) => {
-    const s = quitarTildes(correcta.silabas[0])
-    const distractores = tomar(PALABRAS.filter((w) => !empiezaCon(w, s[0])), 2)
-    return {
-      tipo: 'elegir',
-      item: MAYUS(s),
-      estimulo: { texto: MAYUS(s) },
-      opciones: mezclar([correcta, ...distractores].map(opcionPalabra)),
-      correctaId: correcta.id,
-      instruccion: `Toca la imagen que empieza con ${s}.`,
-      pista: `¡Casi! ${s}… ${correcta.texto}. ¡Inténtalo otra vez!`,
-      refuerzo: `¡Excelente! ${MAYUS(s)} de ${correcta.texto}.`,
-    }
-  })
-}
-
 // Actividad configurable (contenido/plantillas.ts): suena una letra y se toca cuál
 // es, entre las que eligió la docente. Con pocas letras, se repiten hasta completar.
 const RONDAS_ESCUCHA_LETRA = 5
@@ -246,7 +167,7 @@ export function escuchaLaLetra(ids: readonly string[] = ALFABETO.map((l) => l.id
   })
 }
 
-// ---------- Nivel 3: palabras ----------
+// ---------- Palabras ----------
 
 const nivel3 = () => PALABRAS_NIVEL_3.map(palabra)
 
@@ -282,22 +203,6 @@ export function globosDePalabras(): Ronda[] {
   })
 }
 
-function queDiceAqui(): Ronda[] {
-  return tomar(nivel3(), 5).map((w) => {
-    const distractores = tomar(nivel3().filter((x) => x.id !== w.id), 2)
-    return {
-      tipo: 'elegir',
-      item: w.texto,
-      estimulo: { silabas: w.silabas.map(MAYUS) },
-      opciones: mezclar([w, ...distractores].map(opcionPalabra)),
-      correctaId: w.id,
-      instruccion: 'Une las sílabas y toca la foto correcta.',
-      pista: `¡Casi! Escucha: ${w.silabas.join('… ')}. ¡Otra vez!`,
-      refuerzo: `¡Muy bien! Dice ${w.texto}.`,
-    }
-  })
-}
-
 export function completaLaSilaba(): Ronda[] {
   return tomar(nivel3(), 5).map((w) => {
     const falta = w.silabas[1]
@@ -315,81 +220,33 @@ export function completaLaSilaba(): Ronda[] {
   })
 }
 
-// ---------- Módulo transversal: cuentos y canciones ----------
-
-export type Trozo = string | { palabra: string }
-
-export interface Cuento {
-  id: string
-  titulo: string
-  escenas: Trozo[][]
-  preguntas: Ronda[]
-}
-
-const w = (id: string) => ({ palabra: id })
-
-export const CUENTO_TITO: Cuento = {
-  id: 'cuento-tito',
-  titulo: 'Tito y la coneja',
-  escenas: [
-    ['Había una vez una', w('tortuga'), 'llamada Tito. Tito vivía en una', w('casa'), 'muy pequeña.'],
-    ['Un día decidió visitar a su amiga la', w('coneja'), '. Juntos fueron al', w('parque'), 'y recogieron muchas', w('flores'), '.'],
-    ['Al final del día, Tito y la', w('coneja'), 'volvieron felices a', w('casa'), 'para comer una rica', w('zanahoria'), '.'],
-  ],
-  preguntas: [
-    pregunta('¿Quién es Tito?', 'tortuga', ['coneja', 'pollito']),
-    // Sin «casa» como distractor: el cuento termina con ellos volviendo a casa.
-    pregunta('¿A dónde fueron Tito y la coneja?', 'parque', ['isla', 'playa']),
-    pregunta('¿Qué recogieron juntos?', 'flor', ['pelota', 'helado']),
-    pregunta('¿Qué comieron al final del día?', 'zanahoria', ['queso', 'chocolate']),
-  ],
-}
-
-function pregunta(texto: string, correcta: string, otras: string[]): Ronda {
-  const c = palabra(correcta)
-  return {
-    tipo: 'elegir',
-    item: 'comprension',
-    estimulo: {},
-    opciones: mezclar([c, ...otras.map(palabra)].map(opcionPalabra)),
-    correctaId: c.id,
-    instruccion: texto,
-    pista: '¡Casi! Piensa en el cuento. ¡Inténtalo otra vez!',
-    refuerzo: `¡Muy bien! ${c.texto}.`,
-  }
-}
-
-export const CANCION_RATON: { id: string; titulo: string; versos: Trozo[][] } = {
-  id: 'cancion-raton',
-  titulo: 'El ratón chiquitito',
-  versos: [
-    ['Un', w('raton'), 'muy chiquitito come', w('queso'), 'y', w('chocolate'), '.'],
-    ['Juega con su', w('pelota'), 'y baila con un', w('gato'), '.'],
-    ['Cuando llega la', w('luna'), 'se va a dormir a su', w('casa'), '.'],
-  ],
-}
-
 // ---------- Catálogo ----------
 
-export const ACTIVIDADES: Actividad[] = [
-  { id: 'explorar-sonido', grupo: 1, titulo: 'Explorar el sonido', objetivo: 'Explora el sonido de las letras', icono: '👄', categoria: 'letras', generar: explorarSonido, practica: true },
-  { id: 'sonido-inicial', grupo: 1, titulo: '¿Qué empieza con este sonido?', objetivo: 'Encuentra el dibujo que empieza con este sonido', icono: '🔎', categoria: 'letras', generar: sonidoInicial },
-  { id: 'escucha-letra', grupo: 1, titulo: 'Escucha y toca la letra', objetivo: 'Escucha y toca la letra', icono: '🔤', categoria: 'letras', generar: () => escuchaLaLetra(), instrucciones: 'Escucha el sonido y toca la letra.' },
-  { id: 'caza-letras', grupo: 1, titulo: 'Caza de letras', objetivo: 'Encuentra la letra que suena', icono: '🫧', categoria: 'letras', generar: cazaDeLetras },
-  { id: 'choque-sonidos', grupo: 2, titulo: 'El choque de sonidos', objetivo: 'Une los sonidos para formar sílabas', icono: '💥', categoria: 'silabas', generar: choqueDeSonidos, practica: true, juego: true },
-  { id: 'aplausos', grupo: 2, titulo: 'Aplausos silábicos', objetivo: 'Cuenta las sílabas con palmadas', icono: '👏', categoria: 'conteo', generar: aplausosSilabicos, juego: true },
-  { id: 'globos-palabras', grupo: 3, titulo: 'Globos de palabras', objetivo: 'Revienta los globos y forma la palabra', icono: '🎈', categoria: 'palabras', generar: globosDePalabras, juego: true },
-  { id: 'silaba-inicial', grupo: 2, titulo: '¿Con qué sílaba empieza?', objetivo: 'Encuentra la palabra que empieza con esta sílaba', icono: '🔤', categoria: 'silabas', generar: silabaInicial },
-  { id: 'constructor', grupo: 3, titulo: 'Constructor de palabras', objetivo: 'Une las sílabas para formar una palabra', icono: '🧱', categoria: 'palabras', generar: constructorDePalabras },
-  { id: 'que-dice', grupo: 3, titulo: '¿Qué dice aquí?', objetivo: 'Une las sílabas y encuentra la palabra', icono: '🖼️', categoria: 'palabras', generar: queDiceAqui },
-  { id: 'falta-silaba', grupo: 3, titulo: 'Completa la sílaba', objetivo: 'Encuentra la sílaba que falta', icono: '🧩', categoria: 'palabras', generar: completaLaSilaba },
-  { id: CUENTO_TITO.id, grupo: 'cuentos', titulo: CUENTO_TITO.titulo, objetivo: 'Escucha el cuento y responde las preguntas', icono: '🐢', generar: () => CUENTO_TITO.preguntas },
-  { id: CANCION_RATON.id, grupo: 'cuentos', titulo: CANCION_RATON.titulo, objetivo: 'Escucha la canción y sigue la letra', icono: '🎵', generar: () => [] },
+// Los juegos que la docente puede poner en un recreo (punto de llegada tras los contenidos).
+export const JUEGOS: Actividad[] = [
+  { id: 'choque-sonidos', titulo: 'El choque de sonidos', objetivo: 'Une los sonidos para formar sílabas', icono: '💥', categoria: 'silabas', generar: choqueDeSonidos, practica: true },
+  { id: 'aplausos', titulo: 'Aplausos silábicos', objetivo: 'Cuenta las sílabas con palmadas', icono: '👏', categoria: 'conteo', generar: aplausosSilabicos },
+  { id: 'globos-palabras', titulo: 'Globos de palabras', objetivo: 'Revienta los globos y forma la palabra', icono: '🎈', categoria: 'palabras', generar: globosDePalabras },
 ]
 
-export function actividad(id: string) {
-  return ACTIVIDADES.find((a) => a.id === id)
-}
+// Actividades que ya no se juegan (las reemplazaron los contenidos por sala):
+// quedan sus datos para nombrar y clasificar las partidas antiguas en los
+// reportes. Las de práctica no cuentan en el avance; las sin categoría (cuentos), tampoco.
+type ActividadRetirada = Pick<Actividad, 'id' | 'titulo' | 'icono' | 'categoria' | 'practica'>
+const RETIRADAS: ActividadRetirada[] = [
+  { id: 'explorar-sonido', titulo: 'Explorar el sonido', icono: '👄', categoria: 'letras', practica: true },
+  { id: 'sonido-inicial', titulo: '¿Qué empieza con este sonido?', icono: '🔎', categoria: 'letras' },
+  { id: 'caza-letras', titulo: 'Caza de letras', icono: '🫧', categoria: 'letras' },
+  { id: 'silaba-inicial', titulo: '¿Con qué sílaba empieza?', icono: '🔤', categoria: 'silabas' },
+  { id: 'constructor', titulo: 'Constructor de palabras', icono: '🧱', categoria: 'palabras' },
+  { id: 'que-dice', titulo: '¿Qué dice aquí?', icono: '🖼️', categoria: 'palabras' },
+  { id: 'falta-silaba', titulo: 'Completa la sílaba', icono: '🧩', categoria: 'palabras' },
+  { id: 'cuento-tito', titulo: 'Tito y la coneja', icono: '🐢' },
+  { id: 'cancion-raton', titulo: 'El ratón chiquitito', icono: '🎵' },
+]
 
-// Lo que la docente puede elegir como juego de una sala (punto de llegada tras los contenidos).
-export const JUEGOS = ACTIVIDADES.filter((a) => a.juego)
+// Un juego del recreo o una actividad retirada; las de los contenidos y las
+// configurables se buscan en contenidos.ts (nombreActividad, categoriaDe).
+export function actividad(id: string): (ActividadRetirada & Partial<Actividad>) | undefined {
+  return JUEGOS.find((a) => a.id === id) ?? RETIRADAS.find((a) => a.id === id)
+}

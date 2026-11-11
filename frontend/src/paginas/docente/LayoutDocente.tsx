@@ -4,15 +4,16 @@ import { useSesion } from '../../app/Sesion.tsx'
 import { repo } from '../../datos/index.ts'
 import type { Curso } from '../../dominio/tipos.ts'
 import { useConsulta } from '../../lib/useConsulta.ts'
-import { AvisoError, Boton, claseEntrada } from '../../ui/aula.tsx'
+import { AvisoError, Boton, claseEntrada, useDialogo } from '../../ui/aula.tsx'
 import { Icono, type NombreIcono } from '../../ui/Icono.tsx'
 import PrimerCurso from './PrimerCurso.tsx'
 
 const MENU: { to: string; texto: string; icono: NombreIcono; fin?: boolean }[] = [
   { to: '/docente', texto: 'Inicio', icono: 'casa', fin: true },
+  // En el orden de la clase: lo que se usa en vivo, después preparar y revisar.
+  { to: '/docente/salas', texto: 'Salas', icono: 'aula' },
   { to: '/docente/estudiantes', texto: 'Estudiantes', icono: 'personas' },
   { to: '/docente/avance', texto: 'Avance del curso', icono: 'grafico' },
-  { to: '/docente/salas', texto: 'Salas', icono: 'aula' },
 ]
 
 export default function LayoutDocente() {
@@ -200,6 +201,7 @@ function EliminarCurso({ curso, alCerrar }: { curso: Curso; alCerrar: () => void
   const { eliminarCurso } = useSesion()
   const { datos: estudiantes, error: errorCarga } = useConsulta(() => repo.listarEstudiantes(curso.id), [curso.id])
   const [escrito, setEscrito] = useState('')
+  const dialogo = useDialogo<HTMLDivElement>()
   const [borrando, setBorrando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const n = estudiantes?.length ?? 0
@@ -225,7 +227,7 @@ function EliminarCurso({ curso, alCerrar }: { curso: Curso; alCerrar: () => void
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-tinta/40 p-4" onClick={(e) => e.target === e.currentTarget && !borrando && alCerrar()}>
-      <div role="alertdialog" aria-modal="true" aria-labelledby="titulo-eliminar-curso" className="grid w-full max-w-md gap-4 rounded-3xl bg-white p-6 shadow-2xl">
+      <div ref={dialogo} tabIndex={-1} role="alertdialog" aria-modal="true" aria-labelledby="titulo-eliminar-curso" className="outline-none grid w-full max-w-md gap-4 rounded-3xl bg-white p-6 shadow-2xl">
         <span className="grid size-12 place-items-center rounded-2xl bg-red-50 text-[#b42318]">
           <Icono nombre="basura" className="size-6" />
         </span>

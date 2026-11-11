@@ -7,8 +7,6 @@ import { AvisoError, BotonEnlace, Encabezado, claseEntrada } from '../../ui/aula
 import { Icono } from '../../ui/Icono.tsx'
 import { Avatar } from '../../ui/Avatar.tsx'
 
-const NIVELES = { 1: 'Sonidos', 2: 'Sílabas', 3: 'Palabras' } as const
-
 export default function Estudiantes() {
   const { cursoId } = useSesion()
   const [buscar, setBuscar] = useState('')
@@ -45,8 +43,7 @@ export default function Estudiantes() {
               <span className="min-w-0 flex-1">
                 <span className="block text-lg font-bold text-tinta">{e.nombre}</span>
                 <span className="block text-sm text-tinta-suave">
-                  Nivel {e.nivelHabilitado} · {NIVELES[e.nivelHabilitado]}
-                  {!e.activo && ' · Desactivado'}
+                  {e.activo ? 'Activo' : 'Desactivado'}
                 </span>
               </span>
               <span className="rounded-lg bg-celeste-fondo px-3 py-1.5 text-sm font-semibold text-marino">Abrir ficha</span>

@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import type { Opcion, Ronda } from '../contenido/actividades.ts'
-import { nombreLetra } from '../contenido/banco.ts'
 import { hablar } from '../lib/audio.ts'
+import { enFrase } from '../lib/textoVoz.ts'
 import { Icono } from '../ui/Icono.tsx'
 import { BotonNino, ImagenNino } from '../ui/nino.tsx'
 
@@ -22,14 +22,14 @@ export function RondaActual({ ronda, ...resto }: Omit<PropsRonda<Ronda['tipo']>,
       return <RondaConstruir ronda={ronda} {...resto} />
     case 'aplausos':
       return <RondaAplausos ronda={ronda} {...resto} />
-    case 'explorar':
-      return <RondaExplorar ronda={ronda} {...resto} />
     case 'choque':
       return <RondaChoque ronda={ronda} {...resto} />
     case 'escribir':
       return <RondaEscribir ronda={ronda} {...resto} />
     case 'globos':
       return <RondaGlobos ronda={ronda} {...resto} />
+    case 'marcar':
+      return <RondaMarcar ronda={ronda} {...resto} />
   }
 }
 
@@ -55,11 +55,13 @@ function RondaElegir({ ronda, resuelta, revelar, errores, alIntentar }: PropsRon
 
   const conImagen = ronda.opciones.some((o) => o.imagen)
   const palabraVisible = errores > 0
+  const silabaOculta = silabaObjetivo(ronda.item)
+  const silabaDeImagen = estimulo.silabas ? ronda.correctaId : silabaOculta
 
   return (
     <div className="grid justify-items-center gap-10">
       {!estimulo.silabas && (estimulo.audio || estimulo.texto || estimulo.imagen) && (
-        <Estimulo ronda={ronda} resuelta={resuelta} palabraVisible={palabraVisible} />
+        <Estimulo ronda={ronda} resuelta={resuelta} palabraVisible={palabraVisible} silabaOculta={resuelta ? undefined : silabaDeImagen} />
       )}
       {estimulo.silabas && (
         <div className="flex flex-wrap items-center justify-center gap-6">
@@ -68,6 +70,7 @@ function RondaElegir({ ronda, resuelta, revelar, errores, alIntentar }: PropsRon
               <PictogramaPalabra
                 imagen={estimulo.imagen}
                 palabraVisible={palabraVisible}
+                silabaOculta={resuelta ? undefined : silabaDeImagen}
                 className="estimulo-imagen-pictograma"
               />
             </span>
@@ -105,7 +108,11 @@ function RondaElegir({ ronda, resuelta, revelar, errores, alIntentar }: PropsRon
                 {o.imagen ? (
                   <span className="grid justify-items-center gap-1">
                     <ImagenNino imagen={o.imagen} className="text-[3.4em]" />
-                    {palabraVisible && <span className="animate-aparecer text-[0.8em] leading-tight font-bold">{MAYUS(o.audio)}</span>}
+                    {palabraVisible && (
+                      <span className="animate-aparecer text-[0.8em] leading-tight font-bold">
+                        {resuelta ? MAYUS(o.audio) : censurarSilaba(o.audio, silabaOculta)}
+                      </span>
+                    )}
                   </span>
                 ) : (
                   <span className="text-[2em] font-bold">{o.texto}</span>
@@ -128,9 +135,28 @@ function RondaElegir({ ronda, resuelta, revelar, errores, alIntentar }: PropsRon
   )
 }
 
-// Una palabra o sílaba sola la voz la dice mal muchas veces («mano» → «mando»):
-// dentro de una frase corta sale clara.
-const enFrase = (audio: string) => `Escucha: ${audio}.`
+
+function silabaObjetivo(item: string) {
+  const silaba = item.startsWith('-') ? item.slice(1) : item
+  return [...silaba].length <= 2 && /^[a-záéíóúüñ]+$/i.test(silaba) ? item : undefined
+}
+
+function censurarSilaba(texto: string, objetivo?: string) {
+  const letras = [...MAYUS(texto)]
+  const silaba = objetivo?.replace(/^-/, '')
+  const objetivoLetras = silaba ? [...MAYUS(silaba)] : []
+  if (!objetivoLetras.length || objetivoLetras.length > letras.length) return letras.join('')
+
+  const plegar = (letra: string) => letra.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es')
+  const coincideEn = (inicio: number) => objetivoLetras.every((letra, indice) => plegar(letras[inicio + indice]) === plegar(letra))
+  const inicio = objetivo?.startsWith('-')
+    ? letras.length - objetivoLetras.length
+    : letras.findIndex((_, indice) => indice <= letras.length - objetivoLetras.length && coincideEn(indice))
+
+  if (inicio < 0 || !coincideEn(inicio)) return letras.join('')
+  letras.splice(inicio, objetivoLetras.length, ...Array.from({ length: objetivoLetras.length }, () => '█'))
+  return letras.join('')
+}
 
 // Lo que se pregunta: una imagen, una letra o sílaba, o solo un sonido. Se toca
 // para escucharlo otra vez (sin depender de la lectura).
@@ -138,10 +164,12 @@ function Estimulo({
   ronda,
   resuelta,
   palabraVisible,
+  silabaOculta,
 }: {
   ronda: Extract<Ronda, { tipo: 'elegir' }>
   resuelta: boolean
   palabraVisible: boolean
+  silabaOculta?: string
 }) {
   const { estimulo } = ronda
   const soloAudio = !estimulo.imagen && !estimulo.texto
@@ -149,6 +177,7 @@ function Estimulo({
     <PictogramaPalabra
       imagen={estimulo.imagen}
       palabraVisible={palabraVisible}
+      silabaOculta={silabaOculta}
       className="estimulo-imagen-pictograma"
     />
   ) : estimulo.texto ? (
@@ -171,10 +200,12 @@ function Estimulo({
 function PictogramaPalabra({
   imagen,
   palabraVisible,
+  silabaOculta,
   className,
 }: {
   imagen: NonNullable<Extract<Ronda, { tipo: 'elegir' }>['estimulo']['imagen']>
   palabraVisible: boolean
+  silabaOculta?: string
   className: string
 }) {
   return (
@@ -184,7 +215,7 @@ function PictogramaPalabra({
         aria-hidden={!palabraVisible}
         className={`estimulo-palabra min-w-0 text-center text-[1.2em] leading-tight font-bold [overflow-wrap:anywhere] ${palabraVisible ? 'estimulo-palabra-visible' : ''}`}
       >
-        {MAYUS(imagen.alt)}
+        {palabraVisible ? censurarSilaba(imagen.alt, silabaOculta) : MAYUS(imagen.alt)}
       </span>
     </span>
   )
@@ -225,6 +256,7 @@ function RondaConstruir({ ronda, resuelta, revelar, errores, alIntentar }: Props
         <PictogramaPalabra
           imagen={palabra.imagen}
           palabraVisible={errores > 0}
+          silabaOculta={resuelta ? undefined : siguiente}
           className={`estimulo-imagen-pictograma ${resuelta ? 'animate-pop' : ''}`}
         />
       </span>
@@ -320,35 +352,70 @@ function RondaAplausos({ ronda, resuelta, revelar, errores, alIntentar }: PropsR
   )
 }
 
-// ---------- Explorar el sonido (RF-04, RF-19) ----------
+// ---------- Conciencia léxica: marcar las tarjetas que corresponden ----------
 
-function RondaExplorar({ ronda, resuelta, alIntentar }: PropsRonda<'explorar'>) {
-  const [escuchada, setEscuchada] = useState(false)
+// Como la ficha de papel: una grilla de tarjetas, cada una con su dibujo (y su
+// palabra, si la lleva) y una casilla. Tocar la tarjeta la dice; tocar la casilla
+// la marca con una X. Al final, el visto bueno. Si algo está mal, las marcas
+// equivocadas se sacuden y se borran; las que faltan quedan para buscarlas.
+function RondaMarcar({ ronda, resuelta, revelar, alIntentar }: PropsRonda<'marcar'>) {
+  const [marcadas, setMarcadas] = useState<string[]>([])
+  const [sacudir, setSacudir] = useState<string[]>([])
 
-  const tocar = () => {
-    setEscuchada(true)
-    hablar(`La ${nombreLetra(ronda.grafema)}, de ${ronda.ejemplo.texto}.`)
+  const alternar = (id: string) => {
+    if (resuelta) return
+    setMarcadas((m) => (m.includes(id) ? m.filter((x) => x !== id) : [...m, id]))
   }
 
+  const revisar = () => {
+    if (resuelta) return
+    const malas = marcadas.filter((id) => !ronda.tarjetas.find((t) => t.id === id)?.corresponde)
+    const faltan = ronda.tarjetas.filter((t) => t.corresponde && !marcadas.includes(t.id))
+    if (malas.length === 0 && faltan.length === 0) return alIntentar(true)
+    setSacudir(malas)
+    window.setTimeout(() => {
+      setSacudir([])
+      setMarcadas((m) => m.filter((id) => !malas.includes(id)))
+    }, 450)
+    alIntentar(false, `${malas.length} mal, ${faltan.length} faltan`)
+  }
+
+  const columnas = ronda.tarjetas.length <= 4 ? 2 : ronda.tarjetas.length <= 6 ? 3 : 4
+
   return (
-    <div className="grid justify-items-center gap-8">
-      <BotonNino voz={`Letra ${nombreLetra(ronda.grafema)}`} onClick={tocar} className="grid size-[4.5em] place-items-center text-[2.2em] font-bold">
-        {ronda.grafema}
-      </BotonNino>
-      {escuchada && (
-        <div className="animate-aparecer flex flex-wrap items-center justify-center gap-8">
-          <span className="flex flex-col items-center gap-2 rounded-3xl bg-white p-5">
-            <ImagenNino imagen={ronda.ejemplo.imagen} className="size-[2.8em] text-[2.8em]" />
-            <span className="text-[0.9em] font-bold">{ronda.ejemplo.texto}</span>
-          </span>
-          {/* RF-19: marcador hasta tener la ilustración de labios y lengua. */}
-          <span className="flex max-w-xs items-center gap-3 rounded-3xl bg-nino-lila p-5 font-sans text-base">
-            <span aria-hidden="true" className="text-5xl">👄</span>
-            {ronda.apoyo}
-          </span>
-        </div>
+    <div className="grid justify-items-center gap-5">
+      <ul className="grid w-full max-w-5xl gap-3" style={{ gridTemplateColumns: `repeat(${columnas}, minmax(0, 1fr))` }}>
+        {ronda.tarjetas.map((t) => {
+          const marcada = marcadas.includes(t.id)
+          const bien = (resuelta || revelar) && t.corresponde
+          return (
+            <li
+              key={t.id}
+              className={`tarjeta-nino relative grid justify-items-center gap-1 rounded-3xl border-3 p-2 ${sacudir.includes(t.id) ? 'animate-sacudir' : ''} ${
+                resuelta && t.corresponde ? 'animate-pop border-nino-ok bg-nino-menta' : bien ? 'border-[#e6c84d] bg-nino-amarillo' : 'border-nino-azul bg-[#fde7ea]'
+              }`}
+            >
+              <button onClick={() => hablar(t.texto ? enFrase(t.audio) : t.audio)} aria-label={`Escuchar: ${t.audio}`} className="grid justify-items-center gap-1 rounded-2xl">
+                <ImagenNino imagen={t.imagen} className="size-[2.4em] text-[2.4em]" />
+                {t.texto && <span className="text-[0.75em] leading-tight font-bold">{t.texto}</span>}
+              </button>
+              <button
+                onClick={() => alternar(t.id)}
+                aria-pressed={marcada}
+                aria-label={marcada ? `Quitar la X de ${t.audio}` : `Marcar ${t.audio}`}
+                className="absolute bottom-2 left-2 grid size-[1.6em] place-items-center rounded-lg border-3 border-nino-borde bg-white text-[1em] leading-none font-bold text-[#c0392b]"
+              >
+                {marcada ? '✕' : ''}
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+      {!resuelta && (
+        <BotonNino voz="Listo" disabled={marcadas.length === 0} onClick={revisar} className="grid size-20 place-items-center border-nino-ok bg-nino-menta disabled:opacity-40">
+          <Icono nombre="check" className="size-10" />
+        </BotonNino>
       )}
-      {escuchada && !resuelta && <Siguiente alTocar={() => alIntentar(true)} />}
     </div>
   )
 }
@@ -551,7 +618,12 @@ function RondaGlobos({ ronda, resuelta, revelar, errores, alIntentar }: PropsRon
     <div className="grid w-full justify-items-center gap-4">
       <div className="flex flex-wrap items-center justify-center gap-4">
         <span className="tarjeta-nino flex min-w-0 items-center justify-center rounded-3xl border-3 border-nino-azul bg-white px-4 py-2">
-          <PictogramaPalabra imagen={palabra.imagen} palabraVisible={errores > 0} className={`estimulo-imagen-pictograma ${resuelta ? 'animate-pop' : ''}`} />
+          <PictogramaPalabra
+            imagen={palabra.imagen}
+            palabraVisible={errores > 0}
+            silabaOculta={resuelta ? undefined : siguiente}
+            className={`estimulo-imagen-pictograma ${resuelta ? 'animate-pop' : ''}`}
+          />
         </span>
         <div className={`flex gap-3 rounded-3xl p-2 ${resuelta ? 'animate-pop bg-nino-menta' : ''}`}>
           {palabra.silabas.map((sil, i) => (

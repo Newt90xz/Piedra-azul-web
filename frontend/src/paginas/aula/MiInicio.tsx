@@ -34,7 +34,7 @@ export default function MiInicio() {
 
 function Recreo({ actividad, juegos }: { actividad: ActividadRecreo; juegos: string[] }) {
   if (actividad === 'dibujo') return <Dibujo />
-  if (actividad === 'globos') return <Espera voz="¡Es hora de recreo! ¡Revienta los globos!" />
+  if (actividad === 'globos') return <Espera recreo />
   if (actividad === 'juegos') return <Juegos ids={juegos} />
   return <Playground />
 }

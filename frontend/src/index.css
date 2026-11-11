@@ -348,11 +348,33 @@ body {
 .monito-desliza { animation: monito-desliza 0.6s ease-in-out infinite; }
 
 /* Jugando: lo decide el puesto donde está parado, así todos ven lo mismo. */
+/* Columpio y balancín: el niño y las piezas del juego se mueven juntos. Ángulo,
+   duración y retraso los pone Playground (de COLUMPIO y BALANCIN en parque.ts),
+   así todas las piezas de un mismo juego van al mismo compás. */
 @keyframes juega-columpio {
-  from { transform: rotate(-20deg); }
-  to { transform: rotate(20deg); }
+  from { transform: rotate(calc(-1 * var(--grados))); }
+  to { transform: rotate(var(--grados)); }
 }
-.juega-columpio { transform-origin: 50% -90%; animation: juega-columpio 1.1s ease-in-out infinite alternate; }
+/* El niño gira en torno a la barra: --cuerda es cuánto más arriba que sus pies está. */
+.juega-columpio { transform-origin: 50% calc(100% - var(--cuerda)); animation: juega-columpio 1s ease-in-out infinite alternate; }
+/* Cadenas y asiento: el dibujo tiene la barra en (140, 34) de 420 × 340. */
+.columpio-pieza { transform-origin: 33.333% 10%; }
+.columpio-pieza.mece { animation: juega-columpio 1s ease-in-out infinite alternate; }
+
+/* La tabla gira en el perno: (210, 92) de 420 × 180. */
+@keyframes balancin-tabla {
+  from { transform: rotate(calc(-1 * var(--grados))); }
+  to { transform: rotate(var(--grados)); }
+}
+.balancin-tabla { transform-origin: 50% 51.111%; transform: rotate(var(--reposo)); }
+.balancin-tabla.mece { animation: balancin-tabla 1s ease-in-out infinite alternate; }
+/* El niño sube y baja lo mismo que su punta de la tabla: --brazo es cuánto se
+   aleja del perno, con signo (a la izquierda, negativo). */
+@keyframes juega-balancin {
+  from { transform: translateY(calc(var(--brazo) * sin(-1 * var(--grados)))); }
+  to { transform: translateY(calc(var(--brazo) * sin(var(--grados)))); }
+}
+.juega-balancin { transform: translateY(calc(var(--brazo) * sin(var(--reposo)))); animation: juega-balancin 1s ease-in-out infinite alternate; }
 @keyframes juega-resbalin {
   0% { transform: translate(-120%, -135%); opacity: 0; }
   12% { transform: translate(-120%, -135%); opacity: 1; }
@@ -360,12 +382,6 @@ body {
   100% { transform: translate(0, 0); opacity: 1; }
 }
 .juega-resbalin { animation: juega-resbalin 2.4s cubic-bezier(0.5, 0, 0.8, 0.6) infinite; }
-@keyframes juega-balancin {
-  from { transform: translateY(14%); }
-  to { transform: translateY(-20%); }
-}
-.juega-balancin { animation: juega-balancin 1s ease-in-out infinite alternate; }
-.juega-balancin.juega-puesto-1 { animation-direction: alternate-reverse; }
 @keyframes juega-cama {
   0%, 100% { transform: translateY(0) scale(1.08, 0.92); }
   12% { transform: translateY(-6%) scale(0.96, 1.05); }

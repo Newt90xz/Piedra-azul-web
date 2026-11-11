@@ -87,7 +87,7 @@ Por eso se usa un **canal público con nombre secreto** (`salas.canal_parque`), 
 
 ## 5. Voz
 
-`frontend/scripts/frasesVoz.ts` ya recorre el catálogo nuevo. Hay que correr la generación (`scripts/voz/README.md`); mientras falte un trozo, se usa la voz del navegador.
+`frontend/src/lib/catalogoVoz.ts` ya recorre el catálogo nuevo. Para dejar las frases generadas de antemano: `pnpm voz:precargar` en `backend/` (ver `frontend/scripts/voz/README.md`); mientras falte una, se genera en vivo la primera vez que suena.
 
 ## 6. Archivos
 
@@ -106,4 +106,4 @@ Por eso se usa un **canal público con nombre secreto** (`salas.canal_parque`), 
 | `frontend/src/ui/Avatar.tsx` | Dibuja el personaje |
 | `frontend/src/dominio/tipos.ts`, `datos/repositorio*.ts`, `datos/baseDatos.ts` | Tipos y métodos nuevos |
 | `frontend/src/datos/index.ts` | Modo demo con `VITE_DEMO=si` |
-| `frontend/scripts/frasesVoz.ts` | Frases del catálogo |
+| `frontend/src/lib/catalogoVoz.ts` | Frases que se pregeneran |

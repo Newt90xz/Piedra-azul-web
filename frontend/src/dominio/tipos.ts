@@ -33,9 +33,7 @@ export interface Ajustes {
   reducirAnimaciones: boolean
   silenciarEfectos: boolean
   tematica: Tematica
-  exigencia: Exigencia
 }
-
 // RF-24: personaje por capas. Solo guarda ids (contenido/tienda.ts), sin datos del niño.
 export interface Personaje {
   // 1 a 6 (contenido/personaje.ts).
@@ -168,6 +166,8 @@ export interface PasoSala {
   parametros?: ParametrosJuego
   // Nombre de la plantilla de la que salió, para reconocerla en el plan.
   titulo?: string
+  // Dificultad que fijó la docente para esta actividad en esta sala; sin esto, intermedia.
+  exigencia?: Exigencia
 }
 
 // Una configuración guardada para reutilizarla (RF-15). Al agregarla a un plan se

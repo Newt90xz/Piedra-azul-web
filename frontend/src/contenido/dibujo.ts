@@ -1,5 +1,5 @@
 // Sala de dibujo (paginas/aula/Dibujo.tsx). Los nombres son lo que dice cada
-// botón al apuntarlo; scripts/frasesVoz.ts los incluye en la voz pregrabada.
+// botón al apuntarlo; lib/catalogoVoz.ts los incluye en la voz pregenerada.
 
 export const COLORES = [
   { color: '#263238', nombre: 'Negro' },

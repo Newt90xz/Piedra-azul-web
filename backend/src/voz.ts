@@ -10,7 +10,7 @@ import { esperarServidorVoz } from './servidorVoz.ts'
 // se guarda en disco: la segunda vez que alguien la necesita sale al instante y
 // no ocupa el procesador.
 
-const MAX_CARACTERES = 300
+export const MAX_CARACTERES = 300
 
 mkdirSync(config.vozCache, { recursive: true })
 
@@ -109,9 +109,14 @@ function soltarTurno() {
 
 const esConexionRechazada = (e: unknown) => /ECONNREFUSED|ECONNRESET|fetch failed/.test(detalleError(e))
 
+// Dónde queda guardado el audio de una frase. La clave sale del texto que de
+// verdad lee el modelo: si cambia cómo se prepara, se genera de nuevo.
+export const archivoDeFrase = (texto: string) => resolve(config.vozCache, `${clave(paraLeer(normalizar(texto)))}.wav`)
+
 // Pide la frase a Pocket-TTS y la guarda completa en `archivo`. Reintenta si el
-// servidor aún no acepta conexiones (recién levantado).
-async function generar(texto: string, archivo: string) {
+// servidor aún no acepta conexiones (recién levantado). La usa también
+// scripts/precargarVoz.ts para dejar generadas de antemano las frases que se repiten.
+export async function generarFrase(texto: string, archivo: string) {
   const temporal = `${archivo}.${process.pid}.tmp`
   for (let intento = 1; ; intento++) {
     try {
@@ -141,8 +146,7 @@ export async function voz(req: Request, res: Response) {
     res.status(400).json({ error: 'texto_invalido' })
     return
   }
-  // La clave sale del texto que de verdad lee el modelo: si cambia cómo se prepara, se genera de nuevo.
-  const archivo = resolve(config.vozCache, `${clave(paraLeer(texto))}.wav`)
+  const archivo = archivoDeFrase(texto)
   // Con el largo correcto y soporte de rangos: el navegador sabe cuándo termina
   // y no vuelve a pedir (ni a repetir) el audio.
   const enviar = () =>
@@ -160,7 +164,7 @@ export async function voz(req: Request, res: Response) {
       try {
         // Nadie la espera ya (el niño pasó a otra frase): no se ocupa el modelo en ella.
         if (!precarga && esperando.size === 0) return
-        if (!existsSync(archivo)) await generar(texto, archivo)
+        if (!existsSync(archivo)) await generarFrase(texto, archivo)
       } finally {
         soltarTurno()
       }

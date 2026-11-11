@@ -1,4 +1,4 @@
-import type { ContextoPartida, IntentoRonda, Nivel, Palabra, ParametrosJuego, PasoSala, Sala } from '../dominio/tipos.ts'
+import type { ContextoPartida, Exigencia, IntentoRonda, Nivel, Palabra, ParametrosJuego, PasoSala, Sala } from '../dominio/tipos.ts'
 import {
   actividad,
   completaLaSilaba,
@@ -11,7 +11,8 @@ import {
   type Opcion,
   type Ronda,
 } from './actividades.ts'
-import { CONSONANTES_SILABAS, LETRAS, PALABRAS, PALABRAS_NIVEL_3, VOCALES, laLetra, nombreLetra, palabra, quitarTildes } from './banco.ts'
+import { CONSONANTES_SILABAS, LETRAS, PALABRAS, PALABRAS_NIVEL_3, VOCALES, laLetra, nombreLetra, palabra, quitarTildes, sinAcentos } from './banco.ts'
+import { palabrasDelDibujo } from './lexica.ts'
 import { juegoConfigurable } from './plantillas.ts'
 
 // Contenidos de las Bases Curriculares de la Educación Parvularia (MINEDUC,
@@ -34,6 +35,7 @@ export const OA = {
 // auditivas (solo escuchar, sin letras) van aparte de las de sílabas.
 export const AREAS = {
   auditiva: { nombre: 'Escuchar', icono: '👂', descripcion: 'Distinguir palabras y sonidos de oído, sin letras.' },
+  oraciones: { nombre: 'Conciencia léxica', icono: '🗣️', descripcion: 'Reconocer las palabras que corresponden con un dibujo.' },
   letras: { nombre: 'Vocales y letras', icono: '🔤', descripcion: 'Sonido de cada letra y su forma.' },
   silabas: { nombre: 'Sílabas', icono: '👏', descripcion: 'Reconocer, contar y comparar sílabas.' },
   palabras: { nombre: 'Palabras', icono: '🧩', descripcion: 'Formar y completar palabras con sílabas.' },
@@ -61,8 +63,11 @@ export interface Contenido {
   // Lo que ve el niño en su camino: sin texto.
   icono: string
   color: string
-  // 3 actividades preordenadas; una sola en las configurables.
+  // 3 actividades preordenadas; una sola en las configurables. El número de
+  // cada una (posición + 1) es su identidad en el historial: no se reordenan aquí.
   pasos: Paso[]
+  // Orden con que entra al plan (números de `pasos`); sin esto, 1, 2, 3.
+  ordenPorDefecto?: number[]
 }
 
 // Rondas por partida (regla de oro 4: micro-partidas de 4 a 5 rondas).
@@ -84,7 +89,7 @@ function silabaInicialCV(w: Palabra) {
   const s = quitarTildes(w.silabas[0])
   return /^[bcdfgjklmnñprstvz][aeiou]$/.test(s) ? s : null
 }
-const silabaFinal = (w: Palabra) => quitarTildes(w.silabas[w.silabas.length - 1])
+const silabaFinal = (w: Palabra) => sinAcentos(w.silabas[w.silabas.length - 1])
 const empiezaCon = (w: Palabra, prefijo: string) => quitarTildes(w.texto).startsWith(prefijo)
 
 // Completa con `relleno` sin repetir ids hasta tener `n` elementos.
@@ -126,7 +131,7 @@ function vocalInicial(): Ronda[] {
       correctaId: v.id,
       instruccion: `${w.texto}. ¿Con qué letra empieza ${w.texto}?`,
       pista: `¡Casi! Escucha bien: ${w.texto}. ¡Otra vez!`,
-      refuerzo: `¡Sí! ${w.texto} empieza con ${laLetra(v.id)}.`,
+      refuerzo: '¡Si! Muy bien.',
     }
   })
 }
@@ -229,6 +234,8 @@ function contenidoSilabas(c: (typeof CONSONANTES_SILABAS)[number]): Contenido {
       { titulo: '¿Con qué sílaba empieza?', generar: () => silabaDeLaImagen(c) },
       { titulo: 'Busca la imagen de la sílaba', generar: () => imagenDeLaSilaba(c) },
     ],
+    // Primero con apoyo de imagen; «Escucha y toca», solo de oído, al final.
+    ordenPorDefecto: [2, 3, 1],
   }
 }
 
@@ -367,7 +374,8 @@ function mismoSonidoInicial(): Ronda[] {
 // ---------- Escritura: respuestas escritas SIEMPRE en mayúscula (OA 8) ----------
 
 // La respuesta va en mayúscula y sin tildes: el teclado en pantalla no las tiene.
-const paraEscribir = (s: string) => quitarTildes(s).toUpperCase()
+// La Ñ sí va: es otra letra y el teclado la tiene («PIÑA», no «PINA»).
+const paraEscribir = (s: string) => sinAcentos(s).toUpperCase()
 
 function rondaEscribir(w: Palabra, respuesta: string, instruccion: string, pista: string, refuerzo: string, relleno = 'AEIOUMPLST'): Ronda {
   // Teclas: las de la respuesta y algunas más (de `relleno`); el nivel de exigencia ajusta cuántas.
@@ -393,7 +401,7 @@ function escribeVocal(): Ronda[] {
       v,
       `${w.texto}. Escribe la vocal con que empieza ${w.texto}.`,
       `¡Casi! Escucha bien: ${w.texto}. ¡Otra vez!`,
-      `¡Sí! ${w.texto} empieza con ${laLetra(v)}.`,
+      '¡Si! Muy bien.',
       'AEIOU',
     )
   })
@@ -408,7 +416,7 @@ function escribeSilaba(): Ronda[] {
       s,
       `${w.texto}. Escribe la sílaba con que empieza ${w.texto}.`,
       `¡Casi! Empieza con ${s.toLowerCase()}… ${w.texto}. ¡Otra vez!`,
-      `¡Muy bien! ${s.toLowerCase()}, de ${w.texto}.`,
+      `¡Muy bien!`,
     )
   })
 }
@@ -416,7 +424,7 @@ function escribeSilaba(): Ronda[] {
 function escribePalabra(): Ronda[] {
   return tomar(PALABRAS_NIVEL_3.map(palabra), RONDAS).map((w) => {
     const p = paraEscribir(w.texto)
-    return rondaEscribir(w, p, `Escribe ${w.texto}.`, `¡Casi! ${w.silabas.join('… ')}. ¡Otra vez!`, `¡Excelente! Escribiste ${w.texto}.`)
+    return rondaEscribir(w, p, `Escribe ${w.texto}.`, `¡Casi! ${w.silabas.join('… ')}. ¡Otra vez!`, `¡Excelente!`)
   })
 }
 
@@ -440,6 +448,19 @@ export const CONTENIDOS: Contenido[] = [
         instrucciones: 'Escucha dos palabras. Si empiezan igual toca el pulgar arriba; si no, el pulgar abajo.',
       },
       { titulo: 'Busca el dibujo que empieza igual', generar: mismoSonidoInicial, instrucciones: 'Escucha la palabra y toca el dibujo que empieza con el mismo sonido.' },
+    ],
+  },
+  {
+    id: 'lexica',
+    oa: ['OA 3'],
+    titulo: 'Palabras y dibujos',
+    area: 'oraciones',
+    descripcion: 'Conciencia léxica, como la ficha «marca con una X»: una grilla de tarjetas con dibujo y palabra, y se marcan las palabras que corresponden con su dibujo.',
+    categoria: 'oraciones',
+    icono: '🗣️',
+    color: 'var(--color-nino-lila)',
+    pasos: [
+      { titulo: 'Marca las palabras del dibujo', generar: palabrasDelDibujo },
     ],
   },
   {
@@ -536,11 +557,18 @@ export interface PasoPlan {
   generar: () => Ronda[]
   instrucciones?: string
   parametros?: ParametrosJuego
+  // La que fijó la docente para esta actividad en la sala; sin esto, la del niño.
+  exigencia?: Exigencia
 }
 
 // Los contenidos, desplegados en los pasos que se guardan en la sala.
+export const ordenDe = (c: Contenido) => c.ordenPorDefecto ?? c.pasos.map((_, i) => i + 1)
+
 export function pasosDeContenidos(contenidos: string[]): PasoSala[] {
-  return contenidos.flatMap((id) => contenido(id)?.pasos.map((_, i) => ({ juego: `${id}-${i + 1}` })) ?? [])
+  return contenidos.flatMap((id) => {
+    const c = contenido(id)
+    return c ? ordenDe(c).map((n) => ({ juego: `${id}-${n}` })) : []
+  })
 }
 
 // Los pasos de la sala, listos para jugar. Un paso que este código no conoce se
@@ -551,7 +579,17 @@ export function planDeSala(plan: PasoSala[]): PasoPlan[] {
     if (deContenido) {
       const paso = deContenido.contenido.pasos[Number(deContenido.numero) - 1]
       if (!paso) return []
-      return [{ contenido: deContenido.contenido, numero: Number(deContenido.numero), actividadId: p.juego, clave: `${i}`, generar: paso.generar, instrucciones: paso.instrucciones }]
+      return [
+        {
+          contenido: deContenido.contenido,
+          numero: Number(deContenido.numero),
+          actividadId: p.juego,
+          clave: `${i}`,
+          generar: paso.generar,
+          instrucciones: paso.instrucciones,
+          exigencia: p.exigencia,
+        },
+      ]
     }
     const j = juegoConfigurable(p.juego)
     if (!j) return []
@@ -577,6 +615,7 @@ export function planDeSala(plan: PasoSala[]): PasoPlan[] {
         generar,
         instrucciones: j.instrucciones,
         parametros,
+        exigencia: p.exigencia,
       },
     ]
   })
@@ -584,27 +623,55 @@ export function planDeSala(plan: PasoSala[]): PasoPlan[] {
 
 export const planDe = (contenidos: string[]) => planDeSala(pasosDeContenidos(contenidos))
 
-// Lo que edita la docente: un contenido entero o una actividad configurada.
-export type BloquePlan = { contenido: string } | { paso: PasoSala }
+// Lo que edita la docente: un contenido (con las actividades que eligió, en su
+// orden: así puede no empezar por «Escucha» o saltarla) o una actividad configurada.
+// `exigencia`: la dificultad fijada para todo el contenido (las configurables la llevan en su paso).
+export type BloquePlan = { contenido: string; pasos: number[]; exigencia?: Exigencia } | { paso: PasoSala }
 
+export function bloqueContenido(id: string): BloquePlan {
+  const c = contenido(id)
+  return { contenido: id, pasos: c ? ordenDe(c) : [] }
+}
+
+// Pasos seguidos del mismo contenido forman un bloque; si un número se repite,
+// empieza otro bloque (el mismo contenido puede ir dos veces en el plan).
 export function bloquesDePlan(plan: PasoSala[]): BloquePlan[] {
   const bloques: BloquePlan[] = []
   for (const p of plan) {
     const c = pasoDe(p.juego)
-    if (!c) bloques.push({ paso: p })
-    else if (c.numero === '1') bloques.push({ contenido: c.contenido.id })
+    if (!c) {
+      // Lo que ya no existe (una actividad que se sacó) no se muestra y sale del plan al guardarlo.
+      if (juegoConfigurable(p.juego)) bloques.push({ paso: p })
+      continue
+    }
+    const n = Number(c.numero)
+    const ultimo = bloques.at(-1)
+    if (ultimo && 'contenido' in ultimo && ultimo.contenido === c.contenido.id && !ultimo.pasos.includes(n)) ultimo.pasos.push(n)
+    else bloques.push({ contenido: c.contenido.id, pasos: [n], ...(p.exigencia && { exigencia: p.exigencia }) })
   }
   return bloques
 }
 
-export const planDeBloques = (bloques: BloquePlan[]): PasoSala[] => bloques.flatMap((b) => ('paso' in b ? [b.paso] : pasosDeContenidos([b.contenido])))
+export const planDeBloques = (bloques: BloquePlan[]): PasoSala[] =>
+  bloques.flatMap((b) => ('paso' in b ? [b.paso] : b.pasos.map((n): PasoSala => ({ juego: `${b.contenido}-${n}`, ...(b.exigencia && { exigencia: b.exigencia }) }))))
+
+// Pasos seguidos de un mismo contenido: lo que el niño ve como una caja en su camino.
+export function gruposDePlan(plan: PasoPlan[]) {
+  const grupos: { contenido: Contenido; inicio: number; pasos: PasoPlan[] }[] = []
+  plan.forEach((p, i) => {
+    const ultimo = grupos.at(-1)
+    if (ultimo && ultimo.contenido.id === p.contenido.id && !ultimo.pasos.some((x) => x.numero === p.numero)) ultimo.pasos.push(p)
+    else grupos.push({ contenido: p.contenido, inicio: i, pasos: [p] })
+  })
+  return grupos
+}
 
 // Los contenidos enteros del plan: se guardan también en `salas.contenidos`, que
 // siguen leyendo las versiones anteriores de la app.
 export const contenidosDePlan = (plan: PasoSala[]) => bloquesDePlan(plan).flatMap((b) => ('contenido' in b ? [b.contenido] : []))
 
 // Nivel de lo que mide cada categoría (Sonidos, Sílabas, Palabras), para los reportes.
-const NIVEL_POR_CATEGORIA: Record<Categoria, Nivel> = { auditiva: 1, letras: 1, silabas: 2, conteo: 2, rimas: 2, palabras: 3, escritura: 3 }
+const NIVEL_POR_CATEGORIA: Record<Categoria, Nivel> = { auditiva: 1, oraciones: 1, letras: 1, silabas: 2, conteo: 2, rimas: 2, palabras: 3, escritura: 3 }
 
 // Foto de la partida al jugarla: si el catálogo cambia, el historial no se pierde.
 export function contextoDePaso(p: PasoPlan, sala: Pick<Sala, 'id' | 'asignacion'>): ContextoPartida {
@@ -626,19 +693,22 @@ export function aprobo(rondas: Pick<IntentoRonda, 'acertada'>[], umbral = UMBRAL
 
 // Una actividad de contenido se guarda como «silabas-m-2»: contenido y número.
 function pasoDe(actividadId: string) {
-  const paso = /^(.+)-([123])$/.exec(actividadId)
+  const paso = /^(.+)-([1-9])$/.exec(actividadId)
   const c = paso && contenido(paso[1])
-  return c ? { contenido: c, numero: paso[2] } : null
+  // Una actividad que el contenido ya no tiene («lexica-2») no es un paso válido.
+  return c && Number(paso[2]) <= c.pasos.length ? { contenido: c, numero: paso[2] } : null
 }
 
 // Nombre legible para los reportes de la docente: actividades de contenido y juegos.
+// Con el nombre de la actividad y no su número: la docente puede cambiar el
+// orden de las actividades de un contenido, y «Actividad 1» ya no diría cuál es.
 export function nombreActividad(actividadId: string) {
   const paso = pasoDe(actividadId)
-  if (paso) return `${paso.contenido.titulo} · Actividad ${paso.numero}`
-  return actividad(actividadId)?.titulo ?? actividadId
+  if (paso) return `${paso.contenido.titulo} · ${paso.contenido.pasos[Number(paso.numero) - 1]?.titulo ?? `Actividad ${paso.numero}`}`
+  return juegoConfigurable(actividadId)?.titulo ?? actividad(actividadId)?.titulo ?? actividadId
 }
 
 // Categoría de lo que mide la actividad; undefined si no mide avance (cuentos) o no se conoce.
 export function categoriaDe(actividadId: string): Categoria | undefined {
-  return pasoDe(actividadId)?.contenido.categoria ?? actividad(actividadId)?.categoria
+  return pasoDe(actividadId)?.contenido.categoria ?? juegoConfigurable(actividadId)?.categoria ?? actividad(actividadId)?.categoria
 }

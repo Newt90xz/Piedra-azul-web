@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { repo } from '../../datos/index.ts'
+import { AVISOS_ENTRADA, NO_SE_PUDO_ENTRAR, PREGUNTA_PERFIL, nombreEnPerfil, saludoAlumno } from '../../contenido/frases.ts'
 import type { PerfilAlumno } from '../../dominio/tipos.ts'
 import { hablar } from '../../lib/audio.ts'
 import { useConsulta } from '../../lib/useConsulta.ts'
@@ -14,12 +15,6 @@ import { BotonNino, ErrorNino, PantallaNino } from '../../ui/nino.tsx'
 const REFRESCO_MS = 4000
 // Lo que dura el saludo antes de pasar a su inicio.
 const SALUDO_MS = 1900
-
-// Lo que se le dice al niño si no puede entrar: hablado, sin texto que leer.
-const AVISOS: Record<string, string> = {
-  perfil_ocupado: 'Ese perfil ya entró en otro computador. Pide ayuda a tu profe.',
-  perfil_invalido: 'Ese perfil no está disponible. Pide ayuda a tu profe.',
-}
 
 export default function Entrada() {
   const guardado = repo.alumnoDelDispositivo()
@@ -54,7 +49,7 @@ function ElegirPerfil() {
     const t = window.setInterval(recargar, REFRESCO_MS)
     return () => window.clearInterval(t)
   })
-  useEffect(() => hablar('¿Quién eres? Toca tu foto.'), [])
+  useEffect(() => hablar(PREGUNTA_PERFIL), [])
 
   const entrar = async (p: PerfilAlumno, boton: HTMLElement) => {
     setRechazado(null)
@@ -62,28 +57,28 @@ function ElegirPerfil() {
       await repo.entrarComoAlumno(p.id)
     } catch (e) {
       setRechazado(p.id)
-      hablar(AVISOS[(e as Error).message] ?? 'No se pudo entrar. Intenta otra vez.')
+      hablar(AVISOS_ENTRADA[(e as Error).message] ?? NO_SE_PUDO_ENTRAR)
       recargar()
       return
     }
     // El avatar del botón crece hasta el centro y saluda; luego pasa a su inicio.
     const avatar = boton.querySelector('[data-avatar]') ?? boton
     setSaludo({ perfil: p, desde: avatar.getBoundingClientRect() })
-    hablar(`¡Hola, ${p.nombre}!`)
+    hablar(saludoAlumno(p.nombre))
     window.setTimeout(() => navegar(`/aula/${p.id}`), SALUDO_MS)
   }
 
   if (error && !perfiles) return <ErrorNino alReintentar={recargar} />
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-8" aria-label="¿Quién eres? Toca tu foto">
+    <main className="mx-auto max-w-5xl px-6 py-8" aria-label={PREGUNTA_PERFIL}>
       <ul className="grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-6">
         {perfiles?.map((p, i) => (
           <li key={p.id} className="caja-entra" style={{ animationDelay: `${Math.min(i, 12) * 60}ms` }}>
             {/* Evita que dos niños usen el mismo perfil (el servidor también lo
                 rechaza). Si quedó tomado por error, la docente lo libera. */}
             <BotonNino
-              voz={p.ocupado ? `${p.nombre.toUpperCase()} ya entró` : p.nombre.toUpperCase()}
+              voz={nombreEnPerfil(p.nombre, p.ocupado)}
               disabled={p.ocupado || !!saludo}
               onClick={(e) => void entrar(p, e.currentTarget)}
               className={`relative flex w-full flex-col items-center gap-3 p-5 disabled:opacity-50 ${rechazado === p.id ? 'animate-sacudir' : ''} ${

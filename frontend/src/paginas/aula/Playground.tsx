@@ -1,6 +1,23 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type Ref } from 'react'
 import { PICTOS_MENSAJE, pictoMensaje, type PictoMensaje } from '../../contenido/mensajes.ts'
-import { DECORADO, JUEGOS_PARQUE, dentroDelMapa, escalaEn, juegoEn, puestoLibre, rutaEntre, type JuegoParque, type Punto } from '../../contenido/parque.ts'
+import {
+  ASPECTO,
+  BALANCIN,
+  COLUMPIO,
+  DECORADO,
+  INICIO_PELOTA,
+  JUEGOS_PARQUE,
+  capaDe,
+  dentroDelMapa,
+  escalaEn,
+  juegoEn,
+  profundidad,
+  puestoLibre,
+  rutaEntre,
+  type JuegoParque,
+  type Punto,
+} from '../../contenido/parque.ts'
+import { RADIO_PELOTA, moverPelota, pelotaEn, quieta, type Pie } from '../../contenido/pelota.ts'
 import { personajePorDefecto } from '../../contenido/personaje.ts'
 import { articulo } from '../../contenido/tienda.ts'
 import { repo } from '../../datos/index.ts'
@@ -15,7 +32,8 @@ import { Tienda } from './Tienda.tsx'
 // personaje y se ven en tiempo real. Quien está más lejos se ve más chico, los
 // objetos tapan a quien pasa detrás y se camina rodeándolos. Tocar un juego lleva
 // al niño hasta él. Se conversa solo con pictogramas predefinidos que suenan al
-// tocarlos: nada que leer ni escribir, y nada que moderar.
+// tocarlos: nada que leer ni escribir, y nada que moderar. El columpio y el
+// balancín se mueven con quien juega en ellos, y la pelota rueda si la patean.
 
 const REFRESCO_MS = 5000
 const VELOCIDAD = 14 // % del mapa por segundo, a tamaño normal
@@ -23,9 +41,27 @@ const BURBUJA_MS = 3500
 const PASO_TECLA = 6
 const PICTOS_POR_PAGINA = 4
 const SOBRE_TODO = 2000
+// Ancho del niño a escala 1, en % del mapa.
+const ANCHO_NINO = 6.2
+// Más rápido que esto no se camina: es alguien que apareció o saltó de lugar, y no patea.
+const PASO_MAXIMO = 60
 
 const imagen = (n: string) => `${import.meta.env.BASE_URL}parque/${n}.svg`
-const inicioAlAzar = (): Punto => ({ x: 30 + Math.random() * 40, y: 62 + Math.random() * 6 })
+const inicioAlAzar = (): Punto => ({ x: 30 + Math.random() * 36, y: 62 + Math.random() * 6 })
+
+// El niño, las cadenas, el asiento y la tabla empiezan a moverse en momentos
+// distintos. Adelantar cada animación según el reloj común deja a todas las
+// que duran lo mismo al mismo compás. Se pone una vez, al empezar, justo antes
+// de pintar (React no toca el retraso).
+function useCompas<T extends HTMLElement>(activo: unknown, ms: number) {
+  const nodo = useRef<T>(null)
+  useLayoutEffect(() => {
+    if (nodo.current) nodo.current.style.animationDelay = activo ? `${-(performance.now() % (2 * ms))}ms` : ''
+  }, [activo, ms])
+  return nodo
+}
+
+const vaiven = (m: { grados: number; ms: number }) => ({ '--grados': `${m.grados}deg`, animationDuration: `${m.ms}ms` })
 
 export default function Playground() {
   const { estudiante, silenciado, estado } = useNino()
@@ -40,6 +76,12 @@ export default function Playground() {
   // Dónde parte al conectarse o reconectarse (mover ya avisa los cambios).
   const posicion = useRef(yo)
   const vaALaTienda = useRef(false)
+  // Qué puesto usa cada niño ('columpio:0'): el columpio y el balancín se
+  // mueven solo con alguien encima.
+  const [jugando, setJugando] = useState<Record<string, string>>({})
+  // Dónde pisa cada niño, cuadro a cuadro: con esto patean la pelota.
+  const [pies] = useState(() => new Map<string, Punto>())
+  const anotarJuego = useCallback((ficha: string, puesto: string) => setJugando((j) => ((j[ficha] ?? '') === puesto ? j : { ...j, [ficha]: puesto })), [])
 
   const canal = datos?.canal ?? null
   const miembros = datos?.miembros
@@ -165,15 +207,23 @@ export default function Playground() {
             />
           ))}
           {JUEGOS_PARQUE.map((j) => (
-            <Juego key={j.id} juego={j} alTocar={() => tocarJuego(j)} />
+            <Juego
+              key={j.id}
+              juego={j}
+              ocupados={Object.values(jugando).flatMap((c) => (c.startsWith(`${j.id}:`) ? [Number(c.split(':')[1])] : []))}
+              alTocar={() => tocarJuego(j)}
+            />
           ))}
+          <Pelota pies={pies} reducido={reducido} />
           {miembros
             ?.filter((m) => !m.mia)
             .flatMap((m) => {
               const p = otros.find((o) => o.ficha === m.ficha)
-              return p ? [<Monito key={m.ficha} miembro={m} destino={p} picto={dichos[m.ficha]} reducido={reducido} />] : []
+              return p
+                ? [<Monito key={m.ficha} miembro={m} destino={p} picto={dichos[m.ficha]} reducido={reducido} pies={pies} alJugar={anotarJuego} />]
+                : []
             })}
-          <Monito miembro={propio} destino={yo} picto={dichos.yo} reducido={reducido} alLlegar={alLlegar} />
+          <Monito miembro={propio} destino={yo} picto={dichos.yo} reducido={reducido} alLlegar={alLlegar} pies={pies} alJugar={anotarJuego} />
           {/* Lo más cercano: tapa un poco el borde y hace ver el mapa más hondo. */}
           <img src={imagen('primer_plano')} alt="" className="pointer-events-none absolute bottom-0 left-0 w-[20%]" style={{ zIndex: SOBRE_TODO }} />
           <img src={imagen('primer_plano')} alt="" className="pointer-events-none absolute right-0 bottom-0 w-[20%] -scale-x-100" style={{ zIndex: SOBRE_TODO }} />
@@ -199,16 +249,73 @@ function palabraPicto(voz: string) {
   return voz.replace(/[¡!¿?,]/g, '').toUpperCase()
 }
 
-function Juego({ juego, alTocar }: { juego: JuegoParque; alTocar: () => void }) {
+// Un dibujo del juego, o una pieza suya que calza encima (mismo tamaño), corrida `dx`.
+function Dibujo({
+  juego,
+  img,
+  capa = 0,
+  dx = 0,
+  className = '',
+  style,
+  ref,
+}: {
+  juego: JuegoParque
+  img: string
+  capa?: number
+  dx?: number
+  className?: string
+  style?: CSSProperties
+  ref?: Ref<HTMLImageElement>
+}) {
+  return (
+    <img
+      ref={ref}
+      src={imagen(img)}
+      alt=""
+      className={`pointer-events-none absolute -translate-x-1/2 -translate-y-[97%] ${className}`}
+      style={{ left: `${juego.x + dx}%`, top: `${juego.y}%`, width: `${juego.ancho}%`, zIndex: capaDe(juego) + capa, ...style }}
+    />
+  )
+}
+
+// Cadenas y asiento de un puesto del columpio: se mecen solo con alguien sentado.
+// Las cadenas van detrás del niño (que va en la capa 2) y el asiento delante.
+function AsientoColumpio({ juego, puesto, ocupado }: { juego: JuegoParque; puesto: number; ocupado: boolean }) {
+  const cadenas = useCompas<HTMLImageElement>(ocupado, COLUMPIO.ms)
+  const asiento = useCompas<HTMLImageElement>(ocupado, COLUMPIO.ms)
+  const dx = juego.puestos[puesto].x - juego.puestos[0].x
+  const clase = `columpio-pieza ${ocupado ? 'mece' : ''}`
+  const estilo = vaiven(COLUMPIO) as CSSProperties
+  return (
+    <>
+      <Dibujo ref={cadenas} juego={juego} img="columpio_cadenas" capa={1} dx={dx} className={clase} style={estilo} />
+      <Dibujo ref={asiento} juego={juego} img="columpio_asiento" capa={3} dx={dx} className={clase} style={estilo} />
+    </>
+  )
+}
+
+// La tabla del balancín: delante de los niños (capa 1), que la montan a horcajadas.
+function TablaBalancin({ juego, ocupado }: { juego: JuegoParque; ocupado: boolean }) {
+  const tabla = useCompas<HTMLImageElement>(ocupado, BALANCIN.ms)
+  return (
+    <Dibujo
+      ref={tabla}
+      juego={juego}
+      img="balancin_tabla"
+      capa={2}
+      className={`balancin-tabla ${ocupado ? 'mece' : ''}`}
+      style={{ ...vaiven(BALANCIN), '--reposo': `${BALANCIN.reposo}deg` } as CSSProperties}
+    />
+  )
+}
+
+function Juego({ juego, ocupados, alTocar }: { juego: JuegoParque; ocupados: number[]; alTocar: () => void }) {
   const voz = useVozAlApuntar(juego.voz)
   return (
     <>
-      <img
-        src={imagen(juego.img)}
-        alt=""
-        className="pointer-events-none absolute -translate-x-1/2 -translate-y-[97%]"
-        style={{ left: `${juego.x}%`, top: `${juego.y}%`, width: `${juego.ancho}%`, zIndex: Math.round(juego.y * 10) }}
-      />
+      <Dibujo juego={juego} img={juego.img} />
+      {juego.id === 'columpio' && juego.puestos.map((_, k) => <AsientoColumpio key={k} juego={juego} puesto={k} ocupado={ocupados.includes(k)} />)}
+      {juego.id === 'balancin' && <TablaBalancin juego={juego} ocupado={ocupados.length > 0} />}
       {/* El ícono flota sobre el juego y es lo que se toca: al menos 64 px (RNF-02). */}
       <button
         {...voz}
@@ -225,20 +332,53 @@ function Juego({ juego, alTocar }: { juego: JuegoParque; alTocar: () => void }) 
   )
 }
 
+const ubicar = (p: Punto) => `translate(calc(${p.x}cqw - 50%), calc(${p.y}cqh - 100%)) scale(${escalaEn(p.y)})`
+
 const pintar = (el: HTMLElement, p: Punto) => {
-  el.style.transform = `translate(calc(${p.x}cqw - 50%), calc(${p.y}cqh - 100%)) scale(${escalaEn(p.y)})`
-  el.style.zIndex = String(Math.round(p.y * 10) + 1)
+  el.style.transform = ubicar(p)
+  el.style.zIndex = String(profundidad(p))
+}
+
+// Cómo se mueve el niño en el columpio o el balancín para ir pegado a su puesto.
+// Lo que se mide en el mapa se divide por su escala: el dibujo se achica después.
+function pose(juego: JuegoParque, p: Punto): CSSProperties | undefined {
+  const eje = juego.eje
+  if (!eje) return undefined
+  const escala = escalaEn(p.y)
+  // Cuánto más arriba que sus pies está la barra de la que cuelga.
+  if (juego.id === 'columpio') return { ...vaiven(COLUMPIO), '--cuerda': `${(p.y - eje.y) / escala}cqh` } as CSSProperties
+  // Cuánto se aleja del perno: tanto sube o baja su punta de la tabla.
+  if (juego.id === 'balancin') {
+    return { ...vaiven(BALANCIN), '--reposo': `${BALANCIN.reposo}deg`, '--brazo': `${(p.x - eje.x) / ASPECTO / escala}cqh` } as CSSProperties
+  }
+  return undefined
 }
 
 // Con vestido, cola, vehículo o silla no hay dos piernas que mover: se balancea entero.
 const tienePiernas = (p: Personaje) =>
   !p.puestos.vehiculo && !p.apoyos.includes('silla_ruedas') && !['vestido_princesa', 'vestido_estrellas', 'cola_sirena'].includes(articulo(p.puestos.traje)?.id ?? '')
 
-function Monito({ miembro, destino, picto, reducido, alLlegar }: { miembro: MiembroParque; destino: Punto; picto?: string; reducido: boolean; alLlegar?: () => void }) {
+function Monito({
+  miembro,
+  destino,
+  picto,
+  reducido,
+  alLlegar,
+  pies,
+  alJugar,
+}: {
+  miembro: MiembroParque
+  destino: Punto
+  picto?: string
+  reducido: boolean
+  alLlegar?: () => void
+  pies: Map<string, Punto>
+  alJugar: (ficha: string, puesto: string) => void
+}) {
   const nodo = useRef<HTMLDivElement>(null)
   const actual = useRef(destino)
   // La posición la lleva cuadro a cuadro el efecto de abajo, sin pasar por React.
-  const [inicial] = useState(() => `translate(calc(${destino.x}cqw - 50%), calc(${destino.y}cqh - 100%)) scale(${escalaEn(destino.y)})`)
+  const [inicial] = useState(() => ({ transform: ubicar(destino), zIndex: profundidad(destino) }))
   const [caminando, setCaminando] = useState(false)
   const [mirada, setMirada] = useState(1)
   const [llegado, setLlegado] = useState(destino)
@@ -248,6 +388,14 @@ function Monito({ miembro, destino, picto, reducido, alLlegar }: { miembro: Miem
     avisar.current = alLlegar
   })
 
+  const { ficha } = miembro
+  useEffect(() => {
+    pies.set(ficha, actual.current)
+    return () => {
+      pies.delete(ficha)
+    }
+  }, [pies, ficha])
+
   const { x, y } = destino
   useEffect(() => {
     const el = nodo.current
@@ -256,6 +404,7 @@ function Monito({ miembro, destino, picto, reducido, alLlegar }: { miembro: Miem
     if (reducido) {
       actual.current = objetivo
       pintar(el, objetivo)
+      pies.set(ficha, objetivo)
       setLlegado(objetivo)
       avisar.current?.()
       return
@@ -286,6 +435,7 @@ function Monito({ miembro, destino, picto, reducido, alLlegar }: { miembro: Miem
         }
       }
       pintar(el, actual.current)
+      pies.set(ficha, actual.current)
       if (i < ruta.length) {
         cuadro = requestAnimationFrame(avanzar)
       } else {
@@ -296,15 +446,22 @@ function Monito({ miembro, destino, picto, reducido, alLlegar }: { miembro: Miem
     }
     cuadro = requestAnimationFrame(avanzar)
     return () => cancelAnimationFrame(cuadro)
-  }, [x, y, reducido])
+  }, [x, y, reducido, pies, ficha])
 
   const personaje = miembro.personaje ?? personajePorDefecto(miembro.nombre)
   const dicho = picto ? pictoMensaje(picto) : undefined
   const juego = !caminando ? juegoEn(llegado) : null
   const conPiernas = caminando && tienePiernas(personaje)
+  const puesto = juego ? `${juego.tipo}:${juego.puesto}` : ''
+  // Avisa dónde juega para que el columpio o el balancín se muevan con él.
+  useEffect(() => {
+    alJugar(ficha, puesto)
+    return () => alJugar(ficha, '')
+  }, [alJugar, ficha, puesto])
+  const meneo = useCompas<HTMLDivElement>(juego?.juego.eje && puesto, juego?.tipo === 'columpio' ? COLUMPIO.ms : BALANCIN.ms)
 
   return (
-    <div ref={nodo} className="group pointer-events-none absolute top-0 left-0 w-[6.2cqw] origin-bottom" style={{ transform: inicial, zIndex: Math.round(y * 10) + 1 }}>
+    <div ref={nodo} className="group pointer-events-none absolute top-0 left-0 origin-bottom" style={{ ...inicial, width: `${ANCHO_NINO}cqw` }}>
       {dicho && (
         <span aria-label={`${miembro.nombre} dice: ${dicho.voz}`} role="status" className="animate-pop absolute bottom-[88%] left-1/2 grid size-[52%] -translate-x-1/2 place-items-center rounded-full border-3 border-nino-azul bg-white text-[2cqw]">
           <span aria-hidden="true">{dicho.emoji}</span>
@@ -317,6 +474,8 @@ function Monito({ miembro, destino, picto, reducido, alLlegar }: { miembro: Miem
         {...(miembro.mia ? {} : voz)}
         onClick={miembro.mia ? undefined : () => hablar(miembro.nombre)}
         className={`relative ${miembro.mia ? '' : 'pointer-events-auto'} ${caminando ? (conPiernas ? 'monito-camina' : 'monito-desliza') : ''} ${juego ? `juega-${juego.tipo} juega-puesto-${juego.puesto}` : ''}`}
+        ref={meneo}
+        style={juego ? pose(juego.juego, llegado) : undefined}
       >
         <div style={{ transform: `scaleX(${mirada})` }}>
           {conPiernas ? (
@@ -336,6 +495,65 @@ function Monito({ miembro, destino, picto, reducido, alLlegar }: { miembro: Miem
       >
         {miembro.nombre}
       </span>
+    </div>
+  )
+}
+
+// La pelota: la física está en pelota.ts; aquí se le pasa dónde pisa cada niño y
+// a qué velocidad va, y se dibuja cuadro a cuadro sin pasar por React. Cada
+// pantalla la mueve por su cuenta con los niños que ve.
+function Pelota({ pies, reducido }: { pies: Map<string, Punto>; reducido: boolean }) {
+  const nodo = useRef<HTMLDivElement>(null)
+  const bola = useRef<HTMLDivElement>(null)
+  const sombra = useRef<HTMLSpanElement>(null)
+  const [inicial] = useState(() => ({ transform: ubicar(INICIO_PELOTA), zIndex: capaDe(INICIO_PELOTA) + 1 }))
+
+  useEffect(() => {
+    let pelota = pelotaEn(INICIO_PELOTA)
+    const antes = new Map<string, Punto>()
+    let previo = performance.now()
+    let cuadro = 0
+    const paso = (ahora: number) => {
+      const dt = Math.min(0.05, Math.max(0, (ahora - previo) / 1000))
+      previo = ahora
+      const lista: Pie[] = []
+      for (const [ficha, p] of pies) {
+        const a = antes.get(ficha) ?? p
+        antes.set(ficha, p)
+        let vx = dt > 0 ? (p.x - a.x) / dt : 0
+        let vy = dt > 0 ? ((p.y - a.y) * ASPECTO) / dt : 0
+        // Con animaciones reducidas solo se corre del camino, sin salir rodando.
+        if (reducido || Math.hypot(vx, vy) > PASO_MAXIMO) vx = vy = 0
+        lista.push({ x: p.x, y: p.y, vx, vy })
+      }
+      const antesDelPaso = pelota
+      pelota = moverPelota(pelota, lista, dt)
+      if (reducido) pelota = { ...pelota, vx: 0, vy: 0, alto: 0, vAlto: 0 }
+      const el = nodo.current
+      if (el && !(quieta(pelota) && quieta(antesDelPaso) && pelota.x === antesDelPaso.x && pelota.y === antesDelPaso.y)) {
+        const escala = escalaEn(pelota.y)
+        el.style.transform = ubicar(pelota)
+        el.style.zIndex = String(capaDe(pelota) + 1)
+        // Sube sin mover la sombra, que se achica mientras más alto va.
+        if (bola.current) bola.current.style.transform = `translateY(${-pelota.alto / escala}cqw) rotate(${pelota.giro}deg)`
+        if (sombra.current) sombra.current.style.transform = `scale(${1 / (1 + pelota.alto * 0.5)})`
+      }
+      cuadro = requestAnimationFrame(paso)
+    }
+    cuadro = requestAnimationFrame(paso)
+    return () => cancelAnimationFrame(cuadro)
+  }, [pies, reducido])
+
+  return (
+    <div ref={nodo} aria-hidden="true" className="pointer-events-none absolute top-0 left-0 origin-bottom" style={{ ...inicial, width: `${RADIO_PELOTA * 2}cqw` }}>
+      <span ref={sombra} className="monito-sombra absolute -bottom-[12%] left-1/2 h-[28%] w-[95%] -translate-x-1/2 rounded-[50%]" />
+      <div ref={bola}>
+        <svg viewBox="0 0 100 100" className="block">
+          <circle cx="50" cy="50" r="44" fill="#fff" stroke="#4a3f55" strokeWidth="6" />
+          <path d="M50 30 L69 44 L62 66 L38 66 L31 44Z" fill="#4a3f55" />
+          <path d="M50 30 L50 8 M69 44 L90 37 M62 66 L75 85 M38 66 L25 85 M31 44 L10 37" stroke="#4a3f55" strokeWidth="5" />
+        </svg>
+      </div>
     </div>
   )
 }

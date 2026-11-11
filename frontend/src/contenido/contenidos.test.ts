@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { MAX_OPCIONES, ordenarSilabas, type Ronda } from './actividades.ts'
-import { PALABRAS, quitarTildes } from './banco.ts'
+import { PALABRAS, quitarTildes, sinAcentos } from './banco.ts'
 import { CONTENIDOS, UMBRAL_APROBAR, aprobo, nombreActividad, planDe } from './contenidos.ts'
 import { EXIGENCIAS, partidaConExigencia } from './exigencia.ts'
 
@@ -71,7 +71,7 @@ describe('una sola respuesta correcta', () => {
           const fin = r.item.slice(1).toLowerCase()
           const riman = r.opciones.filter((o) => {
             const s = palabraDe(o.id).silabas
-            return quitarTildes(s[s.length - 1]) === fin
+            return sinAcentos(s[s.length - 1]) === fin
           })
           expect(riman.map((o) => o.id)).toEqual([r.correctaId])
           expect(r.estimulo.imagen?.alt).not.toBe(palabraDe(r.correctaId).texto)
@@ -98,9 +98,10 @@ describe('una sola respuesta correcta', () => {
 })
 
 describe('plan de una sala', () => {
-  it('despliega cada contenido en sus 3 actividades, en orden, con ids válidos para la base', () => {
+  it('despliega cada contenido en sus 3 actividades, en su orden por defecto, con ids válidos para la base', () => {
     const plan = planDe(['silabas-m', 'vocales', 'no-existe'])
-    expect(plan.map((p) => p.actividadId)).toEqual(['silabas-m-1', 'silabas-m-2', 'silabas-m-3', 'vocales-1', 'vocales-2', 'vocales-3'])
+    // Sílabas: primero con imagen, «Escucha y toca» (silabas-m-1) al final.
+    expect(plan.map((p) => p.actividadId)).toEqual(['silabas-m-2', 'silabas-m-3', 'silabas-m-1', 'vocales-1', 'vocales-2', 'vocales-3'])
     // Mismo formato que exige guardar_resultado_sala.
     for (const p of planDe(CONTENIDOS.map((c) => c.id))) expect(p.actividadId).toMatch(/^[a-z0-9-]{1,60}$/)
   })
@@ -115,7 +116,7 @@ describe('plan de una sala', () => {
   })
 
   it('nombra actividades de contenido y juegos para los reportes', () => {
-    expect(nombreActividad('silabas-m-2')).toBe('Sílabas con M · Actividad 2')
+    expect(nombreActividad('silabas-m-2')).toBe('Sílabas con M · ¿Con qué sílaba empieza?')
     expect(nombreActividad('aplausos')).toBe('Aplausos silábicos')
     expect(nombreActividad('desconocida')).toBe('desconocida')
   })

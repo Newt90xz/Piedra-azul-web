@@ -63,12 +63,12 @@ export default function FichaEstudiante() {
           <Antetitulo>Ficha del estudiante</Antetitulo>
           <h1 className="text-3xl font-bold tracking-tight">{estudiante.nombre}</h1>
           <p className="text-tinta-suave">
-            Nivel {estudiante.nivelHabilitado} habilitado · {estudiante.monedas} monedas{!estudiante.activo && ' · Desactivado'}
+            {estudiante.monedas} monedas{!estudiante.activo && ' · Desactivado'}
           </p>
           {sala && (
             <p className="mt-2 flex flex-wrap items-center gap-2 text-sm font-semibold text-menta-oscuro">
               <span className="size-2.5 rounded-full bg-menta" aria-hidden="true" />
-              Conectado a «{sala.nombre}»
+              En la sala «{sala.nombre}»
               <Boton
                 variante="suave"
                 onClick={async () => {
@@ -77,7 +77,7 @@ export default function FichaEstudiante() {
                   recargarSala()
                 }}
               >
-                Enviar al recreo
+                Sacar de la sala
               </Boton>
               {falloSala && <span role="alert" className="text-[#b42318]">No se pudo sacar. Intenta otra vez.</span>}
             </p>

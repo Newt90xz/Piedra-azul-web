@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { ACTIVIDADES, escuchaLaLetra } from '../contenido/actividades.ts'
+import { JUEGOS, escuchaLaLetra } from '../contenido/actividades.ts'
 import { CONTENIDOS } from '../contenido/contenidos.ts'
-import { paraVoz } from './audio.ts'
+import { paraVoz } from './textoVoz.ts'
 
 const ALARGADO = /(?<!\p{L})(\p{L})\1{2,}(?!\p{L})/iu
 
@@ -17,7 +17,7 @@ describe('paraVoz', () => {
 
 describe('textos que dice la voz en las actividades', () => {
   const rondas = [
-    ...ACTIVIDADES.flatMap((a) => a.generar()),
+    ...JUEGOS.flatMap((a) => a.generar()),
     ...CONTENIDOS.flatMap((c) => c.pasos.flatMap((p) => p.generar())),
     ...escuchaLaLetra(),
   ]

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { actividad, instruccionesDe, type Ronda } from '../contenido/actividades.ts'
 import { categoriaDe } from '../contenido/contenidos.ts'
-import { nivelDe } from '../contenido/exigencia.ts'
+import { frasePremio, type VariantePremio } from '../contenido/frases.ts'
+import { BONO_RACHA, PRACTICA, PUNTAJE, nivelDe, type NivelExigencia } from '../contenido/exigencia.ts'
 import { guardarResultadoConRespaldo } from '../datos/pendientes.ts'
 import type { ContextoPartida, IntentoRonda } from '../dominio/tipos.ts'
 import { callarAlApuntar, efecto, hablar, precargar } from '../lib/audio.ts'
@@ -9,18 +10,6 @@ import { Moneda } from '../ui/Dibujos.tsx'
 import { Icono } from '../ui/Icono.tsx'
 import { BotonNino, useNino } from '../ui/nino.tsx'
 import { RondaActual } from './rondas.tsx'
-
-// Ciclo de una micro-partida (anatomía de las actividades, sección 2):
-// 1.er intento = 3 estrellas y +10 monedas; tras una pista = 2 y +5;
-// con la respuesta revelada = 1 y +2. Tres aciertos seguidos dan bono de racha.
-const PUNTAJE = [
-  { estrellas: 3, monedas: 10 },
-  { estrellas: 2, monedas: 5 },
-  { estrellas: 1, monedas: 2 },
-]
-const BONO_RACHA = 2
-// Práctica (no se puede fallar): solo la recompensa base por completar, sin racha.
-const PRACTICA = { estrellas: 3, monedas: 2 }
 
 interface Registro {
   item: string
@@ -49,6 +38,7 @@ export function Partida({
   instrucciones,
   icono,
   contexto,
+  desafio,
 }: {
   actividadId: string
   rondas: Ronda[]
@@ -62,6 +52,8 @@ export function Partida({
   alSalir?: () => void
   // Foto de la partida: sala, contenido, parámetros…
   contexto?: ContextoPartida
+  // La dificultad con que se armó la partida; sin esto, intermedia.
+  desafio?: NivelExigencia
 }) {
   const { estudiante, silenciado, recargar } = useNino()
   // `error`: la última respuesta equivocada de esta ronda (se reemplaza en cada fallo).
@@ -76,7 +68,7 @@ export function Partida({
   const tituloObjetivo = objetivo ?? datosActividad?.objetivo
   const comoSeJuega = instruccionesDe(rondas, instrucciones ?? datosActividad?.instrucciones)
   // Desafíos por nivel de exigencia: tras cuántos errores se ilumina la respuesta.
-  const { revelarTras } = nivelDe(estudiante.ajustes.exigencia)
+  const { revelarTras } = desafio ?? nivelDe(undefined)
   // Antes de la primera ronda se muestra cómo se juega; el botón «?» la vuelve a abrir.
   const [verInstrucciones, setVerInstrucciones] = useState(Boolean(comoSeJuega))
 
@@ -278,20 +270,14 @@ export function Premio({
   children,
 }: {
   monedas: number
-  variante: 'logrado' | 'repetir' | 'juego'
+  variante: VariantePremio
   children: ReactNode
 }) {
   const { silenciado } = useNino()
 
   useEffect(() => {
     efecto('premio', silenciado)
-    hablar(
-      variante === 'logrado'
-        ? `¡Lo lograste! Ganaste ${monedas} monedas.`
-        : variante === 'repetir'
-          ? `¡Ganaste ${monedas} monedas! Vamos a intentarlo otra vez.`
-          : `¡Muy bien! Ganaste ${monedas} monedas.`,
-    )
+    hablar(frasePremio(variante, monedas))
     // Solo al aparecer.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

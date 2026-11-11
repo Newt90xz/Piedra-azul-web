@@ -142,5 +142,4 @@ export const AJUSTES_POR_DEFECTO: Ajustes = {
   reducirAnimaciones: false,
   silenciarEfectos: false,
   tematica: 'animales',
-  exigencia: 'intermedio',
 }

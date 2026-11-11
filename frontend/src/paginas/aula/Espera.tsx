@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
+import { SALUDO_ESPERA, SALUDO_RECREO_GLOBOS } from '../../contenido/frases.ts'
 import { detenerMusica, iniciarMusica } from '../../lib/musica.ts'
 import { BotonNino, useNino } from '../../ui/nino.tsx'
 import { MiniJuego } from '../alumno/MiniJuego.tsx'
 import { Tienda } from './Tienda.tsx'
 
-// Recreo (la sala de espera): el niño todavía no tiene sala. Juega con los globos o gasta
-// sus monedas en la tienda mientras suena una música suave; la sala reemplaza
-// esta vista sola en cuanto la docente lo asigna (y la música se apaga).
-export default function Espera({ voz }: { voz?: string }) {
+// Globos, tienda y música suave. Sin sala, el niño espera aquí a que la docente
+// lo asigne (la sala reemplaza esta vista sola y la música se apaga); con
+// `recreo`, es la actividad «Globos» de una sala de recreo.
+export default function Espera({ recreo = false }: { recreo?: boolean }) {
   const [vista, setVista] = useState<'globos' | 'tienda'>('globos')
   const { silenciado, fijarTitulo } = useNino()
 
@@ -59,7 +60,7 @@ export default function Espera({ voz }: { voz?: string }) {
         )}
       </nav>
       <div key={vista} className="animate-pantalla min-h-0 flex-1">
-        {vista === 'globos' ? <MiniJuego saludo={voz ?? '¡Es hora del recreo! Revienta los globos mientras tu profe te asigna una sala.'} /> : <Tienda />}
+        {vista === 'globos' ? <MiniJuego saludo={recreo ? SALUDO_RECREO_GLOBOS : SALUDO_ESPERA} esperando={!recreo} /> : <Tienda />}
       </div>
     </div>
   )

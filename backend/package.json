@@ -7,7 +7,8 @@
     "dev": "node --watch --env-file-if-exists=.env src/server.ts",
     "start": "node --env-file-if-exists=.env src/server.ts",
     "build": "tsc --noEmit",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "voz:precargar": "node --env-file-if-exists=.env scripts/precargarVoz.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",

@@ -125,7 +125,7 @@ function semilla(): Estado {
       juegos: [],
       asignacion: id(),
     },
-    { id: 'sala-patio', cursoId: 'kinder-a', nombre: 'Recreo', tipo: 'recreo', actividad: 'parque', plan: [], contenidos: [], juegos: [], asignacion: id() },
+    { id: 'sala-patio', cursoId: 'kinder-a', nombre: 'Parque', tipo: 'recreo', actividad: 'parque', plan: [], contenidos: [], juegos: [], asignacion: id() },
   ]
   return {
     docentes: [docente],

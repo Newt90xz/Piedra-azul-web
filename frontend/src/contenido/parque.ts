@@ -23,7 +23,21 @@ export interface JuegoParque extends Objeto {
   // Dónde va el ícono flotante.
   marca: Punto
   puestos: Punto[]
+  // Mientras está en él, el niño no se ordena por su altura en el mapa sino
+  // tantas capas sobre el juego: así queda arriba de la lona o de la arena, y en
+  // el columpio entre las cadenas (detrás) y el asiento (delante).
+  capa?: number
+  // Barra del columpio o perno del balancín: en torno a eso gira lo que se mueve.
+  eje?: Punto
 }
+
+// Cuánto se mueve cada juego. Los dibujos y los niños usan las mismas cifras
+// para ir a la par.
+export const COLUMPIO = { grados: 20, ms: 1100 }
+export const BALANCIN = { grados: 12, reposo: -9, ms: 1000 }
+
+// Un % del alto del mapa mide 9/16 de uno del ancho.
+export const ASPECTO = 9 / 16
 
 export const LIMITES = { xMin: 2, xMax: 98, yMin: 37, yMax: 92 }
 
@@ -50,8 +64,10 @@ export const DECORADO: Objeto[] = [
   { img: 'flores', x: 8, y: 63, ancho: 6 },
   { img: 'arco', x: 40, y: 72, ancho: 7 },
   { img: 'arco', x: 58, y: 72, ancho: 7 },
-  { img: 'balon', x: 50, y: 82, ancho: 1.6 },
 ]
+
+// La pelota no es decorado: rueda cuando la patean (ver pelota.ts).
+export const INICIO_PELOTA: Punto = { x: 50, y: 82 }
 
 export const JUEGOS_PARQUE: JuegoParque[] = [
   {
@@ -64,7 +80,10 @@ export const JUEGOS_PARQUE: JuegoParque[] = [
     ancho: 13,
     pie: [12, 2],
     marca: { x: 16, y: 25 },
-    puestos: [{ x: 13.6, y: 49.5 }, { x: 18.6, y: 49.5 }],
+    // Bajo cada asiento, con la cadera a su altura y los pies colgando.
+    puestos: [{ x: 13.83, y: 47.35 }, { x: 18.17, y: 47.35 }],
+    capa: 2,
+    eje: { x: 16, y: 32.72 },
   },
   {
     id: 'resbalin',
@@ -88,7 +107,10 @@ export const JUEGOS_PARQUE: JuegoParque[] = [
     ancho: 12,
     pie: [11, 2],
     marca: { x: 60, y: 33 },
-    puestos: [{ x: 55.6, y: 45.5 }, { x: 64.4, y: 45.5 }],
+    // En cada punta de la tabla, por fuera de las manillas, sentado a horcajadas.
+    puestos: [{ x: 55, y: 43.55 }, { x: 65, y: 43.55 }],
+    capa: 1,
+    eje: { x: 60, y: 41.8 },
   },
   {
     id: 'tienda',
@@ -110,9 +132,12 @@ export const JUEGOS_PARQUE: JuegoParque[] = [
     x: 75,
     y: 75,
     ancho: 14,
-    pie: [13, 7],
-    marca: { x: 75, y: 56 },
-    puestos: [{ x: 72, y: 72 }, { x: 75, y: 71 }, { x: 78, y: 72 }],
+    // Toda la lona: quien pase por detrás no la pisa.
+    pie: [13, 11],
+    marca: { x: 75, y: 49 },
+    // Sobre la lona, no en el borde de adelante.
+    puestos: [{ x: 71, y: 68.5 }, { x: 75, y: 66.5 }, { x: 79, y: 68.5 }],
+    capa: 1,
   },
   {
     id: 'arenero',
@@ -122,9 +147,11 @@ export const JUEGOS_PARQUE: JuegoParque[] = [
     x: 15,
     y: 82,
     ancho: 19,
-    pie: [18, 9],
-    marca: { x: 15, y: 62 },
-    puestos: [{ x: 10.5, y: 79 }, { x: 15, y: 78 }, { x: 19.5, y: 79 }],
+    pie: [18, 12],
+    marca: { x: 15, y: 58 },
+    // Dentro de la arena, no en el marco de adelante.
+    puestos: [{ x: 10.5, y: 77 }, { x: 15, y: 75.5 }, { x: 19.5, y: 77 }],
+    capa: 1,
   },
 ]
 
@@ -142,7 +169,7 @@ export const dentroDelMapa = ({ x, y }: Punto): Punto => ({
   y: Math.min(LIMITES.yMax, Math.max(LIMITES.yMin, y)),
 })
 
-const libre = (x: number, y: number) =>
+export const libre = (x: number, y: number) =>
   x >= LIMITES.xMin && x <= LIMITES.xMax && y >= LIMITES.yMin && y <= LIMITES.yMax && !OBSTACULOS.some((o) => x > o.x0 && x < o.x1 && y > o.y0 && y < o.y1)
 
 const LIBRES = Array.from({ length: COLUMNAS * FILAS }, (_, i) => libre((i % COLUMNAS) * celdaX + celdaX / 2, Math.floor(i / COLUMNAS) * celdaY + celdaY / 2))
@@ -253,7 +280,18 @@ export function puestoLibre(juego: JuegoParque, ocupados: Punto[]) {
 export function juegoEn(p: Punto) {
   for (const j of JUEGOS_PARQUE) {
     const i = j.puestos.findIndex((q) => Math.hypot(q.x - p.x, q.y - p.y) < 0.3)
-    if (i >= 0) return { tipo: j.id, puesto: i }
+    if (i >= 0) return { tipo: j.id, puesto: i, juego: j }
   }
   return null
+}
+
+export const capaDe = (o: Punto) => Math.round(o.y * 10)
+
+const pisa = (p: Punto, o: Objeto) => !!o.pie && p.x > o.x - o.pie[0] / 2 && p.x < o.x + o.pie[0] / 2 && p.y > o.y - o.pie[1] && p.y < o.y
+
+// Qué tapa a quién (z-index). En general, quien está más abajo en el mapa queda
+// delante; pero quien juega en un juego (o se está subiendo) va sobre él.
+export function profundidad(p: Punto) {
+  const j = juegoEn(p)?.juego ?? JUEGOS_PARQUE.find((o) => pisa(p, o))
+  return j?.capa ? capaDe(j) + j.capa : capaDe(p) + 1
 }

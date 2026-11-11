@@ -1,9 +1,10 @@
-// Voz de la plataforma: solo Pocket-TTS (voz Lola o la voz clonada), generada en
-// tiempo real por el backend (GET /api/voz) y guardada allá para la próxima vez.
+// Voz de la plataforma: solo Pocket-TTS (voz Lola o la voz clonada), generada
+// por el backend (GET /api/voz) y guardada allá para la próxima vez. Las frases
+// que se repiten se dejan generadas de antemano (frontend/scripts/voz/README.md).
 // No hay voz de respaldo del navegador: si el servidor de voz no responde, la
-// app sigue en silencio (ver frontend/scripts/voz/README.md).
+// app sigue en silencio.
 
-import { nombreLetra } from '../contenido/banco.ts'
+import { paraVoz } from './textoVoz.ts'
 
 let reproduciendo: HTMLAudioElement | null = null
 // Cada llamada a hablar() deja sin efecto a la anterior.
@@ -21,18 +22,10 @@ export interface OpcionesVoz {
 
 const API = ((import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:3000').replace(/\/$/, '')
 
-// Los sonidos alargados («uuuu», «mmmm») la voz los dice mal: se cambian por el
-// nombre de la letra. Es un resguardo: los textos de las actividades ya no los usan.
-export function paraVoz(texto: string) {
-  return texto
-    .replace(/(?<![\p{L}])(\p{L})\1{2,}(?![\p{L}])/giu, (_, l: string) => nombreLetra(l))
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
 const urlVoz = (texto: string) => `${API}/api/voz?texto=${encodeURIComponent(texto)}`
 
-// Voz apagada hasta que el niño la active con el botón del altavoz. Solo calla
+// Fuera de la pantalla del niño la voz calla; ahí se enciende sola (ui/nino.tsx)
+// y el niño puede apagarla con el botón del altavoz. Solo calla
 // la voz: los efectos dependen del ajuste «silenciar efectos» de la docente.
 let mudo = true
 let temporizadorApuntar: number | undefined
@@ -76,6 +69,7 @@ export function hablar(texto: string, opciones: OpcionesVoz = {}) {
   }
 
   const mio = ++turno
+  console.log(`[Pocket-TTS] Dice: «${frase}»`)
   const audio = new Audio(urlVoz(frase))
   reproduciendo = audio
   actual = { texto: frase, desde: Date.now() }
