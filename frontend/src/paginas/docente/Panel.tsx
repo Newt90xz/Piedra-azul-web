@@ -24,8 +24,9 @@ export default function Panel() {
 
   const semana = deEstaSemana(datos?.resultados ?? [])
   const activos = new Set(semana.map((r) => r.estudianteId))
-  // Por categoría: una letra no se compara con una rima o una palabra.
-  const cuestan = porCategoria(avancePorItem(datos?.resultados ?? []).filter((a) => a.tasa < UMBRAL_LE_CUESTA)).map((g) => ({
+  // Por categoría: una letra no se compara con una rima o una palabra. De esta
+  // semana, igual que en «Avance del curso»: los dos lugares muestran el mismo número.
+  const cuestan = porCategoria(avancePorItem(semana).filter((a) => a.tasa < UMBRAL_LE_CUESTA)).map((g) => ({
     ...g,
     items: g.items.slice(0, POR_CATEGORIA),
   }))

@@ -1,0 +1,16 @@
+/* El tema del video ES el de la app: se importa su hoja de estilos, con el @theme
+   (colores marino, menta, pasteles; fuentes DM Sans y Andika). Los gráficos usan
+   esas mismas clases (bg-marino, text-tinta, font-escolar…). */
+@import '../../frontend/src/index.css';
+@source './';
+
+/* Tres colores que la app usa escritos en sus componentes y no en el @theme:
+   el trazo amarillo de la portada (paginas/Inicio.tsx), el contorno de las fichas
+   (.nino --color-contorno) y el durazno de las fichas. */
+@theme {
+  --color-sol: #ffd76a;
+  --color-contorno: #2b4a6b;
+  --color-durazno: #fde2c8;
+}
+
+html, body { background: transparent; }

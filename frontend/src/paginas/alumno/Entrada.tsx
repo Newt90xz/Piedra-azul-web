@@ -2,10 +2,11 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { repo } from '../../datos/index.ts'
 import type { PerfilAlumno } from '../../dominio/tipos.ts'
-import { hablar } from '../../lib/audio.ts'
+import { fijarMudo, guardarVoz, hablar, vozGuardada } from '../../lib/audio.ts'
 import { useConsulta } from '../../lib/useConsulta.ts'
 import { Avatar } from '../../ui/Avatar.tsx'
 import { FondoNino } from '../../ui/fondoNino.tsx'
+import { Icono } from '../../ui/Icono.tsx'
 import { BotonNino, ErrorNino, PantallaNino } from '../../ui/nino.tsx'
 
 // Dispositivo del alumno: el niño toca su perfil y pasa a la sala de espera,
@@ -23,6 +24,17 @@ const AVISOS: Record<string, string> = {
 
 export default function Entrada() {
   const guardado = repo.alumnoDelDispositivo()
+  // La misma voz del resto de la vista del niño: apagada hasta que alguien la
+  // enciende con el altavoz, y el dispositivo lo recuerda.
+  const [mudo, setMudo] = useState(() => !vozGuardada())
+
+  useEffect(() => {
+    if (guardado) return
+    fijarMudo(mudo)
+    if (!mudo) hablar('¿Quién eres? Toca tu foto.')
+    return () => fijarMudo(true)
+  }, [mudo, guardado])
+
   if (guardado) return <Navigate to={`/aula/${guardado}`} replace />
 
   return (
@@ -35,6 +47,17 @@ export default function Entrada() {
           <Link to="/" className="rounded-lg px-3 py-1.5 text-sm font-semibold text-tinta-suave hover:bg-fondo">
             Inicio
           </Link>
+          <BotonNino
+            voz={mudo ? 'Activar la voz' : 'Apagar la voz'}
+            aria-pressed={!mudo}
+            onClick={() => {
+              guardarVoz(mudo)
+              setMudo(!mudo)
+            }}
+            className="grid size-14 place-items-center rounded-2xl border-nino-azul"
+          >
+            <Icono nombre={mudo ? 'silencio' : 'altavoz'} className="size-7" />
+          </BotonNino>
         </span>
       }
     >
@@ -54,7 +77,6 @@ function ElegirPerfil() {
     const t = window.setInterval(recargar, REFRESCO_MS)
     return () => window.clearInterval(t)
   })
-  useEffect(() => hablar('¿Quién eres? Toca tu foto.'), [])
 
   const entrar = async (p: PerfilAlumno, boton: HTMLElement) => {
     setRechazado(null)

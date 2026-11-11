@@ -3,7 +3,7 @@ import { Link, Navigate, Outlet, useNavigate, useParams } from 'react-router-dom
 import { repo } from '../datos/index.ts'
 import { reenviarPendientes } from '../datos/pendientes.ts'
 import type { Emocion, EstadoAlumno, Estudiante, Imagen } from '../dominio/tipos.ts'
-import { fijarMudo } from '../lib/audio.ts'
+import { fijarMudo, guardarVoz, vozGuardada } from '../lib/audio.ts'
 import { useConsulta } from '../lib/useConsulta.ts'
 import { Avatar } from './Avatar.tsx'
 import { FondoNino, ProtectorPantalla } from './fondoNino.tsx'
@@ -136,8 +136,8 @@ export function NinoShell() {
   const navegar = useNavigate()
   const conectado = repo.alumnoDelDispositivo() === id
   const { datos: estado, error, recargar } = useConsulta(async () => (conectado ? repo.estadoAlumno() : null), [id, conectado])
-  // La voz parte apagada; el niño la enciende con el altavoz. Al salir de la vista vuelve a apagarse.
-  const [mudo, setMudo] = useState(true)
+  // La voz parte apagada; el niño la enciende con el altavoz y el dispositivo lo recuerda.
+  const [mudo, setMudo] = useState(() => !vozGuardada())
   const [emocion, setEmocion] = useState<Emocion | null>(() => emocionGuardada(id))
 
   useEffect(() => {
@@ -220,7 +220,10 @@ export function NinoShell() {
             <BotonNino
               voz={mudo ? 'Activar la voz' : 'Apagar la voz'}
               aria-pressed={!mudo}
-              onClick={() => setMudo(!mudo)}
+              onClick={() => {
+                guardarVoz(mudo)
+                setMudo(!mudo)
+              }}
               className="grid size-16 place-items-center rounded-2xl border-nino-azul"
             >
               <Icono nombre={mudo ? 'silencio' : 'altavoz'} className="size-8" />

@@ -1,0 +1,16 @@
+# Nada de esto se versiona: capturas, audios y renders (PLAN.md, sección 6c).
+node_modules/
+/capturas/
+/voz/
+/out/
+/public/
+/src/tomas.json
+/musica.mp3
+*.mp4
+*.webm
+*.mp3
+*.wav
+*.srt
+/.respaldo/
+/.venv-voz/
+/.cache-voz/

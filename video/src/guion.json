@@ -1,0 +1,32 @@
+{
+  "voz": { "nombre": "Bella", "id": "hpp4J3VqNfWAUOO0d1Us", "servicio": "ElevenLabs" },
+  "partes": [
+    { "id": "gancho", "vo": "En un Kínder, cada niño aprende a leer a su propio ritmo. ¿Cómo hace una sola educadora para acompañarlos a todos al mismo tiempo?" },
+    { "id": "presentacion", "vo": "Leer para Todos es una plataforma para aprender a leer jugando, pensada para Pre-Kínder y Kínder. Acompáñennos en una mañana de clases." },
+    { "id": "acto1a", "vo": "Cada niño tiene su perfil. La educadora elige su personaje, su nivel y cuánta ayuda necesita. Martina parte en nivel inicial: menos opciones y más pistas." },
+    { "id": "acto1b-1", "vo": "Luego arma la sala de trabajo. Para la actividad de letras elige exactamente qué letras entran: una plantilla lista o las de esta semana." },
+    { "id": "acto1b-2", "vo": "La app incluso le avisa si eligió letras que de oído no se distinguen." },
+    { "id": "acto1b-3", "vo": "Lo guarda como plantilla para la próxima vez y lo suma al plan." },
+    { "id": "acto1c", "vo": "Con un clic conecta un recreo. Así, cada niño que termine sus actividades pasará solo al parque." },
+    { "id": "acto2-1", "vo": "Sofía no necesita saber leer para entrar: toca su personaje y la app la saluda por su nombre." },
+    { "id": "acto2-2", "vo": "Antes de empezar cuenta cómo se siente." },
+    { "id": "acto2-3", "vo": "Mientras la educadora la asigna, revienta globos." },
+    { "id": "acto3", "vo": "La educadora arrastra a cada niño a su sala. No hay códigos ni enlaces: en unos segundos, el computador del niño cambia solo." },
+    { "id": "acto4-1", "vo": "La actividad le habla: escucha el sonido y toca la letra." },
+    { "id": "acto4-2", "vo": "Si se equivoca, recibe una pista, nunca un castigo." },
+    { "id": "acto4-3", "vo": "Acertar al primer intento da tres estrellas y más monedas." },
+    { "id": "acto4-4", "vo": "Martina juega lo mismo con dos opciones; Benjamín, con cuatro." },
+    { "id": "acto4-5", "vo": "Y la educadora ve el avance de cada uno en vivo." },
+    { "id": "acto5-1", "vo": "Cuando un niño repite dos veces sin lograrlo, la app avisa a la educadora." },
+    { "id": "acto5-2", "vo": "¿Y qué pasa con los que terminan? No esperan aburridos ni la interrumpen: pasan solos al recreo." },
+    { "id": "acto5-3", "vo": "Así los que van adelante descansan, y la educadora tiene tiempo para quien más la necesita." },
+    { "id": "acto6-1", "vo": "En el recreo se ven en vivo y se saludan solo con pictogramas: no hay nada que leer, escribir ni moderar." },
+    { "id": "acto6-2", "vo": "Las monedas ganadas se gastan en la tienda para vestir a su personaje." },
+    { "id": "acto6-3", "vo": "La educadora decide qué se hace: parque, dibujo, globos o juegos, y el cambio llega al instante." },
+    { "id": "acto7", "vo": "Cuando ella decide, los niños vuelven a trabajar. Otra sala, otro plan, y cada uno sigue desde donde lo necesita." },
+    { "id": "acto8-1", "vo": "Al final del día, la educadora no tiene que adivinar." },
+    { "id": "acto8-2", "vo": "Ve qué le cuesta al curso y con qué se confunde cada niño, cómo llegó emocionalmente y cuánto jugó." },
+    { "id": "acto8-3", "vo": "Y lo descarga en PDF, del curso completo o de cada niño, para la reunión de apoderados o el equipo de integración." },
+    { "id": "cierre", "vo": "Leer para Todos. Cada niño a su ritmo, ninguno solo." }
+  ]
+}

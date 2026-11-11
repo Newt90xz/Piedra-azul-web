@@ -89,6 +89,27 @@ export function fijarMudo(valor: boolean) {
   if (valor) detener()
 }
 
+// La voz parte apagada, pero el dispositivo recuerda si alguien la encendió: así
+// la tablet que ya habla sigue hablando al día siguiente, también en la pantalla
+// de entrada («¿Quién eres? Toca tu foto.»), sin que el niño busque el altavoz.
+const CLAVE_VOZ = 'leer-para-todos/voz'
+
+export function vozGuardada() {
+  try {
+    return localStorage.getItem(CLAVE_VOZ) === 'si'
+  } catch {
+    return false
+  }
+}
+
+export function guardarVoz(encendida: boolean) {
+  try {
+    localStorage.setItem(CLAVE_VOZ, encendida ? 'si' : 'no')
+  } catch {
+    // Sin almacenamiento, la voz vuelve a partir apagada.
+  }
+}
+
 // Un solo temporizador para toda la página: apuntar otra caja reemplaza a la anterior, no se encola.
 export function hablarAlApuntar(texto: string) {
   window.clearTimeout(temporizadorApuntar)

@@ -1,0 +1,34 @@
+{
+  "name": "video",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Video de recorrido de «Leer para Todos»: capturas con Playwright y edición en Remotion (ver PLAN.md)",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "capturar": "node scripts/capturas/correr.mjs",
+    "voz:prueba": "node scripts/voz/prueba.mjs",
+    "voz": "node scripts/voz/generar.mjs",
+    "render:borrador": "remotion render src/index.ts Recorrido out/borrador.mp4 --scale=0.5 --crf=28",
+    "render": "remotion render src/index.ts Recorrido final_4min.mp4",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource-variable/dm-sans": "^5.3.0",
+    "@fontsource/andika": "^5.3.0",
+    "@remotion/cli": "4.0.542",
+    "@remotion/tailwind-v4": "4.0.542",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "remotion": "4.0.542",
+    "tailwindcss": "^4.3.3"
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "^2.117.2",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "playwright": "^1.65.0",
+    "typescript": "~6.0.2"
+  }
+}
