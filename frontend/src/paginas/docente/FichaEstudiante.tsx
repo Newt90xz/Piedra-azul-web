@@ -1,124 +1,201 @@
 import { useState } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useSesion } from '../../app/Sesion.tsx'
 import { nombreActividad } from '../../contenido/contenidos.ts'
 import { repo } from '../../datos/index.ts'
+import type { Estudiante } from '../../dominio/tipos.ts'
 import { EMOCIONES, UMBRAL_LE_CUESTA, avancePorItem, deEstaSemana, fechaCorta, minutos, porCategoria } from '../../lib/avance.ts'
+import { CON_EMOCION, convieneMirar } from '../../lib/clase.ts'
 import { capitalizar } from '../../lib/texto.ts'
 import { useConsulta } from '../../lib/useConsulta.ts'
 import { Avatar } from '../../ui/Avatar.tsx'
-import { Antetitulo, AvisoError, Boton, BotonEnlace, Encabezado, Tarjeta, claseEntrada } from '../../ui/aula.tsx'
+import { Aviso, AvisoError, Boton, BotonEnlace, Dialogo, Encabezado, Etiqueta, EstadoVacio, MenuAcciones, PanelPestana, Pestanas, Tarjeta, claseEntrada } from '../../ui/aula.tsx'
 import { BotonInforme } from './BotonInforme.tsx'
 import { DetalleItem } from './DetalleItem.tsx'
 import { FormEstudiante } from './FormEstudiante.tsx'
 
-const PESTANAS = [
+type Pestana = 'avance' | 'observaciones' | 'ajustes'
+const PESTANAS: { id: Pestana; texto: string }[] = [
   { id: 'avance', texto: 'Avance' },
-  { id: 'perfil', texto: 'Perfil y apoyos' },
   { id: 'observaciones', texto: 'Observaciones' },
-] as const
+  { id: 'ajustes', texto: 'Ajustes' },
+]
+const MIGAS = [{ to: '/docente/estudiantes', texto: 'Estudiantes' }]
+
+// La pestaña pedida en la dirección; «perfil» era el nombre antiguo de Ajustes.
+function pestanaDe(valor: string | null): Pestana {
+  if (valor === 'perfil') return 'ajustes'
+  return PESTANAS.some((p) => p.id === valor) ? (valor as Pestana) : 'avance'
+}
 
 export function NuevoEstudiante() {
   const { cursoId } = useSesion()
   const navegar = useNavigate()
   return (
     <>
-      <BotonEnlace to="/docente/estudiantes" variante="suave" className="mb-5">← Volver a estudiantes</BotonEnlace>
-      <Encabezado antetitulo="Estudiantes / Nuevo" titulo="Añadir estudiante" />
+      <Encabezado migas={MIGAS} titulo="Añadir estudiante" descripcion="Solo el nombre de pila, el personaje que tocará para entrar y sus apoyos." />
       <FormEstudiante
         cursoId={cursoId}
         alGuardar={async (datos) => {
           const e = await repo.guardarEstudiante(datos)
-          navegar(`/docente/estudiantes/${e.id}?pestana=perfil`, { replace: true })
+          navegar(`/docente/estudiantes/${e.id}`, { replace: true })
         }}
       />
     </>
   )
 }
 
+// La ficha de un niño: arriba quién es y dónde está; abajo, en pestañas, su
+// avance, las observaciones y sus ajustes. Lo que se usa poco (desactivar,
+// eliminar) va en el menú ⋯.
 export default function FichaEstudiante() {
   const { id = '' } = useParams()
   const [params, setParams] = useSearchParams()
-  const pestana = params.get('pestana') ?? 'avance'
+  const pestana = pestanaDe(params.get('pestana'))
   const { cursoId } = useSesion()
-  const navegar = useNavigate()
-  const [falloSala, setFalloSala] = useState(false)
   const { datos: estudiante, error, recargar } = useConsulta(() => repo.obtenerEstudiante(id), [id])
   const { datos: sala, recargar: recargarSala } = useConsulta(async () => {
     const miembro = (await repo.listarMiembros(cursoId)).find((m) => m.estudianteId === id)
     if (!miembro) return null
     return (await repo.listarSalas(cursoId)).find((x) => x.id === miembro.salaId) ?? null
   }, [id, cursoId])
+  const [dialogo, setDialogo] = useState<'desactivar' | 'eliminar' | null>(null)
+  const [fallo, setFallo] = useState<string | null>(null)
 
   if (error && !estudiante) return <AvisoError alReintentar={recargar} />
-  if (estudiante === undefined) return null
-  if (estudiante === null) return <p>No se encontró el estudiante. <Link to="/docente/estudiantes" className="underline">Volver</Link></p>
+  if (estudiante === undefined) return <p className="text-tinta-suave">Cargando la ficha…</p>
+  if (estudiante === null)
+    return (
+      <>
+        <Encabezado migas={MIGAS} titulo="Estudiante no encontrado" />
+        <EstadoVacio titulo="Este perfil ya no existe" accion={<BotonEnlace to="/docente/estudiantes">Ver estudiantes</BotonEnlace>}>
+          Puede que se haya eliminado o que sea de otro curso.
+        </EstadoVacio>
+      </>
+    )
+
+  const ejecutar = async (accion: () => Promise<unknown>, mensaje: string) => {
+    setFallo(null)
+    try {
+      await accion()
+    } catch {
+      setFallo(mensaje)
+    }
+    recargar()
+    recargarSala()
+  }
 
   return (
     <>
-      <BotonEnlace to="/docente/estudiantes" variante="suave" className="mb-5">← Volver a estudiantes</BotonEnlace>
-      <div className="mb-6 flex flex-wrap items-center gap-5">
-        <Avatar estudiante={estudiante} className="size-20 text-5xl" />
-        <div className="min-w-0 flex-1">
-          <Antetitulo>Ficha del estudiante</Antetitulo>
-          <h1 className="text-3xl font-bold tracking-tight">{estudiante.nombre}</h1>
-          <p className="text-tinta-suave">
-            {estudiante.monedas} monedas{!estudiante.activo && ' · Desactivado'}
-          </p>
-          {sala && (
-            <p className="mt-2 flex flex-wrap items-center gap-2 text-sm font-semibold text-menta-oscuro">
-              <span className="size-2.5 rounded-full bg-menta" aria-hidden="true" />
-              En la sala «{sala.nombre}»
-              <Boton
-                variante="suave"
-                onClick={async () => {
-                  setFalloSala(false)
-                  await repo.desconectarEstudiante(id).catch(() => setFalloSala(true))
-                  recargarSala()
-                }}
-              >
-                Sacar de la sala
-              </Boton>
-              {falloSala && <span role="alert" className="text-[#b42318]">No se pudo sacar. Intenta otra vez.</span>}
-            </p>
-          )}
-        </div>
-        <BotonInforme estudiante={estudiante} />
-      </div>
+      <Encabezado
+        migas={MIGAS}
+        titulo={
+          <span className="flex items-center gap-3">
+            <Avatar estudiante={estudiante} className={`size-11 ${estudiante.activo ? '' : 'opacity-60'}`} />
+            {estudiante.nombre}
+            {!estudiante.activo && <Etiqueta>Desactivado</Etiqueta>}
+          </span>
+        }
+        descripcion={`${sala ? `En la sala «${sala.nombre}»` : 'Sin sala'}. ${estudiante.monedas} monedas.`}
+        accion={
+          <div className="flex items-center gap-2">
+            <BotonInforme estudiante={estudiante} />
+            <MenuAcciones
+              etiqueta={`Opciones de ${estudiante.nombre}`}
+              alinear="derecha"
+              opciones={[
+                ...(sala ? [{ texto: `Sacar de «${sala.nombre}»`, alElegir: () => void ejecutar(() => repo.desconectarEstudiante(id), 'No se pudo sacar de la sala.') }] : []),
+                estudiante.activo
+                  ? { texto: 'Desactivar perfil…', alElegir: () => setDialogo('desactivar') }
+                  : { texto: 'Activar perfil', alElegir: () => void ejecutar(() => repo.guardarEstudiante({ ...estudiante, activo: true }), 'No se pudo activar el perfil.') },
+                'separador',
+                { texto: 'Eliminar perfil…', peligro: true, alElegir: () => setDialogo('eliminar') },
+              ]}
+            />
+          </div>
+        }
+      />
+      {fallo && (
+        <Aviso tono="peligro" className="mb-4">
+          {fallo}
+        </Aviso>
+      )}
 
-      <div role="tablist" aria-label="Secciones de la ficha" className="mb-6 flex gap-2 border-b border-borde">
-        {PESTANAS.map((p) => (
-          <button
-            key={p.id}
-            role="tab"
-            aria-selected={pestana === p.id}
-            onClick={() => setParams({ pestana: p.id }, { replace: true })}
-            className={`-mb-px border-b-3 px-4 py-2.5 font-semibold ${pestana === p.id ? 'border-menta text-tinta' : 'border-transparent text-tinta-suave hover:text-tinta'}`}
-          >
-            {p.texto}
-          </button>
-        ))}
-      </div>
-
-      {pestana === 'avance' && <Avance estudianteId={id} />}
-      {pestana === 'perfil' && (
-        <>
+      <Pestanas etiqueta="Secciones de la ficha" pestanas={PESTANAS} actual={pestana} alCambiar={(p) => setParams({ pestana: p }, { replace: true })} />
+      <PanelPestana id={pestana}>
+        {pestana === 'avance' && <Avance estudianteId={id} />}
+        {pestana === 'observaciones' && <Observaciones estudianteId={id} />}
+        {pestana === 'ajustes' && (
           <FormEstudiante
             inicial={estudiante}
             cursoId={cursoId}
             alGuardar={async (e) => {
-              await repo.guardarEstudiante(e)
+              // El perfil se activa y desactiva desde el menú: se respeta el estado de ahora.
+              await repo.guardarEstudiante({ ...e, activo: estudiante.activo })
               recargar()
             }}
           />
-          <ZonaEliminar nombre={estudiante.nombre} alEliminar={async () => {
-            await repo.eliminarEstudiante(id)
-            navegar('/docente/estudiantes', { replace: true })
-          }} />
-        </>
+        )}
+      </PanelPestana>
+
+      {dialogo === 'desactivar' && (
+        <Desactivar
+          estudiante={estudiante}
+          alCerrar={() => setDialogo(null)}
+          alConfirmar={() => {
+            setDialogo(null)
+            void ejecutar(() => repo.guardarEstudiante({ ...estudiante, activo: false }), 'No se pudo desactivar el perfil.')
+          }}
+        />
       )}
-      {pestana === 'observaciones' && <Observaciones estudianteId={id} />}
+      {dialogo === 'eliminar' && <Eliminar estudiante={estudiante} alCerrar={() => setDialogo(null)} />}
     </>
+  )
+}
+
+function Desactivar({ estudiante, alCerrar, alConfirmar }: { estudiante: Estudiante; alCerrar: () => void; alConfirmar: () => void }) {
+  return (
+    <Dialogo titulo={`¿Desactivar a ${estudiante.nombre}?`} alCerrar={alCerrar}>
+      <p className="text-tinta-suave">
+        Deja de aparecer en Clase, en las salas y en la pantalla donde los niños eligen su perfil. Su historial se conserva y puedes activarlo cuando quieras.
+      </p>
+      <div className="flex justify-end gap-2">
+        <Boton variante="suave" onClick={alCerrar}>
+          Cancelar
+        </Boton>
+        <Boton onClick={alConfirmar}>Desactivar perfil</Boton>
+      </div>
+    </Dialogo>
+  )
+}
+
+function Eliminar({ estudiante, alCerrar }: { estudiante: Estudiante; alCerrar: () => void }) {
+  const navegar = useNavigate()
+  const [error, setError] = useState(false)
+  const eliminar = async () => {
+    setError(false)
+    try {
+      await repo.eliminarEstudiante(estudiante.id)
+      navegar('/docente/estudiantes', { replace: true })
+    } catch {
+      setError(true)
+    }
+  }
+  return (
+    <Dialogo rol="alertdialog" titulo={`¿Eliminar el perfil de ${estudiante.nombre}?`} alCerrar={alCerrar}>
+      <p className="text-tinta-suave">
+        Se borra todo su historial: partidas, emociones y observaciones. No se puede deshacer. Si solo quieres que deje de aparecer, desactiva el perfil.
+      </p>
+      {error && <Aviso tono="peligro">No se pudo eliminar. Intenta otra vez.</Aviso>}
+      <div className="flex justify-end gap-2">
+        <Boton variante="suave" onClick={alCerrar}>
+          Cancelar
+        </Boton>
+        <Boton variante="peligro" onClick={() => void eliminar()}>
+          Eliminar perfil
+        </Boton>
+      </div>
+    </Dialogo>
   )
 }
 
@@ -133,23 +210,26 @@ function Avance({ estudianteId }: { estudianteId: string }) {
     [estudianteId],
   )
   if (error) return <AvisoError alReintentar={recargar} />
-  if (!datos) return null
+  if (!datos) return <p className="text-tinta-suave">Cargando el avance…</p>
   const items = avancePorItem(datos.resultados)
   const semana = deEstaSemana(datos.resultados)
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
-      {/* Arriba: es lo primero que la docente quiere ver al abrir la ficha. */}
-      <Tarjeta className="lg:col-span-2">
-        <h2 className="text-lg font-bold">¿Cómo llegó a la sesión?</h2>
+    <div className="grid items-start gap-5 lg:grid-cols-[3fr_2fr]">
+      <Tarjeta>
+        <h2 className="text-lg font-semibold text-tinta">Cómo llegó</h2>
         {datos.emociones.length === 0 ? (
-          <p className="mt-2 text-tinta-suave">Aún no registra emociones.</p>
+          <p className="mt-1 text-sm text-tinta-suave">Aún no registra cómo llega.</p>
         ) : (
-          <ul className="mt-4 flex flex-wrap gap-2">
+          <ul className="mt-3 flex flex-wrap gap-1.5">
             {datos.emociones.slice(0, 8).map((e) => (
-              <li key={e.id} className="flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm" style={{ background: EMOCIONES[e.emocion].color }}>
+              <li
+                key={e.id}
+                className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm ${convieneMirar(e.emocion) ? 'border-atencion-borde bg-atencion-fondo' : 'border-borde'}`}
+              >
                 <span aria-hidden="true">{EMOCIONES[e.emocion].cara}</span>
-                {EMOCIONES[e.emocion].texto} · {fechaCorta(e.fecha)}
+                <span className="text-tinta">{capitalizar(CON_EMOCION[e.emocion])}</span>
+                <span className="text-tinta-suave">{fechaCorta(e.fecha)}</span>
               </li>
             ))}
           </ul>
@@ -157,21 +237,31 @@ function Avance({ estudianteId }: { estudianteId: string }) {
       </Tarjeta>
 
       <Tarjeta>
-        <h2 className="text-lg font-bold">Avance por categoría</h2>
-        <p className="mb-5 text-sm text-tinta-suave">
-          % al primer intento, de más difícil a más fácil. Toca una palabra, sílaba o sonido para ver con qué se confunde.
-        </p>
-        {items.length === 0 && <p className="text-tinta-suave">Todavía no hay partidas registradas.</p>}
-        {/* Columnas compartidas (subgrid) por todos los grupos: la del ítem toma el
-            ancho del más largo («La más larga», «unicornio») y las barras quedan
-            alineadas. En pantallas angostas «Le cuesta» baja de línea antes que partir palabras. */}
-        <div className="grid grid-cols-[minmax(5.5rem,max-content)_minmax(4rem,1fr)_auto] gap-x-3 gap-y-5">
+        <h2 className="text-lg font-semibold text-tinta">Esta semana</h2>
+        <dl className="mt-2 grid grid-cols-2 gap-4">
+          <div>
+            <dt className="text-sm text-tinta-suave">Partidas</dt>
+            <dd className="text-3xl font-semibold text-tinta">{semana.length}</dd>
+          </div>
+          <div>
+            <dt className="text-sm text-tinta-suave">Minutos jugando</dt>
+            <dd className="text-3xl font-semibold text-tinta">{semana.length ? minutos(semana.reduce((s, r) => s + r.duracionMs, 0)) : 0}</dd>
+          </div>
+        </dl>
+      </Tarjeta>
+
+      <Tarjeta>
+        <h2 className="text-lg font-semibold text-tinta">Avance por categoría</h2>
+        <p className="mb-4 text-sm text-tinta-suave">Rondas logradas al primer intento, de lo más difícil a lo más fácil. Toca una letra, sílaba o palabra para ver con qué se confunde.</p>
+        {items.length === 0 && <p className="text-sm text-tinta-suave">Todavía no hay partidas registradas.</p>}
+        {/* Columnas compartidas (subgrid) por todos los grupos: las barras quedan alineadas. */}
+        <div className="grid grid-cols-[minmax(4.5rem,max-content)_minmax(4rem,1fr)_auto] gap-x-3 gap-y-5">
           {porCategoria(items).map((g) => (
-            <section key={g.categoria} aria-labelledby={`avance-${g.categoria}`} className="col-span-3 grid grid-cols-subgrid gap-y-3">
-              <h3 id={`avance-${g.categoria}`} className="col-span-3 text-sm font-bold text-tinta-suave">
+            <section key={g.categoria} aria-labelledby={`avance-${g.categoria}`} className="col-span-3 grid grid-cols-subgrid gap-y-2">
+              <h3 id={`avance-${g.categoria}`} className="col-span-3 text-[13px] font-medium text-tinta-suave">
                 {g.titulo}
               </h3>
-              <ul className="col-span-3 grid grid-cols-subgrid items-center gap-y-3">
+              <ul className="col-span-3 grid grid-cols-subgrid items-center gap-y-2">
                 {g.items.map((a) => {
                   const cuesta = a.tasa < UMBRAL_LE_CUESTA
                   const clave = `${a.categoria}|${a.item}`
@@ -182,20 +272,17 @@ function Avance({ estudianteId }: { estudianteId: string }) {
                         type="button"
                         aria-expanded={verDetalle}
                         onClick={() => setAbierto(verDetalle ? null : clave)}
-                        className={`max-w-44 rounded-lg text-left font-escolar font-bold break-words underline decoration-borde decoration-2 underline-offset-4 hover:decoration-menta ${a.item.length > 3 ? 'text-lg leading-tight' : 'text-2xl'}`}
+                        className={`max-w-40 rounded text-left font-escolar font-bold break-words text-tinta underline decoration-borde decoration-2 underline-offset-4 hover:decoration-menta-oscuro ${a.item.length > 3 ? 'text-base leading-tight' : 'text-xl'}`}
                       >
                         {capitalizar(a.item)}
                       </button>
-                      <span className="h-3.5 overflow-hidden rounded-full bg-fondo" aria-hidden="true">
-                        <span className={`block h-full rounded-full ${cuesta ? 'bg-[#e8a35c]' : 'bg-menta'}`} style={{ width: `${Math.max(4, a.tasa * 100)}%` }} />
+                      <span aria-hidden="true" className={`block h-2 rounded-r ${cuesta ? 'bg-atencion-fondo' : 'bg-lienzo'}`}>
+                        {a.tasa > 0 && <span className={`block h-full rounded-r ${cuesta ? 'bg-cuesta' : 'bg-menta'}`} style={{ width: `${a.tasa * 100}%` }} />}
                       </span>
-                      <span className="text-sm">
-                        <span className="whitespace-nowrap">
-                          <b>{Math.round(a.tasa * 100)}%</b> <span className="text-tinta-suave">de {a.rondas}</span>
-                        </span>
-                        {cuesta && (
-                          <span className="ml-1 inline-block rounded-md bg-[#fdf1e4] px-1.5 py-0.5 text-xs font-bold whitespace-nowrap text-[#9a4d00]">Le cuesta</span>
-                        )}
+                      <span className="flex items-center gap-2 text-sm whitespace-nowrap">
+                        <span className="text-tinta tabular-nums">{Math.round(a.tasa * 100)}%</span>
+                        <span className="text-tinta-suave">de {a.rondas}</span>
+                        {cuesta && <Etiqueta tono="atencion">Le cuesta</Etiqueta>}
                       </span>
                       {verDetalle && (
                         <div className="col-span-3">
@@ -211,60 +298,30 @@ function Avance({ estudianteId }: { estudianteId: string }) {
         </div>
       </Tarjeta>
 
-      <div className="grid content-start gap-6">
-        <Tarjeta>
-          <h2 className="text-lg font-bold">Esta semana</h2>
-          <p className="mt-1 text-tinta-suave">
-            <b className="text-tinta">{semana.length}</b> partidas · <b className="text-tinta">{minutos(semana.reduce((s, r) => s + r.duracionMs, 0))}</b> min
-          </p>
-          <ul className="mt-4 grid gap-2">
-            {datos.resultados.slice(0, 6).map((r) => (
-              <li key={r.id} className="flex items-center justify-between gap-2 rounded-xl bg-fondo px-3 py-2 text-sm">
-                <span className="truncate">
-                  <b>{nombreActividad(r.actividadId)}</b>
-                  <span className="block text-tinta-suave">{fechaCorta(r.fecha)} · {minutos(r.duracionMs)} min</span>
+      <Tarjeta>
+        <h2 className="text-lg font-semibold text-tinta">Últimas partidas</h2>
+        {datos.resultados.length === 0 ? (
+          <p className="mt-1 text-sm text-tinta-suave">Todavía no juega.</p>
+        ) : (
+          <ul className="mt-2 divide-y divide-borde">
+            {datos.resultados.slice(0, 8).map((r) => (
+              <li key={r.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+                <span className="min-w-0">
+                  <span className="block truncate font-medium text-tinta">{nombreActividad(r.actividadId)}</span>
+                  <span className="block text-tinta-suave">
+                    {fechaCorta(r.fecha)}, {minutos(r.duracionMs)} min
+                  </span>
                 </span>
-                <span aria-label={`${r.estrellas} de 3 estrellas`} className="shrink-0 tracking-tight">
+                <span aria-label={`${r.estrellas} de 3 estrellas`} className="shrink-0 tracking-tight text-cuesta">
                   {'★'.repeat(r.estrellas)}
                   <span className="text-borde">{'★'.repeat(3 - r.estrellas)}</span>
                 </span>
               </li>
             ))}
           </ul>
-        </Tarjeta>
-      </div>
+        )}
+      </Tarjeta>
     </div>
-  )
-}
-
-function ZonaEliminar({ nombre, alEliminar }: { nombre: string; alEliminar: () => Promise<void> }) {
-  const [confirmar, setConfirmar] = useState(false)
-  const [error, setError] = useState(false)
-  return (
-    <Tarjeta className="mt-6 border-[#f0c9c4]">
-      <h2 className="text-lg font-bold text-[#b42318]">Eliminar perfil</h2>
-      <p className="mt-1 text-tinta-suave">
-        Borra a {nombre} y todo su historial: partidas, emociones y observaciones. No se puede deshacer. Si solo quieres que no aparezca en las salas, desactívalo arriba.
-      </p>
-      {error && <p role="alert" className="mt-2 text-sm font-semibold text-[#b42318]">No se pudo eliminar. Intenta otra vez.</p>}
-      {confirmar ? (
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <span className="font-semibold">¿Seguro que quieres eliminar a {nombre}?</span>
-          <Boton
-            variante="secundario"
-            onClick={() => {
-              setError(false)
-              alEliminar().catch(() => setError(true))
-            }}
-          >
-            Sí, eliminar
-          </Boton>
-          <Boton variante="suave" onClick={() => setConfirmar(false)}>Cancelar</Boton>
-        </div>
-      ) : (
-        <Boton variante="suave" className="mt-4" onClick={() => setConfirmar(true)}>Eliminar perfil</Boton>
-      )}
-    </Tarjeta>
   )
 }
 
@@ -285,48 +342,60 @@ function Observaciones({ estudianteId }: { estudianteId: string }) {
     recargar()
   }
 
-  const agregar = () => {
-    if (!texto.trim()) return
-    void ejecutar(async () => {
-      await repo.agregarObservacion(estudianteId, texto.trim())
-      setTexto('')
-    })
-  }
-
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
+    <div className="grid items-start gap-5 lg:grid-cols-[2fr_3fr]">
       <Tarjeta>
-        <h2 className="text-lg font-bold">Nueva observación</h2>
-        <label className="mt-3 block">
-          <span className="sr-only">Observación</span>
-          <textarea value={texto} onChange={(e) => setTexto(e.target.value)} rows={4} className={claseEntrada} placeholder="Ej.: practicar la R con canciones y rimas." />
-        </label>
-        <Boton onClick={agregar} className="mt-3">Guardar observación</Boton>
+        <form
+          onSubmit={(ev) => {
+            ev.preventDefault()
+            if (!texto.trim()) return
+            void ejecutar(async () => {
+              await repo.agregarObservacion(estudianteId, texto.trim())
+              setTexto('')
+            })
+          }}
+        >
+          <h2 className="text-lg font-semibold text-tinta">
+            <label htmlFor="nueva-observacion">Nueva observación</label>
+          </h2>
+          <textarea
+            id="nueva-observacion"
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            rows={4}
+            className={`${claseEntrada} mt-2`}
+            placeholder="Por ejemplo: practicar la R con canciones y rimas."
+          />
+          <Boton type="submit" disabled={!texto.trim()} className="mt-3">
+            Guardar observación
+          </Boton>
+        </form>
       </Tarjeta>
+
       <Tarjeta>
-        <h2 className="text-lg font-bold">Historial</h2>
+        <h2 className="text-lg font-semibold text-tinta">Historial{datos?.length ? ` (${datos.length})` : ''}</h2>
         {error && (
-          <p className="mt-2 text-sm text-[#b42318]">
+          <Aviso tono="peligro" className="mt-2">
             No se pudo cargar el historial.{' '}
-            <button onClick={recargar} className="font-semibold underline">Reintentar</button>
-          </p>
+            <button type="button" onClick={recargar} className="font-semibold underline">
+              Reintentar
+            </button>
+          </Aviso>
         )}
-        {fallo && <p role="alert" className="mt-2 text-sm font-semibold text-[#b42318]">No se pudo completar la acción. Intenta otra vez.</p>}
-        {datos?.length === 0 && <p className="mt-2 text-tinta-suave">Sin observaciones todavía.</p>}
-        <ul className="mt-3 grid gap-3">
+        {fallo && (
+          <Aviso tono="peligro" className="mt-2">
+            No se pudo completar la acción. Intenta otra vez.
+          </Aviso>
+        )}
+        {datos?.length === 0 && <p className="mt-1 text-sm text-tinta-suave">Sin observaciones todavía.</p>}
+        <ul className="mt-2 divide-y divide-borde">
           {datos?.map((o) => (
-            <li key={o.id} className="rounded-xl bg-fondo px-4 py-3">
+            <li key={o.id} className="py-3">
               {editando?.id === o.id ? (
                 <>
                   <label>
                     <span className="sr-only">Editar observación</span>
-                    <textarea
-                      value={editando.texto}
-                      onChange={(e) => setEditando({ id: o.id, texto: e.target.value })}
-                      rows={3}
-                      className={claseEntrada}
-                      autoFocus
-                    />
+                    <textarea value={editando.texto} onChange={(e) => setEditando({ id: o.id, texto: e.target.value })} rows={3} className={claseEntrada} autoFocus />
                   </label>
                   <div className="mt-2 flex gap-2">
                     <Boton
@@ -340,19 +409,24 @@ function Observaciones({ estudianteId }: { estudianteId: string }) {
                     >
                       Guardar cambios
                     </Boton>
-                    <Boton variante="suave" onClick={() => setEditando(null)}>Cancelar</Boton>
+                    <Boton variante="suave" onClick={() => setEditando(null)}>
+                      Cancelar
+                    </Boton>
                   </div>
                 </>
               ) : (
                 <>
-                  <p>{o.texto}</p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span className="mr-auto text-xs text-tinta-suave">{fechaCorta(o.fecha)}</span>
+                  <p className="text-tinta">{o.texto}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-1">
+                    <span className="mr-auto text-[13px] text-tinta-suave">{fechaCorta(o.fecha)}</span>
                     {borrando === o.id ? (
                       <>
-                        <span className="text-sm font-semibold">¿Borrar?</span>
+                        <span className="text-sm text-tinta">¿Borrar esta observación?</span>
+                        <Boton variante="suave" onClick={() => setBorrando(null)}>
+                          Cancelar
+                        </Boton>
                         <Boton
-                          variante="secundario"
+                          variante="peligro-suave"
                           onClick={() =>
                             void ejecutar(async () => {
                               await repo.eliminarObservacion(o.id)
@@ -360,14 +434,17 @@ function Observaciones({ estudianteId }: { estudianteId: string }) {
                             })
                           }
                         >
-                          Sí, borrar
+                          Borrar
                         </Boton>
-                        <Boton variante="suave" onClick={() => setBorrando(null)}>No</Boton>
                       </>
                     ) : (
                       <>
-                        <Boton variante="suave" onClick={() => setEditando({ id: o.id, texto: o.texto })}>Editar</Boton>
-                        <Boton variante="suave" onClick={() => setBorrando(o.id)}>Borrar</Boton>
+                        <Boton variante="suave" onClick={() => setEditando({ id: o.id, texto: o.texto })}>
+                          Editar
+                        </Boton>
+                        <Boton variante="peligro-suave" onClick={() => setBorrando(o.id)}>
+                          Borrar
+                        </Boton>
                       </>
                     )}
                   </div>

@@ -22,11 +22,11 @@ export function DetalleItem({
   const conteo = item.categoria === 'conteo'
 
   return (
-    <div className="grid gap-4 rounded-2xl border border-borde bg-fondo p-4 text-sm">
+    <div className="grid gap-4 rounded-lg border border-borde bg-lienzo/60 p-4 text-sm">
       {palabra && palabra.silabas.length > 1 && (
         <div className="flex flex-wrap items-center gap-1.5" aria-label={`Sílabas: ${palabra.silabas.join(', ')}`}>
           {palabra.silabas.map((s, i) => (
-            <span key={i} className="rounded-lg bg-white px-2.5 py-1 font-escolar text-base font-bold uppercase">
+            <span key={i} className="rounded-md border border-borde bg-white px-2.5 py-1 font-escolar text-base font-bold uppercase">
               {s}
             </span>
           ))}
@@ -37,15 +37,15 @@ export function DetalleItem({
       )}
 
       <div>
-        <h4 className="mb-1.5 font-bold text-tinta">Con qué se confundió</h4>
+        <h4 className="mb-1.5 font-semibold text-tinta">Con qué se confundió</h4>
         {d.errores.length === 0 ? (
           <p className="text-tinta-suave">Sin equivocaciones registradas.</p>
         ) : (
           <ul className="flex flex-wrap gap-2">
             {d.errores.map((e) => (
-              <li key={e.respuesta} className="flex items-center gap-1.5 rounded-lg bg-[#fdf1e4] px-2.5 py-1 text-[#9a4d00]">
+              <li key={e.respuesta} className="flex items-center gap-1.5 rounded-md bg-atencion-fondo px-2.5 py-1 text-atencion">
                 <b className="font-escolar text-base">{respuestaLegible(e.respuesta, conteo)}</b>
-                <span className="text-xs font-semibold">× {e.veces}</span>
+                <span className="text-xs font-medium">{e.veces} {e.veces === 1 ? 'vez' : 'veces'}</span>
               </li>
             ))}
           </ul>
@@ -56,12 +56,12 @@ export function DetalleItem({
         <PorNino detalle={d} estudiantes={estudiantes} conteo={conteo} />
       ) : (
         <div>
-          <h4 className="mb-1.5 font-bold text-tinta">Últimas rondas</h4>
+          <h4 className="mb-1.5 font-semibold text-tinta">Últimas rondas</h4>
           <ul className="grid gap-1">
             {d.historial.slice(0, 6).map((h, i) => (
               <li key={i} className="flex flex-wrap items-center gap-x-2 text-tinta-suave">
-                <span className={`size-2 rounded-full ${h.intentos === 1 ? 'bg-menta' : 'bg-[#e8a35c]'}`} aria-hidden="true" />
-                <span>{fechaCorta(h.fecha)}</span>·<span>{nombreActividad(h.actividadId)}</span>·
+                <span className={`size-2 rounded-full ${h.intentos === 1 ? 'bg-menta' : 'bg-cuesta'}`} aria-hidden="true" />
+                <span>{fechaCorta(h.fecha)},</span><span>{nombreActividad(h.actividadId)}:</span>
                 <b className="text-tinta">{h.intentos === 1 ? 'al primer intento' : `${h.intentos} intentos`}</b>
                 {h.error && <span>(dijo {respuestaLegible(h.error, conteo)})</span>}
               </li>
@@ -84,16 +84,16 @@ function PorNino({ detalle, estudiantes, conteo }: { detalle: ReturnType<typeof 
 
   return (
     <div>
-      <h4 className="mb-1.5 font-bold text-tinta">Por niño</h4>
+      <h4 className="mb-1.5 font-semibold text-tinta">Por niño</h4>
       <ul className="grid gap-1.5">
         {filas.map(({ e, rondas, primer, ultimoError }) => (
-          <li key={e.id} className="flex flex-wrap items-center gap-2 rounded-xl bg-white px-2.5 py-1.5">
+          <li key={e.id} className="flex flex-wrap items-center gap-2 rounded-md bg-white px-2.5 py-1.5">
             <Avatar estudiante={e} className="size-7 text-base" />
             <span className="min-w-24 flex-1 font-semibold text-tinta">{e.nombre}</span>
-            <span className={primer / rondas < 0.6 ? 'font-bold text-[#9a4d00]' : 'text-tinta-suave'}>
+            <span className={primer / rondas < 0.6 ? 'font-semibold text-atencion' : 'text-tinta-suave'}>
               {Math.round((primer / rondas) * 100)}% de {rondas}
             </span>
-            {ultimoError && <span className="text-tinta-suave">· dijo {respuestaLegible(ultimoError, conteo)}</span>}
+            {ultimoError && <span className="text-tinta-suave">(dijo {respuestaLegible(ultimoError, conteo)})</span>}
           </li>
         ))}
       </ul>

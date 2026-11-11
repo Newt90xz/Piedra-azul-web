@@ -1,9 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { useSesion } from '../../app/Sesion.tsx'
-import { Antetitulo, Boton, BotonEnlace, Campo, FondoAula, IconoCaja, Tarjeta, claseEntrada } from '../../ui/aula.tsx'
+import { Icono } from '../../ui/Icono.tsx'
+import { Aviso, Boton, Campo, claseEntrada } from '../../ui/aula.tsx'
 
 const esquema = z.object({
   email: z.email('Escribe un correo válido.'),
@@ -31,35 +32,36 @@ export default function Entrar() {
   })
 
   return (
-    <FondoAula>
-      <main className="mx-auto max-w-md px-6 py-12">
-        <Antetitulo>Leer para Todos / Docentes / Entrada</Antetitulo>
-        <BotonEnlace to="/" variante="suave" className="mt-6 mb-6">← Volver al inicio</BotonEnlace>
-        <Tarjeta className="p-8">
-          <IconoCaja nombre="nota" />
-          <Antetitulo className="mt-6">Recorrido docente</Antetitulo>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-tinta">Iniciar sesión</h1>
-          <p className="mt-2 text-tinta-suave">
-            Al comenzar la clase, inicia sesión para abrir la sala de tu curso.
-          </p>
-          <form onSubmit={enviar} noValidate className="mt-6 grid gap-4">
+    <div className="grid min-h-dvh place-items-center bg-fondo px-4 py-10 text-[15px] text-tinta">
+      <main className="w-full max-w-sm">
+        <p className="mb-6 flex items-center justify-center gap-2.5 font-semibold">
+          <span className="grid size-8 place-items-center rounded-lg bg-menta-oscuro text-white">
+            <Icono nombre="asterisco" className="size-4" />
+          </span>
+          Leer para Todos
+        </p>
+        <div className="rounded-xl border border-borde bg-white p-6">
+          <h1 className="text-2xl font-semibold">Iniciar sesión</h1>
+          <p className="mt-1 text-sm text-tinta-suave">Panel docente: tu clase en vivo, las salas y el avance de cada niño.</p>
+          <form onSubmit={enviar} noValidate className="mt-5 grid gap-4">
             <Campo etiqueta="Correo" error={formState.errors.email?.message}>
               <input type="email" autoComplete="username" className={claseEntrada} {...register('email')} />
             </Campo>
             <Campo etiqueta="Contraseña" error={formState.errors.clave?.message}>
               <input type="password" autoComplete="current-password" className={claseEntrada} {...register('clave')} />
             </Campo>
-            {formState.errors.root && (
-              <p role="alert" className="text-sm font-semibold text-[#b42318]">
-                {formState.errors.root.message}
-              </p>
-            )}
-            <Boton type="submit" disabled={formState.isSubmitting} className="mt-2 py-3.5 text-base">
-              Entrar
+            {formState.errors.root && <Aviso tono="peligro">{formState.errors.root.message}</Aviso>}
+            <Boton type="submit" disabled={formState.isSubmitting} className="mt-1">
+              {formState.isSubmitting ? 'Entrando…' : 'Entrar'}
             </Boton>
           </form>
-        </Tarjeta>
+        </div>
+        <p className="mt-5 text-center text-sm">
+          <Link to="/" className="font-medium text-tinta-suave underline underline-offset-2 hover:text-tinta">
+            Volver al inicio
+          </Link>
+        </p>
       </main>
-    </FondoAula>
+    </div>
   )
 }

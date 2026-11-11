@@ -4,8 +4,8 @@ import { escuchaLaLetra, type Categoria, type Ronda } from './actividades.ts'
 import type { Area, CodigoOA } from './contenidos.ts'
 
 // Actividades que configura la docente: la mecánica está en código y ella elige
-// con qué se juega (RF-15). Cada configuración se puede guardar como plantilla y
-// reutilizar. Para sumar otra actividad configurable basta agregarla a esta lista.
+// con qué se juega (RF-15), con atajos de la app (PLANTILLAS_SISTEMA). Para sumar
+// otra actividad configurable basta agregarla a esta lista.
 
 export interface JuegoConfigurable {
   id: string
@@ -62,8 +62,7 @@ export const JUEGOS_CONFIGURABLES: JuegoConfigurable[] = [
 
 export const juegoConfigurable = (id: string) => JUEGOS_CONFIGURABLES.find((j) => j.id === id)
 
-// Plantillas listas para usar, iguales para todas las docentes. Las propias se
-// guardan en la base (plantillas_actividad).
+// Atajos listos para usar al elegir las letras, iguales para todas las docentes.
 export const PLANTILLAS_SISTEMA: PlantillaActividad[] = [
   { id: 'sistema-todas', nombre: 'Todas las letras', juegoId: 'escucha-letra', parametros: { letras: TODAS_LAS_LETRAS }, sistema: true },
   { id: 'sistema-vocales', nombre: 'Vocales', juegoId: 'escucha-letra', parametros: { letras: VOCALES_ALFABETO }, sistema: true },

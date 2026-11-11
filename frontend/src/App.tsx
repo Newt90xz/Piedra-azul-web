@@ -5,12 +5,12 @@ import Entrada from './paginas/alumno/Entrada.tsx'
 import Emocion from './paginas/aula/Emocion.tsx'
 import MiInicio from './paginas/aula/MiInicio.tsx'
 import AvanceCurso from './paginas/docente/AvanceCurso.tsx'
+import Clase from './paginas/docente/clase/Clase.tsx'
 import Entrar from './paginas/docente/Entrar.tsx'
 import Estudiantes from './paginas/docente/Estudiantes.tsx'
 import FichaEstudiante, { NuevoEstudiante } from './paginas/docente/FichaEstudiante.tsx'
 import LayoutDocente from './paginas/docente/LayoutDocente.tsx'
-import Panel from './paginas/docente/Panel.tsx'
-import Salas from './paginas/docente/Salas.tsx'
+import Salas, { RedirigirSala } from './paginas/docente/salas/Salas.tsx'
 import { NinoShell } from './ui/nino.tsx'
 
 export default function App() {
@@ -22,12 +22,13 @@ export default function App() {
 
           <Route path="/docente/entrar" element={<Entrar />} />
           <Route path="/docente" element={<LayoutDocente />}>
-            <Route index element={<Panel />} />
+            <Route index element={<Clase />} />
             <Route path="estudiantes" element={<Estudiantes />} />
             <Route path="estudiantes/nuevo" element={<NuevoEstudiante />} />
             <Route path="estudiantes/:id" element={<FichaEstudiante />} />
             <Route path="avance" element={<AvanceCurso />} />
             <Route path="salas" element={<Salas />} />
+            <Route path="salas/:id" element={<RedirigirSala />} />
           </Route>
 
           <Route path="/alumno" element={<Entrada />} />

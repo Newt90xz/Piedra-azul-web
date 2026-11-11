@@ -9,7 +9,6 @@ import type {
   MensajeSala,
   MiembroSala,
   Observacion,
-  PlantillaActividad,
   PosicionParque,
   ProgresoSala,
   RegistroEmocion,
@@ -22,7 +21,7 @@ import { AJUSTES_POR_DEFECTO, type Repositorio } from './repositorio.ts'
 // Implementación de demostración: guarda todo en localStorage del navegador.
 // Sirve para diseñar y probar las pantallas antes de conectar Supabase.
 
-// v5: plan por pasos y plantillas.
+// v5: plan por pasos (las plantillas propias se quitaron: un estado viejo las trae y se ignoran).
 const CLAVE = 'leer-para-todos/demo-v5'
 const CLAVE_SESION = 'leer-para-todos/sesion'
 
@@ -38,7 +37,6 @@ interface Estado {
   conectados: Conectado[]
   progreso: ProgresoSala[]
   compras: { estudianteId: string; articuloId: string }[]
-  plantillas: PlantillaActividad[]
   mensajes: (Omit<MensajeSala, 'nombre' | 'personaje' | 'color'> & { salaId: string })[]
 }
 
@@ -78,7 +76,7 @@ function semilla(): Estado {
     nivelHabilitado: nivel,
     monedas: 400 + i * 150,
     personaje: personajeDesdeBase(PERSONAJES_BASE[i * 2]),
-    ajustes: { ...AJUSTES_POR_DEFECTO, reducirAnimaciones: i === 2, modoImagen: i === 4 ? 'foto' : 'mixto' },
+    ajustes: { ...AJUSTES_POR_DEFECTO, reducirAnimaciones: i === 2, modoImagen: 'picto' },
   }))
 
   // Historial inventado para que el panel de avance tenga algo que mostrar.
@@ -139,7 +137,6 @@ function semilla(): Estado {
     conectados: [],
     progreso: [],
     compras: [],
-    plantillas: [],
     mensajes: [],
   }
 }
@@ -318,18 +315,6 @@ export const repositorioDemo: Repositorio = {
   },
   async asignarPlan(salaId, plan) {
     mutar((e) => (e.salas = e.salas.map((s) => (s.id === salaId ? { ...s, plan, contenidos: contenidosDePlan(plan), asignacion: id() } : s))))
-  },
-  async listarPlantillas() {
-    return leer().plantillas
-  },
-  async guardarPlantilla(datos) {
-    if (leer().plantillas.some((p) => p.juegoId === datos.juegoId && p.nombre === datos.nombre)) throw new Error('duplicate key value')
-    const plantilla: PlantillaActividad = { ...datos, id: id() }
-    mutar((e) => e.plantillas.push(plantilla))
-    return plantilla
-  },
-  async eliminarPlantilla(plantillaId) {
-    mutar((e) => (e.plantillas = e.plantillas.filter((p) => p.id !== plantillaId)))
   },
   async cargarBanco() {
     // La demo usa las palabras incluidas en el código.

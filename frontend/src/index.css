@@ -22,6 +22,19 @@
   --color-fondo: #f2f7fb;
   --color-borde: #dbe6ef;
 
+  /* Panel docente: fondo neutro y estados que siempre van con texto */
+  --color-lienzo: #f4f6f8;
+  --color-menta-hondo: #175a3d;
+  --color-atencion: #9a4d00;
+  --color-atencion-fondo: #fdf1e4;
+  --color-atencion-borde: #f0b97a;
+  --color-cuesta: #e8a35c;
+  /* Barras de datos que no piden atención (la que sí, va en «cuesta») */
+  --color-niebla: #a3b1c0;
+  --color-peligro: #b42318;
+  --color-peligro-hondo: #912018;
+  --color-peligro-fondo: #fef3f2;
+
   /* Pictomania */
   --color-nino-fondo: #f4f9fd;
   --color-nino-tinta: #243447;
@@ -37,6 +50,16 @@
   --animate-sacudir: sacudir 0.4s ease-in-out;
   --animate-aparecer: aparecer 0.35s ease-out;
   --animate-pantalla: pantalla 0.45s ease-out;
+  /* Panel docente: el niño que pide apoyo rebota y su anillo se enciende (una vez cada 1,6 s) */
+  --animate-pide-apoyo: pide-apoyo 1.6s ease-in-out infinite;
+
+  @keyframes pide-apoyo {
+    0%, 55%, 100% { transform: translateY(0); box-shadow: 0 0 0 0 transparent; }
+    12% { transform: translateY(-5px); box-shadow: 0 0 0 3px var(--color-cuesta); }
+    24% { transform: translateY(0); box-shadow: 0 0 0 3px var(--color-cuesta); }
+    34% { transform: translateY(-2px); box-shadow: 0 0 0 3px var(--color-cuesta); }
+    44% { transform: translateY(0); }
+  }
 
   @keyframes pop {
     0% { transform: scale(0.7); }
@@ -56,6 +79,23 @@
     from { opacity: 0; transform: scale(0.97); }
     to { opacity: 1; transform: none; }
   }
+}
+
+@theme static {
+  /* Color de cada sala (fondo pastel de las actividades + acento para bordes y puntos).
+     Los recreos van en menta; las salas de actividades se reparten los demás. */
+  --color-sala-amarillo: #fff3c4;
+  --color-sala-amarillo-acento: #d9a521;
+  --color-sala-celeste: #d6ebfc;
+  --color-sala-celeste-acento: #3f87c4;
+  --color-sala-lila: #e7e0f8;
+  --color-sala-lila-acento: #8467c6;
+  --color-sala-durazno: #fde2c8;
+  --color-sala-durazno-acento: #d47b37;
+  --color-sala-rosa: #f8d9d9;
+  --color-sala-rosa-acento: #c45c6a;
+  --color-sala-menta: #d3f2e3;
+  --color-sala-menta-acento: #2f9e6e;
 }
 
 html {

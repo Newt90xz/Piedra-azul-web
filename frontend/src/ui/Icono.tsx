@@ -20,6 +20,10 @@ const TRAZOS = {
   basura: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6',
   descargar: 'M12 4v11M7 10l5 5 5-5M5 20h14',
   arrastrar: 'M9 5.5v.01M9 12v.01M9 18.5v.01M15 5.5v.01M15 12v.01M15 18.5v.01',
+  cerrar: 'M6 6l12 12M18 6 6 18',
+  opciones: 'M5 12h.01M12 12h.01M19 12h.01',
+  abajo: 'M6 9l6 6 6-6',
+  tablet: 'M6 3h12v18H6zM11 18h2',
 } as const
 
 export type NombreIcono = keyof typeof TRAZOS

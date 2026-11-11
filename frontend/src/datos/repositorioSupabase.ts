@@ -17,7 +17,6 @@ import type {
   PasoSala,
   PerfilAlumno,
   Personaje,
-  PlantillaActividad,
   PosicionParque,
   ProgresoSala,
   RegistroEmocion,
@@ -97,7 +96,8 @@ const aEstudiante = (f: FilaEstudiante): Estudiante => ({
   nivelHabilitado: f.nivel_habilitado as Nivel,
   monedas: f.monedas,
   personaje: aPersonaje(f.personaje),
-  ajustes: { ...AJUSTES_POR_DEFECTO, ...(f.ajustes as Partial<Ajustes>) },
+  // Ya no se elige foto o pictograma: siempre el pictograma primero (la foto queda de respaldo).
+  ajustes: { ...AJUSTES_POR_DEFECTO, ...(f.ajustes as Partial<Ajustes>), modoImagen: 'picto' },
 })
 
 // `monedas` no se envía: solo la suma el trigger al guardar un resultado (RF-25).
@@ -421,24 +421,6 @@ export const repositorioSupabase: Repositorio = {
       throw new Error('Para usar actividades configurables falta aplicar la migración 20261103180000 en la base.')
     }
     sinError(await supabase.from('salas').update(datos).eq('id', salaId))
-  },
-  async listarPlantillas() {
-    const { data, error } = await supabase.from('plantillas_actividad').select('id, nombre, juego_id, parametros').order('nombre')
-    // Sin la migración todavía no hay plantillas propias: quedan las del sistema.
-    if (error) return []
-    return data.map((f): PlantillaActividad => ({ id: f.id, nombre: f.nombre, juegoId: f.juego_id, parametros: f.parametros as PlantillaActividad['parametros'] }))
-  },
-  async guardarPlantilla({ nombre, juegoId, parametros }) {
-    const { data, error } = await supabase
-      .from('plantillas_actividad')
-      .insert({ nombre, juego_id: juegoId, parametros: parametros as Json })
-      .select('id')
-      .single()
-    if (error) throw new Error(error.code === 'PGRST205' || error.code === '42P01' ? 'Para guardar plantillas falta aplicar la migración 20261103180000 en la base.' : error.message)
-    return { id: data.id, nombre, juegoId, parametros }
-  },
-  async eliminarPlantilla(id) {
-    sinError(await supabase.from('plantillas_actividad').delete().eq('id', id))
   },
   async configurarRecreo(salaId, actividad, juegos) {
     sinError(await supabase.from('salas').update({ actividad, juegos }).eq('id', salaId))
