@@ -119,9 +119,9 @@ export type Database = {
         ]
       }
       palabras: {
-        Row: { activa: boolean; emoji: string; foto_url: string | null; id: string; picto_url: string | null; silabas: string[]; texto: string }
-        Insert: { activa?: boolean; emoji: string; foto_url?: string | null; id: string; picto_url?: string | null; silabas: string[]; texto: string }
-        Update: { activa?: boolean; emoji?: string; foto_url?: string | null; id?: string; picto_url?: string | null; silabas?: string[]; texto?: string }
+        Row: { activa: boolean; emoji: string; foto_url: string | null; id: string; picto_url: string | null; silabas: string[]; tema: string | null; texto: string }
+        Insert: { activa?: boolean; emoji: string; foto_url?: string | null; id: string; picto_url?: string | null; silabas: string[]; tema?: string | null; texto: string }
+        Update: { activa?: boolean; emoji?: string; foto_url?: string | null; id?: string; picto_url?: string | null; silabas?: string[]; tema?: string | null; texto?: string }
         Relationships: []
       }
       letras: {

@@ -2,6 +2,7 @@
 
 import type { Categoria } from '../contenido/actividades.ts'
 import type { EspacioOpcional } from '../contenido/tienda.ts'
+import type { Tema } from '../contenido/temas.ts'
 
 export type ModoImagen = 'foto' | 'picto' | 'mixto'
 export type TamanoLetra = 'normal' | 'grande' | 'muy-grande'
@@ -33,6 +34,11 @@ export interface Ajustes {
   reducirAnimaciones: boolean
   silenciarEfectos: boolean
   tematica: Tematica
+  // Dificultad de las actividades solo para este niño (contenido/exigencia.ts);
+  // sin esto, la que fijó la docente en el plan de la sala.
+  dificultad?: Exigencia
+  // Desde cuándo rige: para sugerir subirla se mira solo lo que jugó después.
+  dificultadDesde?: string
 }
 // RF-24: personaje por capas. Solo guarda ids (contenido/tienda.ts), sin datos del niño.
 export interface Personaje {
@@ -78,6 +84,9 @@ export interface Palabra {
   texto: string
   silabas: string[]
   imagen: Imagen
+  // Tema de vocabulario (contenido/temas.ts). Todas las del código lo tienen;
+  // una que llega de la base sin tema queda solo en el banco general.
+  tema?: Tema
 }
 
 export interface Letra {
@@ -168,6 +177,9 @@ export interface PasoSala {
   titulo?: string
   // Dificultad que fijó la docente para esta actividad en esta sala; sin esto, intermedia.
   exigencia?: Exigencia
+  // Solo actividades de contenido: tema de las palabras que eligió la docente
+  // (se prefieren las de ese tema y se completa con otras si no alcanzan).
+  tema?: Tema
 }
 
 // Una configuración guardada para reutilizarla (RF-15). Al agregarla a un plan se
@@ -225,7 +237,7 @@ export interface Conectado {
 // (paso === 3 × contenidos: terminó y pasa a los juegos).
 export interface Progreso {
   paso: number
-  // Veces que repitió la actividad actual sin lograr el 60 %.
+  // Veces que repitió la actividad actual sin lograr la meta (exigencia.ts: metaDe).
   repeticiones: number
 }
 

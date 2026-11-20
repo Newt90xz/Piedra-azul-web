@@ -1,28 +1,30 @@
 import { useState } from 'react'
-import { ALFABETO } from '../../contenido/banco.ts'
-import { PLANTILLAS_SISTEMA, TODAS_LAS_LETRAS, VOCALES_ALFABETO, juegoConfigurable, letrasDe } from '../../contenido/plantillas.ts'
+import { ALFABETO, palabrasDelTema } from '../../contenido/banco.ts'
+import { PLANTILLAS_SISTEMA, TODAS_LAS_LETRAS, VOCALES_ALFABETO, juegoConfigurable, letrasDe, temasDe } from '../../contenido/plantillas.ts'
+import { TEMAS, type Tema } from '../../contenido/temas.ts'
+import { temasPreguntables } from '../../contenido/vocabulario.ts'
 import { repo } from '../../datos/index.ts'
-import type { PasoSala, PlantillaActividad } from '../../dominio/tipos.ts'
+import type { ParametrosJuego, PasoSala, PlantillaActividad } from '../../dominio/tipos.ts'
 import { useConsulta } from '../../lib/useConsulta.ts'
 import { Icono } from '../../ui/Icono.tsx'
 import { Boton, claseEntrada } from '../../ui/aula.tsx'
 
-// Configura una actividad antes de ponerla en el plan: qué letras entran. Lo
-// elegido se puede guardar como plantilla para reutilizarlo en otras salas. El
-// plan guarda una copia: editar la plantilla no le cambia la actividad a nadie.
+// Configura una actividad antes de ponerla en el plan: qué letras o qué temas
+// de palabras entran. Lo elegido se puede guardar como plantilla para
+// reutilizarlo en otras salas. El plan guarda una copia: editar la plantilla no
+// le cambia la actividad a nadie.
 export function ConfigurarActividad({ juegoId, inicial, alListo, alCancelar }: { juegoId: string; inicial?: PasoSala; alListo: (p: PasoSala) => void; alCancelar: () => void }) {
   const juego = juegoConfigurable(juegoId)!
-  const [letras, setLetras] = useState(() => letrasDe(inicial?.parametros ?? juego.porDefecto))
+  const [parametros, setParametros] = useState<ParametrosJuego>(() => inicial?.parametros ?? juego.porDefecto)
   const [nombre, setNombre] = useState(inicial?.titulo ?? '')
   const [aviso, setAviso] = useState<{ error: boolean; texto: string } | null>(null)
   const { datos: propias, recargar } = useConsulta(() => repo.listarPlantillas(), [])
 
   const plantillas = [...PLANTILLAS_SISTEMA, ...(propias ?? [])].filter((p) => p.juegoId === juegoId)
-  const parametros = { letras }
   const problema = juego.validar(parametros)
 
   const usar = (p: PlantillaActividad) => {
-    setLetras(letrasDe(p.parametros))
+    setParametros(p.parametros)
     setNombre(p.nombre)
     setAviso(null)
   }
@@ -46,8 +48,6 @@ export function ConfigurarActividad({ juegoId, inicial, alListo, alCancelar }: {
       setAviso({ error: true, texto: 'No se pudo borrar la plantilla.' })
     }
   }
-
-  const alternar = (id: string) => setLetras((x) => (x.includes(id) ? x.filter((l) => l !== id) : [...x, id]))
 
   return (
     <section aria-label={`Configurar ${juego.titulo}`} className="grid gap-4 rounded-2xl border-2 border-menta bg-menta-fondo/40 p-4">
@@ -76,35 +76,11 @@ export function ConfigurarActividad({ juegoId, inicial, alListo, alCancelar }: {
         </ul>
       </div>
 
-      <fieldset>
-        <legend className="mb-1.5 text-xs font-bold text-tinta-suave">
-          Letras que aparecen ({letras.length} de {ALFABETO.length})
-        </legend>
-        <div className="mb-2 flex flex-wrap gap-1.5">
-          <Boton variante="suave" onClick={() => setLetras(TODAS_LAS_LETRAS)}>Todas</Boton>
-          <Boton variante="suave" onClick={() => setLetras(VOCALES_ALFABETO)}>Vocales</Boton>
-          <Boton variante="suave" onClick={() => setLetras(TODAS_LAS_LETRAS.filter((l) => !VOCALES_ALFABETO.includes(l)))}>Consonantes</Boton>
-          <Boton variante="suave" onClick={() => setLetras([])}>Ninguna</Boton>
-        </div>
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(2.75rem,1fr))] gap-1.5">
-          {ALFABETO.map((l) => {
-            const activa = letras.includes(l.id)
-            return (
-              <button
-                key={l.id}
-                type="button"
-                aria-pressed={activa}
-                aria-label={`Letra ${l.grafema}`}
-                title={`Suena: ${l.fonema}`}
-                onClick={() => alternar(l.id)}
-                className={`grid h-11 place-items-center rounded-xl border-2 text-lg font-bold ${activa ? 'border-menta bg-menta text-white' : 'border-borde bg-white text-tinta-suave'}`}
-              >
-                {l.grafema}
-              </button>
-            )
-          })}
-        </div>
-      </fieldset>
+      {juego.eleccion === 'temas' ? (
+        <ElegirTemas temas={temasDe(parametros)} alCambiar={(temas) => setParametros({ temas })} />
+      ) : (
+        <ElegirLetras letras={letrasDe(parametros)} alCambiar={(letras) => setParametros({ letras })} />
+      )}
 
       {problema && (
         <p role="alert" className="rounded-xl bg-[#fdf1e4] px-3 py-2 text-sm font-semibold text-[#9a4d00]">
@@ -128,7 +104,10 @@ export function ConfigurarActividad({ juegoId, inicial, alListo, alCancelar }: {
       )}
 
       <div className="flex flex-wrap gap-2">
-        <Boton disabled={!!problema} onClick={() => alListo({ juego: juegoId, parametros, titulo: nombre.trim() || undefined })}>
+        <Boton
+          disabled={!!problema}
+          onClick={() => alListo({ juego: juegoId, parametros, titulo: nombre.trim() || undefined, ...(inicial?.exigencia && { exigencia: inicial.exigencia }) })}
+        >
           <Icono nombre="check" /> {inicial ? 'Actualizar en el plan' : 'Agregar al plan'}
         </Boton>
         <Boton variante="suave" onClick={alCancelar}>
@@ -136,5 +115,74 @@ export function ConfigurarActividad({ juegoId, inicial, alListo, alCancelar }: {
         </Boton>
       </div>
     </section>
+  )
+}
+
+function ElegirLetras({ letras, alCambiar }: { letras: string[]; alCambiar: (letras: string[]) => void }) {
+  const alternar = (id: string) => alCambiar(letras.includes(id) ? letras.filter((l) => l !== id) : [...letras, id])
+  return (
+    <fieldset>
+      <legend className="mb-1.5 text-xs font-bold text-tinta-suave">
+        Letras que aparecen ({letras.length} de {ALFABETO.length})
+      </legend>
+      <div className="mb-2 flex flex-wrap gap-1.5">
+        <Boton variante="suave" onClick={() => alCambiar(TODAS_LAS_LETRAS)}>Todas</Boton>
+        <Boton variante="suave" onClick={() => alCambiar(VOCALES_ALFABETO)}>Vocales</Boton>
+        <Boton variante="suave" onClick={() => alCambiar(TODAS_LAS_LETRAS.filter((l) => !VOCALES_ALFABETO.includes(l)))}>Consonantes</Boton>
+        <Boton variante="suave" onClick={() => alCambiar([])}>Ninguna</Boton>
+      </div>
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(2.75rem,1fr))] gap-1.5">
+        {ALFABETO.map((l) => {
+          const activa = letras.includes(l.id)
+          return (
+            <button
+              key={l.id}
+              type="button"
+              aria-pressed={activa}
+              aria-label={`Letra ${l.grafema}`}
+              title={`Suena: ${l.fonema}`}
+              onClick={() => alternar(l.id)}
+              className={`grid h-11 place-items-center rounded-xl border-2 text-lg font-bold ${activa ? 'border-menta bg-menta text-white' : 'border-borde bg-white text-tinta-suave'}`}
+            >
+              {l.grafema}
+            </button>
+          )
+        })}
+      </div>
+    </fieldset>
+  )
+}
+
+// Los temas que se pueden preguntar, con cuántas palabras tiene cada uno.
+function ElegirTemas({ temas, alCambiar }: { temas: Tema[]; alCambiar: (temas: Tema[]) => void }) {
+  const disponibles = temasPreguntables()
+  const alternar = (t: Tema) => alCambiar(temas.includes(t) ? temas.filter((x) => x !== t) : [...temas, t])
+  return (
+    <fieldset>
+      <legend className="mb-1.5 text-xs font-bold text-tinta-suave">
+        Temas que se preguntan ({temas.length} de {disponibles.length}). Con varios, se van turnando.
+      </legend>
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] gap-1.5">
+        {disponibles.map((t) => {
+          const activo = temas.includes(t)
+          return (
+            <button
+              key={t}
+              type="button"
+              aria-pressed={activo}
+              aria-label={`${TEMAS[t].nombre}, ${palabrasDelTema(t).length} palabras`}
+              onClick={() => alternar(t)}
+              className={`flex min-h-11 items-center gap-2 rounded-xl border-2 px-2.5 py-1.5 text-left text-sm font-semibold ${activo ? 'border-menta bg-menta text-white' : 'border-borde bg-white text-tinta'}`}
+            >
+              <span aria-hidden="true" className="text-lg">
+                {TEMAS[t].icono}
+              </span>
+              <span className="min-w-0 flex-1 leading-tight">{TEMAS[t].nombre}</span>
+              <span className={`text-xs ${activo ? 'text-white/80' : 'text-tinta-suave'}`}>{palabrasDelTema(t).length}</span>
+            </button>
+          )
+        })}
+      </div>
+    </fieldset>
   )
 }

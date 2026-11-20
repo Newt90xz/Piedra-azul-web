@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { Ronda } from './actividades.ts'
-import { JUEGOS } from './actividades.ts'
+import { CATEGORIAS, JUEGOS } from './actividades.ts'
 import { ALFABETO, PALABRAS, aplicarBanco } from './banco.ts'
-import { bloqueContenido, bloquesDePlan, categoriaDe, gruposDePlan, contenidosDePlan, nombreActividad, pasosDeContenidos, planDe, planDeBloques, planDeSala } from './contenidos.ts'
-import { PLANTILLAS_SISTEMA, juegoConfigurable, letrasDe } from './plantillas.ts'
+import { bloqueContenido, bloquesDePlan, categoriaDe, contextoDePaso, gruposDePlan, contenidosDePlan, nombreActividad, pasosDeContenidos, planDe, planDeBloques, planDeSala } from './contenidos.ts'
+import { PLANTILLAS_SISTEMA, juegoConfigurable, letrasDe, temasDe } from './plantillas.ts'
 
 const juego = juegoConfigurable('escucha-letra')!
 const elegir = (r: Ronda) => {
@@ -12,7 +12,8 @@ const elegir = (r: Ronda) => {
 }
 const sonidoDe = (id: string) => ALFABETO.find((l) => l.id === id)!.sonido
 
-const migraciones = Object.values(import.meta.glob<string>('../../../supabase/migrations/*.sql', { query: '?raw', import: 'default', eager: true })).join('\n')
+const sqlPorArchivo = import.meta.glob<string>('../../../supabase/migrations/*.sql', { query: '?raw', import: 'default', eager: true })
+const migraciones = Object.values(sqlPorArchivo).join('\n')
 
 describe('alfabeto', () => {
   it('tiene las 27 letras, una vez cada una', () => {
@@ -65,8 +66,13 @@ describe('Escucha y toca la letra', () => {
 
   it('las plantillas del sistema se pueden jugar', () => {
     for (const p of PLANTILLAS_SISTEMA) {
-      expect(juegoConfigurable(p.juegoId)!.validar(p.parametros), p.nombre).toBeNull()
-      expect(letrasDe(p.parametros).length).toBeGreaterThan(1)
+      const j = juegoConfigurable(p.juegoId)!
+      expect(j.validar(p.parametros), p.nombre).toBeNull()
+      if (j.eleccion === 'letras') expect(letrasDe(p.parametros).length).toBeGreaterThan(1)
+      else expect(temasDe(p.parametros).length).toBeGreaterThan(0)
+      expect(j.generar(p.parametros).length, p.nombre).toBeGreaterThanOrEqual(4)
+      // Mismo límite que plantillas_actividad.nombre en la base.
+      expect(p.nombre.length).toBeLessThanOrEqual(40)
     }
   })
 
@@ -85,12 +91,13 @@ describe('plan por pasos', () => {
     const viejo = planDe(['vocales', 'silabas-m'])
     const nuevo = planDeSala(pasosDeContenidos(['vocales', 'silabas-m']))
     expect(nuevo.map((p) => p.actividadId)).toEqual(viejo.map((p) => p.actividadId))
-    expect(nuevo.map((p) => p.actividadId).slice(0, 3)).toEqual(['vocales-1', 'vocales-2', 'vocales-3'])
+    // Escalera: con apoyo (vocales-2), decide solo (vocales-3) y solo de oído (vocales-1).
+    expect(nuevo.map((p) => p.actividadId).slice(0, 3)).toEqual(['vocales-2', 'vocales-3', 'vocales-1'])
   })
 
   it('mezcla contenidos y actividades configurables en orden', () => {
     const plan = planDeSala([...pasosDeContenidos(['vocales']), conLetras])
-    expect(plan.map((p) => p.actividadId)).toEqual(['vocales-1', 'vocales-2', 'vocales-3', 'escucha-letra'])
+    expect(plan.map((p) => p.actividadId)).toEqual(['vocales-2', 'vocales-3', 'vocales-1', 'escucha-letra'])
     expect(plan[3].contenido.titulo).toBe('Mis letras')
     expect(plan[3].parametros).toEqual({ letras: ['m', 'p'] })
   })
@@ -99,6 +106,21 @@ describe('plan por pasos', () => {
     const plan = planDeSala([conLetras, conLetras])
     expect(new Set(plan.map((p) => p.clave)).size).toBe(2)
     expect(plan[0].contenido.id).not.toBe(plan[1].contenido.id)
+  })
+
+  it('el tema de un contenido se guarda en el plan, vuelve al editarlo y llega a las actividades', () => {
+    const bloques = [{ contenido: 'escucho', pasos: [1, 3], tema: 'frutas' as const }, { contenido: 'escucho', pasos: [2] }, { contenido: 'formo-palabras', pasos: [1], tema: 'frutas' as const }]
+    const plan = planDeBloques(bloques)
+    expect(plan.slice(0, 3)).toEqual([{ juego: 'escucho-1', tema: 'frutas' }, { juego: 'escucho-3', tema: 'frutas' }, { juego: 'escucho-2' }])
+    // Mismo contenido seguido pero con otro tema: siguen siendo dos bloques.
+    expect(bloquesDePlan(plan)).toEqual(bloques)
+    const pasos = planDeSala(plan)
+    expect(pasos.map((p) => p.tema)).toEqual(['frutas', 'frutas', undefined, undefined])
+    // Formo palabras usa una lista fija: el tema no le llega.
+    const sala = { id: crypto.randomUUID(), asignacion: crypto.randomUUID() }
+    const contexto = contextoDePaso(pasos[0], sala)
+    expect(contexto).toMatchObject({ contenidoId: 'escucho', paso: 1, parametros: { tema: 'frutas' } })
+    expect(contextoDePaso(pasos[2], sala)).toMatchObject({ contenidoId: 'escucho', paso: 2, parametros: undefined })
   })
 
   it('se puede editar por bloques sin perder nada', () => {
@@ -117,7 +139,7 @@ describe('plan por pasos', () => {
     expect(contenidosDePlan(sinEscuchar)).toEqual(['silabas-s'])
 
     const grupos = gruposDePlan(planDeSala(planDeBloques([{ contenido: 'silabas-l', pasos: [3] }, bloqueContenido('vocales')])))
-    expect(grupos.map((g) => g.pasos.map((p) => p.numero))).toEqual([[3], [1, 2, 3]])
+    expect(grupos.map((g) => g.pasos.map((p) => p.numero))).toEqual([[3], [2, 3, 1]])
     expect(grupos.map((g) => g.inicio)).toEqual([0, 1])
   })
 })
@@ -126,6 +148,37 @@ describe('banco de la base', () => {
   it('la semilla incluye todo el banco del código', () => {
     for (const w of PALABRAS) expect(migraciones, w.id).toContain(`('${w.id}', '${w.texto}',`)
     for (const l of ALFABETO) expect(migraciones, l.id).toContain(`('${l.id}', '${l.grafema}', '${l.fonema}', '${l.sonido}',`)
+  })
+
+  it('la base tiene el tema de cada palabra del código', () => {
+    const lineas = migraciones.split('\n')
+    for (const w of PALABRAS) {
+      // Al insertarla («('kiwi', 'kiwi', array[…], '🥝', 'frutas')») o al actualizarla («('abeja', 'animales')»).
+      const alInsertar = lineas.some((l) => l.includes(`('${w.id}', '${w.texto}', array[`) && l.includes(`', '${w.tema}')`))
+      expect(alInsertar || migraciones.includes(`('${w.id}', '${w.tema}')`), w.id).toBe(true)
+    }
+  })
+
+  it('la base acepta guardar las rondas de todas las categorías', () => {
+    // La última migración que define las funciones que guardan: ahí van el check de la tabla y las dos funciones.
+    const ultima = Object.entries(sqlPorArchivo)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([, sql]) => sql)
+      .filter((sql) => sql.includes('function public.guardar_resultado_sala'))
+      .at(-1)!
+    for (const categoria of Object.keys(CATEGORIAS)) expect(ultima.split(`'${categoria}'`).length - 1, categoria).toBeGreaterThanOrEqual(3)
+  })
+
+  it('una palabra de la base sin tema conserva el del código', () => {
+    const kiwi = PALABRAS.find((w) => w.id === 'kiwi')!
+    const copia = { ...kiwi, imagen: { ...kiwi.imagen } }
+    aplicarBanco({ palabras: [{ id: 'kiwi', texto: 'kiwi', silabas: ['ki', 'wi'], emoji: '🥝' }], letras: [] })
+    expect(PALABRAS.find((w) => w.id === 'kiwi')?.tema).toBe('frutas')
+    aplicarBanco({ palabras: [{ id: 'kiwi', texto: 'kiwi', silabas: ['ki', 'wi'], emoji: '🥝', tema: 'no-es-tema' }], letras: [] })
+    expect(PALABRAS.find((w) => w.id === 'kiwi')?.tema).toBe('frutas')
+    aplicarBanco({ palabras: [{ id: 'kiwi', texto: 'kiwi', silabas: ['ki', 'wi'], emoji: '🥝', tema: 'verduras' }], letras: [] })
+    expect(PALABRAS.find((w) => w.id === 'kiwi')?.tema).toBe('verduras')
+    Object.assign(PALABRAS.find((w) => w.id === 'kiwi')!, copia)
   })
 
   it('agrega palabras nuevas, cambia las existentes e ignora lo inválido', () => {

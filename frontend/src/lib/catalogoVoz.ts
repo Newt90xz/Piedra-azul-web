@@ -1,4 +1,5 @@
 import { COMO_SE_JUEGA, JUEGOS, type Ronda } from '../contenido/actividades.ts'
+import { PALABRAS } from '../contenido/banco.ts'
 import { CONTENIDOS } from '../contenido/contenidos.ts'
 import { COLORES, GROSORES, LETRAS as LETRAS_DIBUJO } from '../contenido/dibujo.ts'
 import { MONEDAS_PARTIDA } from '../contenido/exigencia.ts'
@@ -228,6 +229,9 @@ export function frasesDeLaApp(fuentes: Fuente[], opciones: OpcionesCatalogo = {}
   for (const j of JUEGOS_CONFIGURABLES) agregar('datos', j.titulo, j.instrucciones, FRASES.fraseCamino(j.titulo, false), FRASES.fraseCamino(j.titulo, true))
   for (const j of JUEGOS) agregar('datos', j.titulo, j.instrucciones)
   agregar('datos', ...Object.values(COMO_SE_JUEGA))
+  // Cada palabra del banco tal como suena al tocar su dibujo o su tarjeta: así
+  // también las que salen poco al azar (o solo con un tema) suenan al instante.
+  agregar('datos', ...PALABRAS.map((w) => enFrase(w.texto)))
   for (const a of ARTICULOS) agregar('datos', a.nombre, a.precio ? FRASES.articuloConPrecio(a.nombre, a.precio) : undefined)
   agregar('datos', ...[...new Set(ARTICULOS.map((a) => a.precio).filter(Boolean))].map(FRASES.frasePrecio))
   agregar('datos', ...Array.from({ length: MAX_FALTAN_CON_NUMERO + 1 }, (_, i) => faltanMonedas(i + 1)))

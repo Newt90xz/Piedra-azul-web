@@ -1,8 +1,11 @@
 import type { Letra, Palabra } from '../dominio/tipos.ts'
+import { enBancoGeneral, esTema, type Tema } from './temas.ts'
 
-// Banco de contenidos de prueba. En la versión conectada se carga desde
-// Supabase (RNF-14): agregar una palabra no debe requerir tocar código.
-// Los emoji son marcadores hasta tener fotos reales y pictogramas ARASAAC.
+// Banco de palabras. En la versión conectada se carga también desde Supabase
+// (RNF-14): agregar una palabra no debe requerir tocar código. Cada palabra
+// tiene su pictograma ARASAAC en public/imagenes/<palabra>.png; el emoji es el
+// respaldo si la imagen no carga, y no se repite (dos opciones iguales no se
+// distinguirían).
 
 const p = (texto: string, silabas: string[], emoji: string): Palabra => ({
   id: quitarTildes(texto),
@@ -11,133 +14,232 @@ const p = (texto: string, silabas: string[], emoji: string): Palabra => ({
   imagen: { alt: texto, emoji },
 })
 
+const deTema = (tema: Tema, palabras: Palabra[]) => palabras.map((w) => ({ ...w, tema }))
+
+// Agrupadas por tema, en el orden de TEMAS (contenido/temas.ts).
 export const PALABRAS: Palabra[] = [
-  p('avión', ['a', 'vión'], '✈️'),
-  p('abeja', ['a', 'be', 'ja'], '🐝'),
-  p('árbol', ['ár', 'bol'], '🌳'),
-  p('elefante', ['e', 'le', 'fan', 'te'], '🐘'),
-  p('estrella', ['es', 'tre', 'lla'], '⭐'),
-  p('iglesia', ['i', 'gle', 'sia'], '⛪'),
-  p('isla', ['is', 'la'], '🏝️'),
-  p('oso', ['o', 'so'], '🐻'),
-  p('ojo', ['o', 'jo'], '👁️'),
-  p('uvas', ['u', 'vas'], '🍇'),
-  p('unicornio', ['u', 'ni', 'cor', 'nio'], '🦄'),
-  p('mano', ['ma', 'no'], '✋'),
-  p('mono', ['mo', 'no'], '🐒'),
-  p('manzana', ['man', 'za', 'na'], '🍎'),
-  p('mamá', ['ma', 'má'], '👩'),
-  p('mapa', ['ma', 'pa'], '🗺️'),
-  p('mariposa', ['ma', 'ri', 'po', 'sa'], '🦋'),
-  p('pato', ['pa', 'to'], '🦆'),
-  p('perro', ['pe', 'rro'], '🐶'),
-  p('pelota', ['pe', 'lo', 'ta'], '⚽'),
-  p('papá', ['pa', 'pá'], '👨'),
-  p('puma', ['pu', 'ma'], '🐆'),
-  p('pera', ['pe', 'ra'], '🍐'),
-  p('pan', ['pan'], '🍞'),
-  p('luna', ['lu', 'na'], '🌙'),
-  p('lupa', ['lu', 'pa'], '🔍'),
-  p('león', ['le', 'ón'], '🦁'),
-  p('lápiz', ['lá', 'piz'], '✏️'),
-  p('sol', ['sol'], '☀️'),
-  p('sapo', ['sa', 'po'], '🐸'),
-  p('silla', ['si', 'lla'], '🪑'),
-  p('sopa', ['so', 'pa'], '🍲'),
-  p('taza', ['ta', 'za'], '☕'),
-  p('tomate', ['to', 'ma', 'te'], '🍅'),
-  p('tortuga', ['tor', 'tu', 'ga'], '🐢'),
-  p('zapato', ['za', 'pa', 'to'], '👞'),
-  p('gato', ['ga', 'to'], '🐱'),
-  p('casa', ['ca', 'sa'], '🏠'),
-  p('coneja', ['co', 'ne', 'ja'], '🐰'),
-  p('parque', ['par', 'que'], '🏞️'),
-  p('flores', ['flo', 'res'], '🌸'),
-  p('flor', ['flor'], '🌸'),
-  p('zanahoria', ['za', 'na', 'ho', 'ria'], '🥕'),
-  p('pollito', ['po', 'lli', 'to'], '🐥'),
-  p('playa', ['pla', 'ya'], '🏖️'),
-  p('helado', ['he', 'la', 'do'], '🍦'),
-  p('ratón', ['ra', 'tón'], '🐭'),
-  p('queso', ['que', 'so'], '🧀'),
-  p('chocolate', ['cho', 'co', 'la', 'te'], '🍫'),
-  // Familias silábicas y rimas de los contenidos (contenidos.ts).
-  p('moto', ['mo', 'to'], '🏍️'),
-  p('muñeca', ['mu', 'ñe', 'ca'], '🪆'),
-  p('maleta', ['ma', 'le', 'ta'], '🧳'),
-  p('lobo', ['lo', 'bo'], '🐺'),
-  p('leche', ['le', 'che'], '🥛'),
-  p('limón', ['li', 'món'], '🍋'),
-  p('semilla', ['se', 'mi', 'lla'], '🌱'),
-  p('sirena', ['si', 're', 'na'], '🧜‍♀️'),
-  p('sofá', ['so', 'fá'], '🛋️'),
-  p('galleta', ['ga', 'lle', 'ta'], '🍪'),
-  p('dado', ['da', 'do'], '🎲'),
-  p('noche', ['no', 'che'], '🌃'),
-  // Personas y cosas (antes, para las oraciones).
-  p('niño', ['ni', 'ño'], '👦'),
-  p('niña', ['ni', 'ña'], '👧'),
-  p('agua', ['a', 'gua'], '💧'),
-  p('libro', ['li', 'bro'], '📚'),
-  p('pez', ['pez'], '🐟'),
-  // Familias silábicas con pocas palabras (ME, MI, MU, PI, PO, PA, LA, LO, LE, SA, SE, SU).
-  p('melón', ['me', 'lón'], '🍈'),
-  p('medusa', ['me', 'du', 'sa'], '🪼'),
-  p('micrófono', ['mi', 'cró', 'fo', 'no'], '🎙️'),
-  p('mochila', ['mo', 'chi', 'la'], '🎒'),
-  p('música', ['mú', 'si', 'ca'], '🎵'),
-  p('piña', ['pi', 'ña'], '🍍'),
-  p('pino', ['pi', 'no'], '🌲'),
-  p('pollo', ['po', 'llo'], '🍗'),
-  p('polera', ['po', 'le', 'ra'], '👕'),
-  p('paloma', ['pa', 'lo', 'ma'], '🕊️'),
-  p('payaso', ['pa', 'ya', 'so'], '🤡'),
-  p('paraguas', ['pa', 'ra', 'guas'], '☂️'),
-  p('lata', ['la', 'ta'], '🥫'),
-  p('lana', ['la', 'na'], '🧶'),
-  p('loro', ['lo', 'ro'], '🦜'),
-  p('lechuga', ['le', 'chu', 'ga'], '🥬'),
-  p('salero', ['sa', 'le', 'ro'], '🧂'),
-  p('semáforo', ['se', 'má', 'fo', 'ro'], '🚦'),
-  p('serrucho', ['se', 'rru', 'cho'], '🪚'),
-  p('sushi', ['su', 'shi'], '🍣'),
-  // Vocal inicial (E, I, O y U tenían solo dos palabras).
-  p('escoba', ['es', 'co', 'ba'], '🧹'),
-  p('espejo', ['es', 'pe', 'jo'], '🪞'),
-  p('erizo', ['e', 'ri', 'zo'], '🦔'),
-  p('imán', ['i', 'mán'], '🧲'),
-  p('iguana', ['i', 'gua', 'na'], '🦎'),
-  p('oreja', ['o', 're', 'ja'], '👂'),
-  p('oveja', ['o', 've', 'ja'], '🐑'),
-  p('ola', ['o', 'la'], '🌊'),
-  p('uña', ['u', 'ña'], '💅'),
-  p('araña', ['a', 'ra', 'ña'], '🕷️'),
-  p('anillo', ['a', 'ni', 'llo'], '💍'),
-  p('ardilla', ['ar', 'di', 'lla'], '🐿️'),
-  p('auto', ['au', 'to'], '🚗'),
-  // Palabras de 1 y de 4 sílabas, para contar y comparar largos.
-  p('tren', ['tren'], '🚆'),
-  p('pie', ['pie'], '🦶'),
-  p('mar', ['mar'], '⛵'),
-  p('mariquita', ['ma', 'ri', 'qui', 'ta'], '🐞'),
-  p('bicicleta', ['bi', 'ci', 'cle', 'ta'], '🚲'),
-  p('cocodrilo', ['co', 'co', 'dri', 'lo'], '🐊'),
-  p('calabaza', ['ca', 'la', 'ba', 'za'], '🎃'),
-  p('dinosaurio', ['di', 'no', 'sau', 'rio'], '🦕'),
-  p('fresa', ['fre', 'sa'], '🍓'),
-  // Palabras de dos sílabas directas (formar, completar y escribir palabras).
-  p('mesa', ['me', 'sa'], '🟫'),
-  p('foca', ['fo', 'ca'], '🦭'),
-  p('vaca', ['va', 'ca'], '🐄'),
-  p('nube', ['nu', 'be'], '☁️'),
-  p('dedo', ['de', 'do'], '☝️'),
-  p('cama', ['ca', 'ma'], '🛏️'),
-  p('bota', ['bo', 'ta'], '👢'),
-  // Más personas y animales para las oraciones. «Guagua»: bebé, en Chile.
-  p('guagua', ['gua', 'gua'], '👶'),
-  p('pájaro', ['pá', 'ja', 'ro'], '🐦'),
-  p('abuela', ['a', 'bue', 'la'], '👵'),
+  ...deTema('animales', [
+    p('abeja', ['a', 'be', 'ja'], '🐝'),
+    p('elefante', ['e', 'le', 'fan', 'te'], '🐘'),
+    p('oso', ['o', 'so'], '🐻'),
+    p('mono', ['mo', 'no'], '🐒'),
+    p('mariposa', ['ma', 'ri', 'po', 'sa'], '🦋'),
+    p('pato', ['pa', 'to'], '🦆'),
+    p('perro', ['pe', 'rro'], '🐶'),
+    p('puma', ['pu', 'ma'], '🐆'),
+    p('león', ['le', 'ón'], '🦁'),
+    p('sapo', ['sa', 'po'], '🐸'),
+    p('tortuga', ['tor', 'tu', 'ga'], '🐢'),
+    p('gato', ['ga', 'to'], '🐱'),
+    p('coneja', ['co', 'ne', 'ja'], '🐰'),
+    p('pollito', ['po', 'lli', 'to'], '🐥'),
+    p('ratón', ['ra', 'tón'], '🐭'),
+    p('lobo', ['lo', 'bo'], '🐺'),
+    p('medusa', ['me', 'du', 'sa'], '🪼'),
+    p('paloma', ['pa', 'lo', 'ma'], '🕊️'),
+    p('loro', ['lo', 'ro'], '🦜'),
+    p('erizo', ['e', 'ri', 'zo'], '🦔'),
+    p('iguana', ['i', 'gua', 'na'], '🦎'),
+    p('oveja', ['o', 've', 'ja'], '🐑'),
+    p('araña', ['a', 'ra', 'ña'], '🕷️'),
+    p('ardilla', ['ar', 'di', 'lla'], '🐿️'),
+    p('pez', ['pez'], '🐟'),
+    p('mariquita', ['ma', 'ri', 'qui', 'ta'], '🐞'),
+    p('cocodrilo', ['co', 'co', 'dri', 'lo'], '🐊'),
+    p('dinosaurio', ['di', 'no', 'sau', 'rio'], '🦕'),
+    p('foca', ['fo', 'ca'], '🦭'),
+    p('vaca', ['va', 'ca'], '🐄'),
+    p('pájaro', ['pá', 'ja', 'ro'], '🐦'),
+  ]),
+  ...deTema('frutas', [
+    p('manzana', ['man', 'za', 'na'], '🍎'),
+    p('pera', ['pe', 'ra'], '🍐'),
+    p('uvas', ['u', 'vas'], '🍇'),
+    p('limón', ['li', 'món'], '🍋'),
+    p('melón', ['me', 'lón'], '🍈'),
+    p('piña', ['pi', 'ña'], '🍍'),
+    // «Frutilla», como se dice en Chile (antes «fresa»).
+    p('frutilla', ['fru', 'ti', 'lla'], '🍓'),
+    p('plátano', ['plá', 'ta', 'no'], '🍌'),
+    p('naranja', ['na', 'ran', 'ja'], '🍊'),
+    p('sandía', ['san', 'dí', 'a'], '🍉'),
+    p('durazno', ['du', 'raz', 'no'], '🍑'),
+    p('kiwi', ['ki', 'wi'], '🥝'),
+    p('cereza', ['ce', 're', 'za'], '🍒'),
+    p('mango', ['man', 'go'], '🥭'),
+    p('coco', ['co', 'co'], '🥥'),
+    p('mora', ['mo', 'ra'], '🫐'),
+    p('papaya', ['pa', 'pa', 'ya'], '🧡'),
+    p('ciruela', ['ci', 'rue', 'la'], '🟣'),
+  ]),
+  ...deTema('verduras', [
+    p('tomate', ['to', 'ma', 'te'], '🍅'),
+    p('zanahoria', ['za', 'na', 'ho', 'ria'], '🥕'),
+    p('lechuga', ['le', 'chu', 'ga'], '🥬'),
+    p('calabaza', ['ca', 'la', 'ba', 'za'], '🎃'),
+  ]),
+  ...deTema('alimentos', [
+    p('pan', ['pan'], '🍞'),
+    p('sopa', ['so', 'pa'], '🍲'),
+    p('helado', ['he', 'la', 'do'], '🍦'),
+    p('queso', ['que', 'so'], '🧀'),
+    p('chocolate', ['cho', 'co', 'la', 'te'], '🍫'),
+    p('leche', ['le', 'che'], '🥛'),
+    p('galleta', ['ga', 'lle', 'ta'], '🍪'),
+    p('pollo', ['po', 'llo'], '🍗'),
+    p('sushi', ['su', 'shi'], '🍣'),
+  ]),
+  ...deTema('cuerpo', [
+    p('ojo', ['o', 'jo'], '👁️'),
+    p('mano', ['ma', 'no'], '✋'),
+    p('pie', ['pie'], '🦶'),
+    p('oreja', ['o', 're', 'ja'], '👂'),
+    p('uña', ['u', 'ña'], '💅'),
+    p('dedo', ['de', 'do'], '☝️'),
+  ]),
+  // «Guagua»: bebé, en Chile.
+  ...deTema('familia', [
+    p('mamá', ['ma', 'má'], '👩'),
+    p('papá', ['pa', 'pá'], '👨'),
+    p('niño', ['ni', 'ño'], '👦'),
+    p('niña', ['ni', 'ña'], '👧'),
+    p('guagua', ['gua', 'gua'], '👶'),
+    p('abuela', ['a', 'bue', 'la'], '👵'),
+  ]),
+  // Profesiones: trabajos que piden estudiar muchos años. Sin «enfermera»: su
+  // pictograma es igual al de la doctora.
+  ...deTema('profesiones', [
+    p('doctora', ['doc', 'to', 'ra'], '👩‍⚕️'),
+    p('profesora', ['pro', 'fe', 'so', 'ra'], '👩‍🏫'),
+    p('dentista', ['den', 'tis', 'ta'], '🦷'),
+    p('veterinaria', ['ve', 'te', 'ri', 'na', 'ria'], '🐾'),
+    p('piloto', ['pi', 'lo', 'to'], '🧑‍✈️'),
+    p('astronauta', ['as', 'tro', 'nau', 'ta'], '🧑‍🚀'),
+    p('científica', ['cien', 'tí', 'fi', 'ca'], '👩‍🔬'),
+  ]),
+  // Oficios: los demás trabajos, también bombero, carabinero y cartero.
+  ...deTema('oficios', [
+    p('bombero', ['bom', 'be', 'ro'], '🧑‍🚒'),
+    p('carabinero', ['ca', 'ra', 'bi', 'ne', 'ro'], '👮'),
+    p('cartero', ['car', 'te', 'ro'], '📮'),
+    p('panadero', ['pa', 'na', 'de', 'ro'], '🥖'),
+    p('carpintero', ['car', 'pin', 'te', 'ro'], '🔨'),
+    p('pescador', ['pes', 'ca', 'dor'], '🎣'),
+    p('jardinero', ['jar', 'di', 'ne', 'ro'], '🌻'),
+    p('peluquera', ['pe', 'lu', 'que', 'ra'], '💇'),
+    p('cocinero', ['co', 'ci', 'ne', 'ro'], '🧑‍🍳'),
+    p('mecánico', ['me', 'cá', 'ni', 'co'], '🧑‍🔧'),
+    p('albañil', ['al', 'ba', 'ñil'], '🧱'),
+    p('agricultor', ['a', 'gri', 'cul', 'tor'], '🧑‍🌾'),
+    p('pintor', ['pin', 'tor'], '🎨'),
+  ]),
+  // Sin «metro» ni «taxi»: sus pictogramas son iguales al tren y al auto.
+  ...deTema('transporte', [
+    p('avión', ['a', 'vión'], '✈️'),
+    p('auto', ['au', 'to'], '🚗'),
+    p('moto', ['mo', 'to'], '🏍️'),
+    p('tren', ['tren'], '🚆'),
+    p('bicicleta', ['bi', 'ci', 'cle', 'ta'], '🚲'),
+    p('micro', ['mi', 'cro'], '🚌'),
+    p('barco', ['bar', 'co'], '🚢'),
+    p('camión', ['ca', 'mión'], '🚚'),
+    p('helicóptero', ['he', 'li', 'cóp', 'te', 'ro'], '🚁'),
+    p('cohete', ['co', 'he', 'te'], '🚀'),
+    p('submarino', ['sub', 'ma', 'ri', 'no'], '🤿'),
+    p('ambulancia', ['am', 'bu', 'lan', 'cia'], '🚑'),
+    p('tractor', ['trac', 'tor'], '🚜'),
+  ]),
+  ...deTema('ropa', [
+    p('polera', ['po', 'le', 'ra'], '👕'),
+    p('zapato', ['za', 'pa', 'to'], '👞'),
+    p('bota', ['bo', 'ta'], '👢'),
+  ]),
+  ...deTema('casa', [
+    p('casa', ['ca', 'sa'], '🏠'),
+    p('silla', ['si', 'lla'], '🪑'),
+    p('mesa', ['me', 'sa'], '🟫'),
+    p('cama', ['ca', 'ma'], '🛏️'),
+    p('sofá', ['so', 'fá'], '🛋️'),
+    p('taza', ['ta', 'za'], '☕'),
+    p('espejo', ['es', 'pe', 'jo'], '🪞'),
+    p('escoba', ['es', 'co', 'ba'], '🧹'),
+    p('salero', ['sa', 'le', 'ro'], '🧂'),
+    p('lata', ['la', 'ta'], '🥫'),
+    p('lana', ['la', 'na'], '🧶'),
+    p('maleta', ['ma', 'le', 'ta'], '🧳'),
+    p('paraguas', ['pa', 'ra', 'guas'], '☂️'),
+    p('imán', ['i', 'mán'], '🧲'),
+    p('anillo', ['a', 'ni', 'llo'], '💍'),
+    p('serrucho', ['se', 'rru', 'cho'], '🪚'),
+    p('micrófono', ['mi', 'cró', 'fo', 'no'], '🎙️'),
+    p('música', ['mú', 'si', 'ca'], '🎵'),
+  ]),
+  ...deTema('juguetes', [
+    p('pelota', ['pe', 'lo', 'ta'], '⚽'),
+    p('muñeca', ['mu', 'ñe', 'ca'], '🪆'),
+    p('dado', ['da', 'do'], '🎲'),
+    p('lápiz', ['lá', 'piz'], '✏️'),
+    p('libro', ['li', 'bro'], '📚'),
+    p('mochila', ['mo', 'chi', 'la'], '🎒'),
+    p('lupa', ['lu', 'pa'], '🔍'),
+    p('mapa', ['ma', 'pa'], '🗺️'),
+  ]),
+  // «Flores» antes que «flor»: comparten emoji y el banco general se queda con la primera.
+  ...deTema('naturaleza', [
+    p('árbol', ['ár', 'bol'], '🌳'),
+    p('pino', ['pi', 'no'], '🌲'),
+    p('flores', ['flo', 'res'], '🌸'),
+    p('flor', ['flor'], '🌸'),
+    p('semilla', ['se', 'mi', 'lla'], '🌱'),
+    p('estrella', ['es', 'tre', 'lla'], '⭐'),
+    p('luna', ['lu', 'na'], '🌙'),
+    p('sol', ['sol'], '☀️'),
+    p('nube', ['nu', 'be'], '☁️'),
+    p('noche', ['no', 'che'], '🌃'),
+    p('agua', ['a', 'gua'], '💧'),
+    p('mar', ['mar'], '⛵'),
+    p('ola', ['o', 'la'], '🌊'),
+    p('playa', ['pla', 'ya'], '🏖️'),
+    p('isla', ['is', 'la'], '🏝️'),
+    p('parque', ['par', 'que'], '🏞️'),
+    p('iglesia', ['i', 'gle', 'sia'], '⛪'),
+    p('semáforo', ['se', 'má', 'fo', 'ro'], '🚦'),
+  ]),
+  ...deTema('personajes', [
+    p('unicornio', ['u', 'ni', 'cor', 'nio'], '🦄'),
+    p('sirena', ['si', 're', 'na'], '🧜‍♀️'),
+    p('payaso', ['pa', 'ya', 'so'], '🤡'),
+  ]),
+  // Meses y estaciones: solo en las actividades de vocabulario (temas.ts). Los
+  // meses usan los pictogramas de calendario con su número (y ese emoji).
+  ...deTema('meses', [
+    p('enero', ['e', 'ne', 'ro'], '1️⃣'),
+    p('febrero', ['fe', 'bre', 'ro'], '2️⃣'),
+    p('marzo', ['mar', 'zo'], '3️⃣'),
+    p('abril', ['a', 'bril'], '4️⃣'),
+    p('mayo', ['ma', 'yo'], '5️⃣'),
+    p('junio', ['ju', 'nio'], '6️⃣'),
+    p('julio', ['ju', 'lio'], '7️⃣'),
+    p('agosto', ['a', 'gos', 'to'], '8️⃣'),
+    p('septiembre', ['sep', 'tiem', 'bre'], '9️⃣'),
+    p('octubre', ['oc', 'tu', 'bre'], '🔟'),
+    p('noviembre', ['no', 'viem', 'bre'], '1️⃣1️⃣'),
+    p('diciembre', ['di', 'ciem', 'bre'], '1️⃣2️⃣'),
+  ]),
+  ...deTema('estaciones', [
+    p('primavera', ['pri', 'ma', 've', 'ra'], '🌷'),
+    p('verano', ['ve', 'ra', 'no'], '🌞'),
+    p('otoño', ['o', 'to', 'ño'], '🍂'),
+    p('invierno', ['in', 'vier', 'no'], '⛄'),
+  ]),
 ]
+
+// Las que usan las actividades de sonidos, sílabas y palabras: sin meses ni
+// estaciones. Es una función y no una constante porque la caché de la base
+// (datos/bancoGuardado.ts) se aplica después de cargar este archivo.
+export const bancoGeneral = () => PALABRAS.filter(enBancoGeneral)
+
+export const palabrasDelTema = (tema: Tema) => PALABRAS.filter((w) => w.tema === tema)
 
 // Nivel 1: vocales y consonantes de fácil articulación (M, P, L, S, T).
 export const LETRAS: Letra[] = [
@@ -245,15 +347,25 @@ export function fonemaDe(l: string) {
 // Lo que llega de la base (datos/bancoGuardado.ts). Agrega y actualiza, y nunca
 // quita: las actividades piden palabras por id y fallarían si una desaparece.
 export interface BancoRemoto {
-  palabras: { id: string; texto: string; silabas: string[]; emoji: string; fotoUrl?: string; pictoUrl?: string }[]
+  palabras: { id: string; texto: string; silabas: string[]; emoji: string; fotoUrl?: string; pictoUrl?: string; tema?: string }[]
   letras: { id: string; fonema: string; apoyoArticulatorio?: string }[]
 }
 
 export function aplicarBanco(banco: BancoRemoto) {
   for (const f of banco.palabras ?? []) {
     if (!f.id || !f.texto || !f.emoji || !f.silabas?.length) continue
-    const nueva: Palabra = { id: f.id, texto: f.texto, silabas: f.silabas, imagen: { alt: f.texto, emoji: f.emoji, fotoUrl: f.fotoUrl, pictoUrl: f.pictoUrl } }
     const i = PALABRAS.findIndex((w) => w.id === f.id)
+    // El tema de la base si trae uno válido; si no (una base sin migrar o una
+    // caché vieja), el del código. Sin ninguno, la palabra queda solo en el
+    // banco general: no entra a los temas ni a las actividades de vocabulario.
+    const tema = esTema(f.tema) ? f.tema : PALABRAS[i]?.tema
+    const nueva: Palabra = {
+      id: f.id,
+      texto: f.texto,
+      silabas: f.silabas,
+      imagen: { alt: f.texto, emoji: f.emoji, fotoUrl: f.fotoUrl, pictoUrl: f.pictoUrl },
+      ...(tema && { tema }),
+    }
     if (i >= 0) PALABRAS[i] = nueva
     else PALABRAS.push(nueva)
   }

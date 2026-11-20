@@ -27,5 +27,15 @@ licencia. Se descargan de la API pública en 500 px:
   https://api.arasaac.org/v1/pictograms/es/search/<palabra>   (buscar el id)
   https://static.arasaac.org/pictograms/<id>/<id>_500.png     (descargar)
 
-Revisar siempre el dibujo elegido: la búsqueda a veces devuelve otro sentido
-de la palabra (p. ej. «bota» de vino en vez de calzado).
+Para agregar palabras: anotar el id en scripts/pictogramas/arasaac.json
+(«archivo»: { "id": 1234, "clave": "palabra en ARASAAC si es otra" }) y, desde
+frontend/, correr:
+
+  node scripts/pictogramas/descargar.ts
+
+El script revisa que el pictograma tenga esa palabra clave y baja solo los que
+faltan (--forzar los vuelve a bajar). Igual hay que revisar el dibujo elegido:
+la búsqueda a veces devuelve otro sentido de la palabra (p. ej. «bota» de vino
+en vez de calzado, o el «mango» de una sartén). Cada palabra también lleva su
+tema en contenido/banco.ts (ver contenido/temas.ts) y una migración en
+supabase/migrations con su tema.

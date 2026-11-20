@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Partida, Premio, type FinPartida } from '../../actividades/Partida.tsx'
 import { JUEGOS, type Actividad, type Ronda } from '../../contenido/actividades.ts'
-import { aprobo, contextoDePaso, gruposDePlan, planDeSala, type PasoPlan } from '../../contenido/contenidos.ts'
-import { nivelDe, partidaConExigencia } from '../../contenido/exigencia.ts'
+import { contextoDePaso, gruposDePlan, planDeSala, type PasoPlan } from '../../contenido/contenidos.ts'
+import { aprobo, metaDe, nivelDe, partidaConExigencia } from '../../contenido/exigencia.ts'
 import { SALUDO_RECREO_GLOBOS, fraseCamino } from '../../contenido/frases.ts'
 import { repo } from '../../datos/index.ts'
 import type { EstadoAlumno } from '../../dominio/tipos.ts'
@@ -14,8 +14,8 @@ import { MiniJuego } from '../alumno/MiniJuego.tsx'
 type SalaTrabajo = NonNullable<EstadoAlumno['sala']>
 
 // Sala de trabajo: el niño recorre en orden las actividades de los contenidos
-// que asignó la docente. Con 60 % o más pasa a la siguiente; si no, la repite
-// con otras rondas del mismo pool. Al terminar todas ve un resumen y pasa solo a
+// que asignó la docente. Si logra la meta (exigencia.ts: metaDe) pasa a la
+// siguiente; si no, la repite con otras rondas del mismo pool. Al terminar todas ve un resumen y pasa solo a
 // la sala conectada. El niño nunca elige qué contenido trabajar.
 export default function Secuencia({ sala }: { sala: SalaTrabajo }) {
   const { estado, recargar } = useNino()
@@ -36,7 +36,7 @@ export default function Secuencia({ sala }: { sala: SalaTrabajo }) {
   const terminar = useCallback(
     (fin: FinPartida) => {
       if (!actual) return
-      const logrado = aprobo(fin.rondas, nivelDe(actual.exigencia).umbral)
+      const logrado = aprobo(fin.rondas, metaDe(rondas))
       setUltimo({ monedas: fin.monedas, logrado })
       setFase('premio')
       if (logrado) {
@@ -46,11 +46,12 @@ export default function Secuencia({ sala }: { sala: SalaTrabajo }) {
       }
       void registrar(sala.asignacion, paso, logrado, fin.resultadoId).then(recargar)
     },
-    [actual, paso, plan.length, sala.asignacion, recargar],
+    [actual, paso, plan.length, sala.asignacion, recargar, rondas],
   )
 
-  // La dificultad que fijó la docente para esta actividad en la sala.
-  const desafio = nivelDe(actual?.exigencia)
+  // La dificultad: la que la docente fijó para este niño en su perfil o, si no,
+  // la de esta actividad en el plan de la sala.
+  const desafio = nivelDe(estado.estudiante.ajustes.dificultad ?? actual?.exigencia)
 
   const empezar = () => {
     if (!actual) return

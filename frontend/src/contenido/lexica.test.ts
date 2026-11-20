@@ -6,7 +6,7 @@ import { partidaConExigencia } from './exigencia.ts'
 import { TARJETAS, palabrasDelDibujo } from './lexica.ts'
 
 const veces = <T,>(n: number, f: () => T) => Array.from({ length: n }, f)
-const tarjetasDe = (generar: typeof palabrasDelDibujo): Tarjeta[][] =>
+const tarjetasDe = (generar: () => ReturnType<typeof palabrasDelDibujo>): Tarjeta[][] =>
   veces(40, generar)
     .flat()
     .map((r) => {
@@ -34,7 +34,7 @@ describe('conciencia léxica: marcar lo que corresponde', () => {
   })
 
   it('en nivel inicial quedan 4 tarjetas, con al menos una de cada', () => {
-    for (const r of partidaConExigencia(palabrasDelDibujo, 'inicial')) {
+    for (const r of partidaConExigencia((nivel) => palabrasDelDibujo({ nivel }), 'inicial')) {
       if (r.tipo !== 'marcar') throw new Error('tipo')
       expect(r.tarjetas).toHaveLength(4)
       expect(r.tarjetas.some((t) => t.corresponde)).toBe(true)

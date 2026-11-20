@@ -96,3 +96,31 @@ Para cumplir con los requerimientos `RF-18` (Must) y `RF-23` (Should) sin exigir
 ### 3.2 Canciones y Rimas Fonéticas (`RF-23`)
 * **Estructura:** Al menos 1 canción o rima corta por cada vocal y consonante inicial.
 * **Experiencia en pantalla:** Reproductor visual simple donde el niño escucha la rima y puede tocar objetos en pantalla que suenan al ritmo de la sílaba o vocal trabajada.
+---
+
+## 4. Dos ejes: escalera de apoyo y dificultad
+
+Cada contenido trae **3 actividades** y, aparte, cada contenido (o cada niño) tiene una **dificultad**. Son dos cosas distintas:
+
+### 4.1 Escalera de apoyo (las 3 actividades, igual en todo contenido)
+1. **Con apoyo:** ve el dibujo y escucha la palabra, y elige (¿Con qué sílaba empieza?).
+2. **Decide solo:** el niño decide el sonido, la sílaba o la palabra (busca el dibujo que empieza con MA).
+3. **Sin apoyo:** solo de oído (escucha y toca la sílaba; ¿terminan igual?) o armando / escribiendo la respuesta.
+
+### 4.2 Dificultad: Fácil, Medio, Difícil (igual en todas las actividades)
+| | Fácil | Medio | Difícil |
+|---|---|---|---|
+| Opciones | 3 | 3 | 4 |
+| Parecidas a la correcta | ninguna (MANO / SOL) | una (MANO / MONO) | todas las posibles (MANO / MONO / MESA) |
+| Palabras trabajadas | cortas (1 o 2 sílabas) | todas | todas |
+| Se ilumina la respuesta tras | 1 error | 2 errores | 2 errores |
+| Rondas | 5 | 5 | 5 |
+
+La docente la fija por contenido en el plan de la sala o para un niño en su perfil (manda la del niño). Sin nada, Medio.
+
+### 4.3 Para pasar de actividad
+Una ronda cuenta como lograda solo **al primer intento** (al segundo, con las opciones ya descartadas, se llega por azar). Se pasa con **3 de 5** rondas (**4 de 5** si son solo dos opciones, como sí/no). Así, un niño que toca al azar aprueba a lo más 1 de cada 4 partidas; con las reglas anteriores aprobaba hasta el 100 %.
+
+### 4.4 Sugerencias a la docente
+- Si un niño repite 2 veces la misma actividad sin lograrla, el aviso «Necesitan tu apoyo» ofrece **bajarle la dificultad** (solo a ese niño).
+- Si hace 3 actividades seguidas sin un error, aparece en «Van muy bien» con la opción de **subírsela**. Nada cambia sin que la docente lo confirme.

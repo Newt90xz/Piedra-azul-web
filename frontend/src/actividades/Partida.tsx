@@ -97,11 +97,12 @@ export function Partida({
     const promedio = registro.reduce((s, r) => s + r.estrellas, 0) / Math.max(1, registro.length)
     const fin: FinPartida = {
       resultadoId: crypto.randomUUID(),
-      // Acertada = resuelta antes de que se iluminara la respuesta.
+      // Acertada = al primer intento: al segundo, con las opciones que ya se
+      // descartaron, se llega tocando al azar (exigencia.ts: metaDe).
       rondas: registro.map((r) => ({
         item: r.item,
         intentos: r.intentos,
-        acertada: r.intentos <= revelarTras,
+        acertada: r.intentos === 1,
         error: r.error,
         categoria: categoriaDe(actividadId),
         tiempoMs: r.tiempoMs,

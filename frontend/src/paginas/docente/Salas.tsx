@@ -1,9 +1,11 @@
 import { createContext, use, useEffect, useState, type DragEvent, type FormEvent, type ReactNode } from 'react'
 import { useSesion } from '../../app/Sesion.tsx'
 import { JUEGOS } from '../../contenido/actividades.ts'
-import { AREAS, CONTENIDOS, bloqueContenido, bloquesDePlan, contenido, planDeBloques, planDeSala, type Area, type BloquePlan, type Contenido } from '../../contenido/contenidos.ts'
+import { palabrasDelTema } from '../../contenido/banco.ts'
+import { AREAS, CONTENIDOS, bloqueContenido, bloquesDePlan, contenido, planDeBloques, planDeSala, usaTema, type Area, type BloquePlan, type Contenido } from '../../contenido/contenidos.ts'
 import { JUEGOS_CONFIGURABLES, juegoConfigurable } from '../../contenido/plantillas.ts'
-import { EXIGENCIAS } from '../../contenido/exigencia.ts'
+import { TEMAS, TEMAS_FILTRO, type Tema } from '../../contenido/temas.ts'
+import { EXIGENCIAS, META, masDificil, masFacil } from '../../contenido/exigencia.ts'
 import { pictoMensaje } from '../../contenido/mensajes.ts'
 import { repo } from '../../datos/index.ts'
 import type { ActividadRecreo, Conectado, Emocion, Estudiante, Exigencia, MiembroSala, ProgresoSala, ResultadoActividad, Sala, TipoSala } from '../../dominio/tipos.ts'
@@ -272,6 +274,7 @@ export default function Salas() {
       {datos && (
         <>
           <Avisos datos={datos} ejecutar={ejecutar} />
+          <VanMuyBien datos={datos} ejecutar={ejecutar} />
           <SinSala ninos={sinSala} datos={datos} />
           <div className="grid gap-6">
             {rutas.map((r) => (
@@ -370,7 +373,16 @@ function Flecha() {
   )
 }
 
-// Niños que repitieron 2 veces la misma actividad sin lograr el 60 %.
+// La dificultad con que juega un niño ahora: la de su perfil o la del plan.
+const dificultadDe = (e: Estudiante, exigencia?: Exigencia): Exigencia => e.ajustes.dificultad ?? exigencia ?? 'intermedio'
+// Le fija una dificultad propia (o solo reinicia desde cuándo se mira, con la misma).
+const conDificultad = (e: Estudiante, dificultad: Exigencia | undefined): Estudiante => ({
+  ...e,
+  ajustes: { ...e.ajustes, dificultad, dificultadDesde: new Date().toISOString() },
+})
+
+// Niños que repitieron 2 veces la misma actividad sin lograr la meta. Se le
+// sugiere a la docente bajarle la dificultad (solo a ese niño).
 function Avisos({ datos, ejecutar }: { datos: Datos; ejecutar: Ejecutar }) {
   const avisos = datos.miembros.flatMap((m) => {
     const sala = datos.salas.find((s) => s.id === m.salaId)
@@ -398,9 +410,85 @@ function Avisos({ datos, ejecutar }: { datos: Datos; ejecutar: Ejecutar }) {
                 <b className="text-[#9a4d00]">{p.repeticiones} intentos</b>
               </span>
             </span>
-            <Boton variante="secundario" className="shrink-0" onClick={() => void ejecutar(() => repo.marcarApoyado(e.id))}>
-              <Icono nombre="check" /> Listo
-            </Boton>
+            <span className="grid shrink-0 gap-1">
+              {dificultadDe(e, paso?.exigencia) !== 'inicial' && (
+                <Boton
+                  variante="suave"
+                  title={`Solo para ${e.nombre}. ${EXIGENCIAS[masFacil(dificultadDe(e, paso?.exigencia))].descripcion}`}
+                  onClick={() =>
+                    void ejecutar(async () => {
+                      await repo.guardarEstudiante(conDificultad(e, masFacil(dificultadDe(e, paso?.exigencia))))
+                      await repo.marcarApoyado(e.id)
+                    })
+                  }
+                >
+                  Bajar a {EXIGENCIAS[masFacil(dificultadDe(e, paso?.exigencia))].nombre}
+                </Boton>
+              )}
+              <Boton variante="secundario" onClick={() => void ejecutar(() => repo.marcarApoyado(e.id))}>
+                <Icono nombre="check" /> Listo
+              </Boton>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+// Partidas seguidas, todas las rondas al primer intento, para sugerir subirle la dificultad.
+const SEGUIDAS_SIN_ERRORES = 3
+
+// Niños a los que les va muy bien con su dificultad: sus últimas partidas de la
+// sala (desde que rige su dificultad) fueron todas sin un error. Se le sugiere a
+// la docente subírsela; «Ahora no» vuelve a mirar desde cero.
+function VanMuyBien({ datos, ejecutar }: { datos: Datos; ejecutar: Ejecutar }) {
+  const sugeridos = datos.miembros.flatMap((m) => {
+    const sala = datos.salas.find((s) => s.id === m.salaId)
+    const e = datos.estudiantes.find((x) => x.id === m.estudianteId)
+    if (!sala || sala.tipo !== 'trabajo' || !e) return []
+    const plan = planDeSala(sala.plan)
+    const actual = plan[avanceEn(sala, datos.progresoDe.get(e.id))?.paso ?? 0]
+    if (!actual) return []
+    const dificultad = dificultadDe(e, actual.exigencia)
+    if (dificultad === 'avanzado') return []
+    const desde = e.ajustes.dificultadDesde ?? ''
+    const ultimas = datos.resultadosHoy
+      .filter((r) => r.estudianteId === e.id && r.fecha > desde && plan.some((x) => x.actividadId === r.actividadId))
+      .sort((a, b) => b.fecha.localeCompare(a.fecha))
+      .slice(0, SEGUIDAS_SIN_ERRORES)
+    if (ultimas.length < SEGUIDAS_SIN_ERRORES || !ultimas.every((r) => r.rondas.length > 0 && r.rondas.every((x) => x.intentos === 1))) return []
+    return [{ e, sala, dificultad }]
+  })
+  if (sugeridos.length === 0) return null
+
+  return (
+    <section aria-labelledby="titulo-van-bien" className="mb-5 rounded-3xl border-2 border-menta bg-menta-fondo/50 p-4">
+      <h2 id="titulo-van-bien" className="mb-2 flex items-center gap-2 font-bold text-menta-oscuro">
+        <span aria-hidden="true">🚀</span> Van muy bien ({sugeridos.length})
+      </h2>
+      <ul className="grid grid-cols-[repeat(auto-fill,minmax(20rem,1fr))] gap-2">
+        {sugeridos.map(({ e, sala, dificultad }) => (
+          <li key={e.id} className="flex items-center gap-3 rounded-xl bg-white px-3 py-2">
+            <Avatar estudiante={e} className="size-10 text-2xl" />
+            <span className="min-w-0 flex-1 text-sm">
+              <b className="text-tinta">{e.nombre}</b> <span className="text-tinta-suave">· {sala.nombre}</span>
+              <span className="block text-tinta-suave">
+                {SEGUIDAS_SIN_ERRORES} actividades seguidas sin errores en {EXIGENCIAS[dificultad].nombre}.
+              </span>
+            </span>
+            <span className="grid shrink-0 gap-1">
+              <Boton
+                variante="secundario"
+                title={`Solo para ${e.nombre}. ${EXIGENCIAS[masDificil(dificultad)].descripcion}`}
+                onClick={() => void ejecutar(() => repo.guardarEstudiante(conDificultad(e, masDificil(dificultad))))}
+              >
+                Subir a {EXIGENCIAS[masDificil(dificultad)].nombre}
+              </Boton>
+              <Boton variante="suave" onClick={() => void ejecutar(() => repo.guardarEstudiante(conDificultad(e, e.ajustes.dificultad)))}>
+                Ahora no
+              </Boton>
+            </span>
           </li>
         ))}
       </ul>
@@ -779,6 +867,7 @@ function ResumenPlan({ sala, pasos, alEditar }: { sala: Sala; pasos: number[]; a
               <span className="block truncate text-xs text-tinta-suave">
                 {resumen || `${actividades} ${actividades === 1 ? 'actividad' : 'actividades'}`}
                 {exigenciaDe(b) && ` · ${EXIGENCIAS[exigenciaDe(b)!].nombre}`}
+                {'contenido' in b && b.tema && ` · ${TEMAS[b.tema].nombre}`}
               </span>
             </span>
             {aqui > 0 && (
@@ -981,7 +1070,7 @@ function EditorPlan({ sala, conAvance, ejecutar, alCerrar }: { sala: Sala; conAv
             <h2 id={`plan-${sala.id}`} className="text-xl font-bold text-tinta">
               Plan de «{sala.nombre}»
             </h2>
-            <p className="text-sm text-tinta-suave">En orden: contenidos y actividades que configuras tú. En cada contenido toca una actividad para quitarla o cambiarla de lugar. Cada uno trae su dificultad (intermedia si no eliges otra).</p>
+            <p className="text-sm text-tinta-suave">En orden: contenidos y actividades que configuras tú. En cada contenido toca una actividad para quitarla o cambiarla de lugar. Sus actividades van de más apoyo a menos. La dificultad (Medio si no eliges otra) cambia qué tan difíciles son las preguntas; también puedes elegir el tema de sus palabras.</p>
           </div>
           <button type="button" aria-label="Cerrar" onClick={alCerrar} className="grid size-11 place-items-center rounded-xl text-tinta-suave hover:bg-fondo">
             ✕
@@ -1001,7 +1090,10 @@ function EditorPlan({ sala, conAvance, ejecutar, alCerrar }: { sala: Sala; conAv
                     <b className="block text-tinta">{titulo}</b>
                     {resumen && <span className="block truncate text-xs text-tinta-suave">{resumen}</span>}
                     {'contenido' in b && <ElegirPasos bloque={b} alCambiar={(pasos) => setBloques((x) => x.map((y, k) => (k === i ? { ...b, pasos } : y)))} />}
-                    <ElegirDificultad valor={exigenciaDe(b)} alCambiar={(e) => setBloques((x) => x.map((y, k) => (k === i ? conExigencia(b, e) : y)))} />
+                    <span className="flex flex-wrap gap-x-3 gap-y-1">
+                      <ElegirDificultad valor={exigenciaDe(b)} alCambiar={(e) => setBloques((x) => x.map((y, k) => (k === i ? conExigencia(b, e) : y)))} />
+                      {'contenido' in b && admiteTema(b) && <ElegirTema valor={b.tema} alCambiar={(t) => setBloques((x) => x.map((y, k) => (k === i ? { ...b, tema: t } : y)))} />}
+                    </span>
                   </span>
                   {juegoId && (
                     <Boton variante="suave" className="min-h-11 min-w-11" aria-label={`Configurar ${titulo}`} onClick={() => setConfigurando({ juegoId, indice: i })}>
@@ -1042,7 +1134,7 @@ function EditorPlan({ sala, conAvance, ejecutar, alCerrar }: { sala: Sala; conAv
                     <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-full text-2xl" style={{ background: j.color }}>{j.icono}</span>
                     <span className="leading-tight">
                       <b className="block">{j.titulo}</b>
-                      <span className="text-xs text-tinta-suave">Elige las letras o usa una plantilla</span>
+                      <span className="text-xs text-tinta-suave">{j.eleccion === 'temas' ? 'Elige los temas o usa una plantilla' : 'Elige las letras o usa una plantilla'}</span>
                     </span>
                   </button>
                 </li>
@@ -1150,11 +1242,15 @@ function ElegirPasos({ bloque, alCambiar }: { bloque: { contenido: string; pasos
 
 // Dificultad de un contenido o actividad en esta sala (intermedia si no se elige otra).
 const exigenciaDe = (b: BloquePlan) => ('paso' in b ? b.paso.exigencia : b.exigencia)
+const admiteTema = (b: { contenido: string; pasos: number[] }) => {
+  const c = contenido(b.contenido)
+  return Boolean(c && usaTema(c, b.pasos))
+}
 const conExigencia = (b: BloquePlan, exigencia?: Exigencia): BloquePlan => ('paso' in b ? { paso: { ...b.paso, exigencia } } : { ...b, exigencia })
 
 function ElegirDificultad({ valor, alCambiar }: { valor?: Exigencia; alCambiar: (e?: Exigencia) => void }) {
   return (
-    <label className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-tinta-suave">
+    <label className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-tinta-suave" title={`${EXIGENCIAS[valor ?? 'intermedio'].descripcion} ${META}`}>
       Dificultad
       <select
         value={valor ?? ''}
@@ -1164,6 +1260,28 @@ function ElegirDificultad({ valor, alCambiar }: { valor?: Exigencia; alCambiar: 
         {(Object.keys(EXIGENCIAS) as Exigencia[]).map((e) => (
           <option key={e} value={e === 'intermedio' ? '' : e}>
             {EXIGENCIAS[e].nombre}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
+// Tema de las palabras de un contenido: primero salen las de ese tema y, si
+// no alcanzan para lo que pide la actividad, se completa con otras.
+function ElegirTema({ valor, alCambiar }: { valor?: Tema; alCambiar: (t?: Tema) => void }) {
+  return (
+    <label className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-tinta-suave" title="Si el tema no alcanza para una actividad, se completa con otras palabras.">
+      Tema de las palabras
+      <select
+        value={valor ?? ''}
+        onChange={(e) => alCambiar((e.target.value || undefined) as Tema | undefined)}
+        className="min-h-9 rounded-lg border border-borde bg-white px-2 text-xs font-semibold text-tinta"
+      >
+        <option value="">Todas</option>
+        {TEMAS_FILTRO.map((t) => (
+          <option key={t} value={t}>
+            {TEMAS[t].icono} {TEMAS[t].nombre} ({palabrasDelTema(t).length})
           </option>
         ))}
       </select>

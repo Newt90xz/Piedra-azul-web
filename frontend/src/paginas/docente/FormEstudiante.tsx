@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import type { InputHTMLAttributes, ReactNode } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
+import { EXIGENCIAS, META } from '../../contenido/exigencia.ts'
 import { PERSONAJES_BASE, personajeDesdeBase } from '../../contenido/personaje.ts'
 import type { Estudiante, Personaje } from '../../dominio/tipos.ts'
 import { capitalizar } from '../../lib/texto.ts'
@@ -28,6 +29,12 @@ const esquema = z.object({
     reducirAnimaciones: z.boolean(),
     silenciarEfectos: z.boolean(),
     tematica: z.enum(['animales', 'dinosaurios', 'futbol', 'oceano', 'vehiculos', 'piratas']),
+    // Vacío: la del plan de la sala.
+    dificultad: z
+      .union([z.literal(''), z.enum(['inicial', 'intermedio', 'avanzado'])])
+      .optional()
+      .transform((v) => v || undefined),
+    dificultadDesde: z.string().optional(),
   }),
 })
 
@@ -45,6 +52,8 @@ export function FormEstudiante({ inicial, cursoId, alGuardar }: { inicial?: Estu
   const color = watch('color')
 
   const enviar = handleSubmit(async (v) => {
+    // Desde cuándo rige su dificultad: las sugerencias de subirla miran solo lo que jugó después.
+    if (v.ajustes.dificultad !== inicial?.ajustes.dificultad) v.ajustes.dificultadDesde = new Date().toISOString()
     try {
       await alGuardar(inicial ? { ...inicial, ...v } : { ...v, cursoId })
     } catch (e) {
@@ -130,6 +139,19 @@ export function FormEstudiante({ inicial, cursoId, alGuardar }: { inicial?: Estu
             <option value="vehiculos">Vehículos</option>
             <option value="piratas">Piratas</option>
           </select>
+        </Campo>
+        <Campo etiqueta="Dificultad de las actividades">
+          <select className={claseEntrada} {...register('ajustes.dificultad')} aria-describedby="ayuda-dificultad">
+            <option value="">La del plan de su sala</option>
+            {(['inicial', 'intermedio', 'avanzado'] as const).map((e) => (
+              <option key={e} value={e}>
+                {EXIGENCIAS[e].nombre}: {EXIGENCIAS[e].descripcion}
+              </option>
+            ))}
+          </select>
+          <span id="ayuda-dificultad" className="mt-1 block text-xs text-tinta-suave">
+            Solo para este niño: manda sobre la del plan. {META}
+          </span>
         </Campo>
         <Interruptor etiqueta="Alto contraste" {...register('ajustes.altoContraste')} />
         <Interruptor etiqueta="Reducir animaciones" {...register('ajustes.reducirAnimaciones')} />

@@ -35,6 +35,12 @@ describe('juegos del recreo', () => {
     expect(JUEGOS.every((a) => a.categoria)).toBe(true)
     expect(JUEGOS.filter((a) => a.practica).map((a) => a.id)).toEqual(['choque-sonidos'])
   })
+
+  it('los aplausos nunca cuentan meses ni estaciones (sus dibujos no se reconocen sin leer)', () => {
+    const aplausos = JUEGOS.find((a) => a.id === 'aplausos')!
+    for (let n = 0; n < VECES; n++)
+      for (const r of aplausos.generar()) if (r.tipo === 'aplausos') expect(['meses', 'estaciones']).not.toContain(r.palabra.tema)
+  })
 })
 
 describe('actividades retiradas', () => {

@@ -1,5 +1,6 @@
 import type { Imagen, Palabra } from '../dominio/tipos.ts'
-import { ALFABETO, CONSONANTES_SILABAS, PALABRAS, PALABRAS_NIVEL_3, VOCALES, laLetra, nombreLetra, palabra, quitarTildes } from './banco.ts'
+import type { NivelExigencia } from './exigencia.ts'
+import { ALFABETO, CONSONANTES_SILABAS, PALABRAS_NIVEL_3, VOCALES, bancoGeneral, laLetra, nombreLetra, palabra, quitarTildes } from './banco.ts'
 
 // Mecánicas de las rondas y los juegos del recreo. Lo que el niño trabaja en una
 // sala de actividades está en contenidos.ts (contenidos de 3 o 4 actividades) y
@@ -40,6 +41,9 @@ export type Ronda =
       opciones: Opcion[]
       correctaId: string
       pista: string
+      // Opciones que no se quitan ni en la dificultad más baja: «¿Cuál no va?»
+      // necesita al menos dos del tema y la que no va.
+      minOpciones?: number
     })
   | (RondaBase & { tipo: 'construir'; palabra: Palabra; fichas: string[]; pista: string })
   | (RondaBase & { tipo: 'aplausos'; palabra: Palabra; pista: string })
@@ -57,6 +61,7 @@ export type Ronda =
 export const CATEGORIAS = {
   auditiva: 'Discriminación auditiva',
   oraciones: 'Conciencia léxica',
+  vocabulario: 'Vocabulario y temas',
   letras: 'Vocales y letras',
   silabas: 'Sílabas',
   conteo: 'Conteo de sílabas',
@@ -74,7 +79,7 @@ export interface Actividad {
   objetivo: string
   icono: string
   categoria?: Categoria
-  generar: () => Ronda[]
+  generar: (nivel?: NivelExigencia) => Ronda[]
   // Sin respuesta incorrecta posible (choque): no mide avance ni da racha.
   practica?: boolean
   // «¿Cómo se juega?» antes de empezar; sin esto se usa el del tipo de ronda.
@@ -106,6 +111,17 @@ export function mezclar<T>(a: readonly T[]) {
   return r
 }
 export const tomar = <T,>(a: readonly T[], n: number) => mezclar(a).slice(0, n)
+
+// `n` de `opciones` para acompañar a la correcta: primero las parecidas que pide
+// el nivel (exigencia.ts; sin nivel, una) y después las distintas. Si no
+// alcanzan las distintas, se completa con parecidas.
+export function otrasOpciones<T>(opciones: readonly T[], n: number, parecida: (x: T) => boolean, nivel?: NivelExigencia) {
+  const cerca = mezclar(opciones.filter(parecida))
+  const lejos = mezclar(opciones.filter((x) => !parecida(x)))
+  const r = cerca.slice(0, Math.min(n, nivel?.parecidas ?? 1))
+  for (const x of [...lejos, ...cerca]) if (r.length < n && !r.includes(x)) r.push(x)
+  return r
+}
 const MAYUS = (s: string) => s.toUpperCase()
 
 export function ordenarSilabas(silabas: readonly string[]) {
@@ -131,7 +147,8 @@ function choqueDeSonidos(): Ronda[] {
 }
 
 function aplausosSilabicos(): Ronda[] {
-  const porCantidad = [1, 2, 3, 4].map((n) => PALABRAS.filter((w) => w.silabas.length === n))
+  const banco = bancoGeneral()
+  const porCantidad = [1, 2, 3, 4].map((n) => banco.filter((w) => w.silabas.length === n))
   const elegidas = mezclar([...tomar(porCantidad[0], 1), ...tomar(porCantidad[1], 1), ...tomar(porCantidad[2], 2), ...tomar(porCantidad[3], 1)])
   return elegidas.map((w) => ({
     tipo: 'aplausos',
@@ -171,14 +188,15 @@ export function escuchaLaLetra(ids: readonly string[] = ALFABETO.map((l) => l.id
 
 const nivel3 = () => PALABRAS_NIVEL_3.map(palabra)
 
+// Trae dos fichas que sobran; el nivel de dificultad deja 0, 1 o 2.
 export function constructorDePalabras(): Ronda[] {
   return tomar(nivel3(), 5).map((w) => {
-    const otras = nivel3().flatMap((x) => x.silabas).filter((s) => !w.silabas.includes(s))
+    const otras = [...new Set(nivel3().flatMap((x) => x.silabas))].filter((s) => !w.silabas.includes(s))
     return {
       tipo: 'construir',
       item: w.texto,
       palabra: w,
-      fichas: mezclar([...w.silabas, ...tomar(otras, 1)]),
+      fichas: mezclar([...w.silabas, ...tomar(otras, 2)]),
       instruccion: `Junta las sílabas para formar ${w.texto}.`,
       pista: `¡Casi! ${w.texto} empieza con ${w.silabas[0]}. ¡Otra vez!`,
       refuerzo: `¡${MAYUS(w.texto)}! ¡Lo armaste!`,
@@ -203,10 +221,14 @@ export function globosDePalabras(): Ronda[] {
   })
 }
 
-export function completaLaSilaba(): Ronda[] {
+// Las parecidas comparten consonante o vocal con la que falta (NA / NO, NA / MA).
+export function completaLaSilaba(nivel?: NivelExigencia): Ronda[] {
   return tomar(nivel3(), 5).map((w) => {
     const falta = w.silabas[1]
-    const otras = tomar([...new Set(nivel3().flatMap((x) => x.silabas))].filter((s) => quitarTildes(s) !== quitarTildes(falta)), 2)
+    const [consonante, vocal] = [...quitarTildes(falta)]
+    const silabas = [...new Set(nivel3().flatMap((x) => x.silabas))].filter((s) => quitarTildes(s) !== quitarTildes(falta))
+    const parecida = (s: string) => quitarTildes(s)[0] === consonante || quitarTildes(s)[1] === vocal
+    const otras = otrasOpciones(silabas, (nivel?.maxOpciones ?? 3) - 1, parecida, nivel)
     return {
       tipo: 'elegir',
       item: w.texto,
@@ -226,7 +248,7 @@ export function completaLaSilaba(): Ronda[] {
 export const JUEGOS: Actividad[] = [
   { id: 'choque-sonidos', titulo: 'El choque de sonidos', objetivo: 'Une los sonidos para formar sílabas', icono: '💥', categoria: 'silabas', generar: choqueDeSonidos, practica: true },
   { id: 'aplausos', titulo: 'Aplausos silábicos', objetivo: 'Cuenta las sílabas con palmadas', icono: '👏', categoria: 'conteo', generar: aplausosSilabicos },
-  { id: 'globos-palabras', titulo: 'Globos de palabras', objetivo: 'Revienta los globos y forma la palabra', icono: '🎈', categoria: 'palabras', generar: globosDePalabras },
+  { id: 'globos-palabras', titulo: 'Globos de palabras', objetivo: 'Revienta los globos y forma la palabra', icono: '🎈', categoria: 'palabras', generar: () => globosDePalabras() },
 ]
 
 // Actividades que ya no se juegan (las reemplazaron los contenidos por sala):

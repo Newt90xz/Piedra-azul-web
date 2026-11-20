@@ -1,5 +1,6 @@
-import { mezclar, tomar, type Ronda, type Tarjeta } from './actividades.ts'
-import { PALABRAS } from './banco.ts'
+import { mezclar, type Ronda, type Tarjeta } from './actividades.ts'
+import { bancoGeneral } from './banco.ts'
+import { bancoDe, distractores, objetivos, type Contexto } from './elegir.ts'
 
 // Conciencia léxica (Bases Curriculares, OA 3), como la ficha de papel «Marca
 // con una X las palabras que corresponden con el dibujo»: una grilla de
@@ -13,20 +14,10 @@ const RONDAS = 5
 // Tarjetas por pantalla (como la ficha: 2 filas de 4). El nivel de exigencia deja menos.
 export const TARJETAS = 8
 
-// Dibujos que se parecen tanto que una tarjeta «no corresponde» sería injusta
-// (el dibujo de una paloma con la palabra «pájaro»).
-const PARECIDOS = [
-  ['pajaro', 'paloma', 'loro', 'pollito', 'pollo'],
-  ['nino', 'nina', 'guagua'],
-  ['mama', 'abuela'],
-  ['flor', 'flores'],
-  ['coneja', 'raton'],
-  ['sapo', 'rana'],
-]
-const parecidos = (a: string, b: string) => a === b || PARECIDOS.some((g) => g.includes(a) && g.includes(b))
-
-// Una sola imagen por emoji (flor y flores comparten dibujo) y sin acciones.
-const DIBUJABLES = PALABRAS.filter((w, i) => PALABRAS.findIndex((x) => x.imagen.emoji === w.imagen.emoji) === i)
+// Una sola imagen por emoji (flor y flores comparten dibujo), sin meses ni
+// estaciones (sus dibujos no se reconocen sin leer).
+const GENERAL = bancoGeneral()
+const DIBUJABLES = GENERAL.filter((w, i) => GENERAL.findIndex((x) => x.imagen.emoji === w.imagen.emoji) === i)
 
 // Cuántas corresponden en una pantalla: al menos 2 y al menos 2 que no, sin patrón fijo.
 const cuantasCorresponden = () => 2 + Math.floor(Math.random() * (TARJETAS - 3))
@@ -34,12 +25,15 @@ const cuantasCorresponden = () => 2 + Math.floor(Math.random() * (TARJETAS - 3))
 const INSTRUCCION_PALABRAS = 'Marca con una X las palabras que corresponden con el dibujo. Toca la tarjeta para escucharla.'
 
 // Cada tarjeta, un dibujo con una palabra; la mitad más o menos no es la suya.
-export function palabrasDelDibujo(): Ronda[] {
+// Con tema, los dibujos y las palabras son primero de ese tema; en Fácil, cortas.
+// Cuántas tarjetas quedan lo decide el nivel (exigencia.ts).
+export function palabrasDelDibujo(c: Contexto = {}): Ronda[] {
+  const b = bancoDe(DIBUJABLES, c)
   return Array.from({ length: RONDAS }, () => {
     const si = cuantasCorresponden()
-    const tarjetas = tomar(DIBUJABLES, TARJETAS).map((w, i): Tarjeta => {
+    const tarjetas = objetivos(b, TARJETAS).map((w, i): Tarjeta => {
       // La palabra equivocada no se parece al dibujo ni suena casi igual (pollo/pollito).
-      const otra = i < si ? w : tomar(DIBUJABLES.filter((x) => !parecidos(x.id, w.id) && x.id.slice(0, 3) !== w.id.slice(0, 3)), 1)[0]
+      const otra = i < si ? w : distractores(b, 1, [w], (x) => x.id.slice(0, 3) !== w.id.slice(0, 3))[0]
       return { id: `${i}`, imagen: w.imagen, texto: MAYUS(otra.texto), audio: otra.texto, corresponde: i < si }
     })
     return {

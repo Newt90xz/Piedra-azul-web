@@ -515,7 +515,16 @@ export const repositorioSupabase: Repositorio = {
     const [palabras, letras] = await Promise.all([supabase.from('palabras').select(), supabase.from('letras').select()])
     if (palabras.error || letras.error || palabras.data.length === 0) return null
     return {
-      palabras: palabras.data.map((f) => ({ id: f.id, texto: f.texto, silabas: f.silabas, emoji: f.emoji, fotoUrl: f.foto_url ?? undefined, pictoUrl: f.picto_url ?? undefined })),
+      palabras: palabras.data.map((f) => ({
+        id: f.id,
+        texto: f.texto,
+        silabas: f.silabas,
+        emoji: f.emoji,
+        fotoUrl: f.foto_url ?? undefined,
+        pictoUrl: f.picto_url ?? undefined,
+        // Sin la migración de temas la columna no viene: queda el tema del código.
+        tema: f.tema ?? undefined,
+      })),
       letras: letras.data.map((f) => ({ id: f.id, fonema: f.fonema, apoyoArticulatorio: f.apoyo_articulatorio })),
     }
   },
