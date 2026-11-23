@@ -1,4 +1,4 @@
-// Mensajes del playground: un set fijo de pictogramas que suenan al tocarlos.
+// Saludos del parque del recreo: un set fijo de pictogramas que suenan al tocarlos.
 // Sin texto libre (los niños no leen ni escriben aún y así no hay nada que
 // moderar). La misma lista la valida la base (mensajes_sala.picto).
 

@@ -60,25 +60,24 @@ function semilla(): Estado {
     { id: 'kinder-a', nombre: 'Kínder A', docenteId: docente.id },
     { id: 'prekinder-a', nombre: 'Pre-Kínder A', docenteId: docente.id },
   ]
-  const ninos: [string, string, string, 1 | 2 | 3][] = [
-    ['Sofía', '🦊', '#fde2c8', 2],
-    ['Tomás', '🦖', '#d3f2e3', 2],
-    ['Martina', '🐬', '#cfe8fb', 1],
-    ['Benjamín', '🚒', '#f6d1d1', 3],
-    ['Isidora', '🦄', '#e4dcf7', 1],
-    ['Lucas', '⚽', '#fff3c4', 2],
+  const ninos: [string, string, string][] = [
+    ['Sofía', '🦊', '#fde2c8'],
+    ['Tomás', '🦖', '#d3f2e3'],
+    ['Martina', '🐬', '#cfe8fb'],
+    ['Benjamín', '🚒', '#f6d1d1'],
+    ['Isidora', '🦄', '#e4dcf7'],
+    ['Lucas', '⚽', '#fff3c4'],
   ]
-  const estudiantes: Estudiante[] = ninos.map(([nombre, avatar, color, nivel], i) => ({
+  const estudiantes: Estudiante[] = ninos.map(([nombre, avatar, color], i) => ({
     id: `est-${i + 1}`,
     cursoId: 'kinder-a',
     nombre,
     avatar,
     color,
     activo: true,
-    nivelHabilitado: nivel,
     monedas: 400 + i * 150,
     personaje: personajeDesdeBase(PERSONAJES_BASE[i * 2]),
-    ajustes: { ...AJUSTES_POR_DEFECTO, reducirAnimaciones: i === 2, modoImagen: i === 4 ? 'foto' : 'mixto' },
+    ajustes: { ...AJUSTES_POR_DEFECTO, reducirAnimaciones: i === 2 },
   }))
 
   // Historial inventado para que el panel de avance tenga algo que mostrar.

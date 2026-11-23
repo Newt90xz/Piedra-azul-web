@@ -19,11 +19,7 @@ const esquema = z.object({
   personaje: z.custom<Personaje>(),
   color: z.string(),
   activo: z.boolean(),
-  // Ya no se elige en el formulario (lo que trabaja cada niño lo decide el plan de
-  // su sala); se conserva el valor guardado.
-  nivelHabilitado: z.coerce.number<string>().pipe(z.union([z.literal(1), z.literal(2), z.literal(3)])),
   ajustes: z.object({
-    modoImagen: z.enum(['foto', 'picto', 'mixto']),
     tamanoLetra: z.enum(['normal', 'grande', 'muy-grande']),
     altoContraste: z.boolean(),
     reducirAnimaciones: z.boolean(),
@@ -45,8 +41,8 @@ export function FormEstudiante({ inicial, cursoId, alGuardar }: { inicial?: Estu
   const { register, handleSubmit, watch, setValue, setError, formState } = useForm<Entrada, unknown, Salida>({
     resolver: zodResolver(esquema),
     defaultValues: inicial
-      ? { ...inicial, personaje: inicial.personaje ?? personajeDesdeBase(PERSONAJES_BASE[0]), nivelHabilitado: String(inicial.nivelHabilitado) }
-      : { nombre: '', avatar: '🙂', personaje: personajeDesdeBase(PERSONAJES_BASE[0]), color: COLORES[0], activo: true, nivelHabilitado: '1', ajustes: AJUSTES_POR_DEFECTO },
+      ? { ...inicial, personaje: inicial.personaje ?? personajeDesdeBase(PERSONAJES_BASE[0]) }
+      : { nombre: '', avatar: '🙂', personaje: personajeDesdeBase(PERSONAJES_BASE[0]), color: COLORES[0], activo: true, ajustes: AJUSTES_POR_DEFECTO },
   })
   const personaje = watch('personaje') as Personaje
   const color = watch('color')
@@ -116,13 +112,6 @@ export function FormEstudiante({ inicial, cursoId, alGuardar }: { inicial?: Estu
 
       <Tarjeta className="grid content-start gap-5">
         <h2 className="text-lg font-bold">Apoyos y accesibilidad</h2>
-        <Campo etiqueta="Imágenes">
-          <select className={claseEntrada} {...register('ajustes.modoImagen')}>
-            <option value="foto">Fotografía real</option>
-            <option value="picto">Pictograma</option>
-            <option value="mixto">Mixto</option>
-          </select>
-        </Campo>
         <Campo etiqueta="Tamaño de letra">
           <select className={claseEntrada} {...register('ajustes.tamanoLetra')}>
             <option value="normal">Normal (28 px)</option>

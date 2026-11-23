@@ -79,11 +79,8 @@ function rutaImagenLocal(alt: string) {
 }
 
 export function ImagenNino({ imagen, className = '' }: { imagen: Imagen; className?: string }) {
-  const { estudiante } = useNino()
-  const modo = estudiante.ajustes.modoImagen
-  const fuentes = modo === 'picto'
-    ? [imagen.pictoUrl, imagen.fotoUrl, rutaImagenLocal(imagen.alt)]
-    : [imagen.fotoUrl, imagen.pictoUrl, rutaImagenLocal(imagen.alt)]
+  // Primero el pictograma (de la base, si lo tiene), luego la foto y al final el PNG local.
+  const fuentes = [imagen.pictoUrl, imagen.fotoUrl, rutaImagenLocal(imagen.alt)]
   const candidatas = [...new Set(fuentes.filter((src): src is string => Boolean(src)))]
   const clave = candidatas.join('\0')
   const [error, setError] = useState<{ clave: string; indice: number } | null>(null)
@@ -146,8 +143,7 @@ export function NinoShell() {
   const navegar = useNavigate()
   const conectado = repo.alumnoDelDispositivo() === id
   const { datos: estado, error, recargar } = useConsulta(async () => (conectado ? repo.estadoAlumno() : null), [id, conectado])
-  // La voz parte apagada; el niño la enciende con el altavoz. Al salir de la vista vuelve a apagarse.
-  // Voz encendida por defecto: el niño puede apagarla con el altavoz.
+  // Voz encendida al entrar: el niño puede apagarla con el altavoz. Al salir de la vista vuelve a apagarse.
   const [mudo, setMudo] = useState(false)
   const [titulo, fijarTitulo] = useState<ReactNode>(null)
   const [emocion, setEmocion] = useState<Emocion | null>(() => emocionGuardada(id))

@@ -319,6 +319,35 @@ export function sinAcentos(s: string) {
   return s.toLowerCase().replace(/[áéíóúü]/g, (c) => 'aeiouu'['áéíóúü'.indexOf(c)])
 }
 
+// Cómo suena una palabra o sílaba en el español de Chile, para comparar sonidos
+// y no letras: la Z y la C (antes de E o I) suenan como S (zapato / sapo,
+// cereza / mesa), la V como B, la LL como Y, la H no suena (helado empieza con
+// E), QU y C (antes de A, O, U) como K, y G (antes de E o I) como J.
+// Se consulta muchísimo al armar cada ronda: se guarda lo ya calculado.
+const sonidos = new Map<string, string>()
+export function sonido(s: string) {
+  let r = sonidos.get(s)
+  if (r === undefined) sonidos.set(s, (r = calcularSonido(s)))
+  return r
+}
+
+function calcularSonido(s: string) {
+  return sinAcentos(s)
+    .replace(/ch/g, 'ʧ')
+    .replace(/h/g, '')
+    .replace(/qu/g, 'k')
+    .replace(/c(?=[ei])/g, 's')
+    .replace(/c/g, 'k')
+    .replace(/z/g, 's')
+    .replace(/v/g, 'b')
+    .replace(/ll/g, 'y')
+    // Primero la G suave (gente) y después GU (guerra): si no, «gue» pasaría a «je».
+    .replace(/g(?=[ei])/g, 'j')
+    .replace(/gu(?=[ei])/g, 'g')
+    .replace(/x/g, 'ks')
+    .replace(/y$/, 'i')
+}
+
 export function palabra(id: string): Palabra {
   const encontrada = PALABRAS.find((w) => w.id === id)
   if (!encontrada) throw new Error(`Palabra no encontrada en el banco: ${id}`)
