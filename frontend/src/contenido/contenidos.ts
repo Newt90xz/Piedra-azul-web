@@ -101,6 +101,8 @@ export interface Contenido {
   oa: CodigoOA[]
   titulo: string
   descripcion: string
+  // Una línea para la tarjeta del plan; la descripción completa queda de título.
+  resumen?: string
   categoria: Categoria
   area: Area
   // Lo que ve el niño en su camino: sin texto.
@@ -291,6 +293,7 @@ function contenidoSilabas(consonante: (typeof CONSONANTES_SILABAS)[number]): Con
     // Conciencia fonémica, después de las vocales: el sonido de la consonante en sus sílabas.
     area: 'letras',
     descripcion: `Sílabas directas ${silabas}: reconocerlas al inicio de palabras, buscarlas entre dibujos y, al final, solo de oído.`,
+    resumen: `Reconocer ${silabas}.`,
     categoria: 'silabas',
     ...NOMBRE_SILABAS[consonante],
     pasos: [
@@ -597,6 +600,7 @@ export const CONTENIDOS: Contenido[] = [
     titulo: 'Las oraciones tienen palabras',
     area: 'oraciones',
     descripcion: 'Conciencia léxica: las oraciones están formadas por palabras. Contar las palabras de una oración viéndolas, encontrar la palabra que falta y, al final, contarlas solo de oído.',
+    resumen: 'Contar palabras y encontrar la que falta.',
     categoria: 'oraciones',
     icono: '💬',
     color: 'var(--color-nino-lila)',
@@ -620,6 +624,7 @@ export const CONTENIDOS: Contenido[] = [
     titulo: 'Palabras largas y cortas',
     area: 'silabas',
     descripcion: 'Comparar palabras por su cantidad de sílabas: cuál es más larga, cuál más corta y la más larga entre varias.',
+    resumen: 'Comparar palabras por sus sílabas.',
     categoria: 'conteo',
     icono: '🐘',
     color: 'var(--color-nino-azul)',
@@ -635,6 +640,7 @@ export const CONTENIDOS: Contenido[] = [
     titulo: 'Rimas: ¿cuál termina igual?',
     area: 'rimas',
     descripcion: 'Identificar la sílaba final de palabras conocidas (GATO / PATO): buscar la que rima, encontrar la que no rima y, al final, decidir solo de oído si dos palabras terminan igual.',
+    resumen: 'Encontrar palabras que terminan igual.',
     categoria: 'rimas',
     icono: '🐱',
     color: 'var(--color-nino-menta)',
@@ -655,6 +661,7 @@ export const CONTENIDOS: Contenido[] = [
     titulo: 'Las vocales',
     area: 'letras',
     descripcion: 'Vocales A, E, I, O, U: con qué vocal empieza un dibujo, buscar dibujos por su vocal y, al final, reconocerlas solo de oído.',
+    resumen: 'Reconocer A, E, I, O, U.',
     categoria: 'letras',
     icono: '🐝',
     color: 'var(--color-nino-amarillo)',
@@ -671,6 +678,7 @@ export const CONTENIDOS: Contenido[] = [
     titulo: 'Escucho y reconozco',
     area: 'letras',
     descripcion: 'Discriminación auditiva sin letras: reconocer la palabra escuchada, buscar el dibujo que empieza igual y, al final, comparar sonidos iniciales solo de oído.',
+    resumen: 'Distinguir sonidos iniciales, sin letras.',
     categoria: 'auditiva',
     icono: '👂',
     color: 'var(--color-nino-azul)',
@@ -698,6 +706,7 @@ export const CONTENIDOS: Contenido[] = [
     titulo: 'Formo palabras',
     area: 'palabras',
     descripcion: 'Palabras de dos sílabas: completar la sílaba que falta, armarlas con fichas y reventar globos en orden.',
+    resumen: 'Completar y armar palabras de dos sílabas.',
     categoria: 'palabras',
     icono: '🎈',
     color: 'var(--color-nino-lila)',
@@ -714,6 +723,7 @@ export const CONTENIDOS: Contenido[] = [
     titulo: 'Categorías: frutas, profesiones y oficios',
     area: 'vocabulario',
     descripcion: 'Léxico por categorías: buscar el que es una fruta, una profesión o un oficio, marcar todos los de una categoría y encontrar el que no va. Si eliges un tema, se trabaja solo esa categoría.',
+    resumen: 'Agrupar dibujos por categoría.',
     categoria: 'vocabulario',
     icono: '🧺',
     color: 'var(--color-nino-amarillo)',
@@ -734,6 +744,7 @@ export const CONTENIDOS: Contenido[] = [
     titulo: 'Palabras y dibujos',
     area: 'vocabulario',
     descripcion: 'Léxico, como la ficha «marca con una X»: una grilla de tarjetas con dibujo y palabra, y se marcan las palabras que corresponden con su dibujo.',
+    resumen: 'Unir cada palabra con su dibujo.',
     categoria: 'vocabulario',
     icono: '🗣️',
     color: 'var(--color-nino-lila)',
@@ -747,6 +758,7 @@ export const CONTENIDOS: Contenido[] = [
     titulo: 'Escribo',
     area: 'escritura',
     descripcion: 'Responder por escrito con un teclado en pantalla de letras mayúsculas: la vocal, la sílaba y la palabra completa.',
+    resumen: 'Escribir la vocal, la sílaba y la palabra.',
     categoria: 'escritura',
     icono: '✏️',
     color: 'var(--color-nino-amarillo)',

@@ -1066,7 +1066,11 @@ function EditorPlan({ sala, conAvance, ejecutar, alCerrar }: { sala: Sala; conAv
     alCerrar()
   }
 
-  const disponibles = CONTENIDOS.filter((c) => !bloques.some((b) => 'contenido' in b && b.contenido === c.id))
+  const enPlan = (id: string) => bloques.some((b) => 'contenido' in b && b.contenido === id)
+  // Tocar una tarjeta la agrega o la quita. La tarjeta no desaparece de la
+  // lista: si desapareciera, el navegador pierde su ancla y salta el scroll.
+  const alternar = (id: string) =>
+    setBloques((x) => (enPlan(id) ? x.filter((b) => !('contenido' in b && b.contenido === id)) : [...x, bloqueContenido(id)]))
   const editado = configurando?.indice !== undefined ? bloques[configurando.indice] : undefined
 
   return (
@@ -1163,50 +1167,63 @@ function EditorPlan({ sala, conAvance, ejecutar, alCerrar }: { sala: Sala; conAv
           </section>
         )}
 
-        {disponibles.length > 0 && (
-          <div className="grid gap-4">
-            <h3 className="text-xs font-bold text-tinta-suave">Toca para agregar</h3>
-            {/* Por área: las actividades auditivas (solo escuchar) aparte de las de sílabas. */}
+          <div className="grid gap-2">
+            <h3 className="text-xs font-bold text-tinta-suave">Toca un área para ver sus actividades; toca una para agregarla o quitarla</h3>
+            {/* Por área, desplegable: así la lista no ocupa todo el diálogo. */}
             {(Object.keys(AREAS) as Area[]).map((area) => {
-              const delArea = disponibles.filter((c) => c.area === area)
+              const delArea = CONTENIDOS.filter((c) => c.area === area)
               if (delArea.length === 0) return null
+              const agregadas = delArea.filter((c) => enPlan(c.id)).length
               return (
-                <section key={area} aria-label={AREAS[area].nombre}>
-                  <h4 className="mb-1.5 flex items-baseline gap-2 text-sm font-bold text-tinta">
+                <details key={area} className="group rounded-xl border border-borde bg-white open:bg-fondo/40">
+                  <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 px-3 py-2 text-sm font-bold text-tinta [&::-webkit-details-marker]:hidden">
                     {AREAS[area].etapa && (
-                      <span className="grid size-6 shrink-0 place-items-center self-center rounded-full bg-menta text-xs text-white" title="Lugar en el orden sugerido">
+                      <span className="grid size-6 shrink-0 place-items-center rounded-full bg-menta text-xs text-white" title="Lugar en el orden sugerido">
                         {AREAS[area].etapa}
                       </span>
                     )}
-                    <span aria-hidden="true">{AREAS[area].icono}</span> {AREAS[area].nombre}
-                    <span className="text-xs font-normal text-tinta-suave">{AREAS[area].descripcion}</span>
-                  </h4>
-                  <ul className="grid grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] gap-2">
-                    {delArea.map((c) => (
-                      <li key={c.id}>
-                        {/* La descripción va a la vista: en tablet no hay tooltip. */}
-                        <button
-                          type="button"
-                          onClick={() => setBloques((x) => [...x, bloqueContenido(c.id)])}
-                          className="flex h-full w-full items-start gap-2.5 rounded-xl border border-borde bg-white px-3 py-2.5 text-left text-tinta transition-colors hover:border-menta hover:bg-menta-fondo"
-                        >
-                          <IconoContenido c={c} className="size-11 text-2xl" />
-                          <span className="min-w-0 leading-tight">
-                            <b className="block text-sm">{c.titulo}</b>
-                            <span className="mt-0.5 line-clamp-3 block text-xs text-tinta-suave">{c.descripcion}</span>
-                            <span className="mt-1 block text-xs font-semibold text-menta-oscuro">
-                              {c.pasos.length} {c.pasos.length === 1 ? 'actividad' : 'actividades'}
-                            </span>
-                          </span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
+                    <span aria-hidden="true">{AREAS[area].icono}</span>
+                    <span className="min-w-0 flex-1">{AREAS[area].nombre}</span>
+                    <span className="shrink-0 rounded-full bg-menta-fondo px-2 py-0.5 text-xs font-semibold text-menta-oscuro" title="En el plan / total">
+                      {agregadas}/{delArea.length}
+                    </span>
+                    <span aria-hidden="true" className="shrink-0 text-tinta-suave transition-transform group-open:rotate-180">▾</span>
+                  </summary>
+                  <div className="grid gap-2 px-3 pb-3">
+                    <p className="text-xs text-tinta-suave">{AREAS[area].descripcion}</p>
+                    <ul className="grid grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] gap-2">
+                      {delArea.map((c) => {
+                        const agregada = enPlan(c.id)
+                        return (
+                          <li key={c.id}>
+                            {/* El resumen va a la vista (en tablet no hay tooltip); la descripción completa, de título. */}
+                            <button
+                              type="button"
+                              aria-pressed={agregada}
+                              title={c.descripcion}
+                              onClick={() => alternar(c.id)}
+                              className={`flex h-full w-full items-center gap-2.5 rounded-xl border-2 px-3 py-2 text-left text-tinta transition-colors ${
+                                agregada ? 'border-menta bg-menta-fondo' : 'border-borde bg-white hover:border-menta hover:bg-menta-fondo/50'
+                              }`}
+                            >
+                              <IconoContenido c={c} className="size-10 text-xl" />
+                              <span className="min-w-0 flex-1 leading-tight">
+                                <b className="block text-sm">{c.titulo}</b>
+                                <span className="mt-0.5 line-clamp-2 block text-xs text-tinta-suave">{c.resumen ?? c.descripcion}</span>
+                                <span className="mt-1 block text-xs font-semibold text-menta-oscuro">
+                                  {agregada ? '✓ En el plan · toca para quitar' : `${c.pasos.length} ${c.pasos.length === 1 ? 'actividad' : 'actividades'}`}
+                                </span>
+                              </span>
+                            </button>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </div>
+                </details>
               )
             })}
           </div>
-        )}
 
         {conAvance > 0 && (
           <p className="rounded-xl bg-[#fdf1e4] px-3 py-2 text-sm font-semibold text-[#9a4d00]">
