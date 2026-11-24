@@ -4,6 +4,26 @@
 
 ---
 
+## 0. Orden sugerido por el equipo PIE (reunión de noviembre 2026)
+
+El catálogo de contenidos y el botón **«Ordenar el plan como se sugiere»** (en el plan de cada sala) siguen el orden de la conciencia fonológica que indicó el equipo PIE:
+
+| Etapa | Área | Contenidos |
+|---|---|---|
+| 1 | **Conciencia léxica**: las oraciones están formadas por palabras (identificar, contar y manipular palabras) | Las oraciones tienen palabras: cuenta las palabras (viéndolas), ¿qué palabra falta?, escucha y cuenta (solo de oído) |
+| 2 | **Conciencia silábica** | Palabras largas y cortas |
+| 3 | **Conciencia intrasilábica (rimas)** | Rimas: ¿cuál termina igual? |
+| 4 | **Conciencia fonémica**: primero vocales, después consonantes | Las vocales → Escucho y reconozco → Sílabas con M, P, L, S, T |
+| 5 | Formo palabras | Armar, completar y reventar globos con sílabas |
+| — | **Vocabulario (léxico)**, sin etapa fija | Categorías: frutas, profesiones y oficios; Palabras y dibujos |
+| — | Escritura, sin etapa fija | Escribo |
+
+* **Conciencia léxica ≠ léxico.** La conciencia léxica es la capacidad de identificar, contar y manipular las palabras de una oración. El léxico es el conjunto de palabras de una lengua: eso se trabaja en **Vocabulario** (por eso «Palabras y dibujos» pasó a esa área).
+* **Es una sugerencia.** Las profesionales pueden cambiar el orden del plan con ↑ ↓, quitar o reordenar las actividades de cada contenido, y volver al orden sugerido con el botón.
+* **Diseño por estaciones del año.** La temática «Estaciones del año (cambia sola)» del perfil del niño, y la pantalla de entrada de los alumnos, muestran la estación actual de Chile (primavera, verano, otoño, invierno).
+
+---
+
 ## 1. Visión General de la Progresión (`RF-09`)
 
 Dado que en Pre-Kínder y Kínder la meta máxima esperada es la manipulación silábica y la decodificación de palabras simples (siendo excepcionales los casos de lectura fluida), el software estructura su ruta de aprendizaje en **3 Niveles Secuenciales** más **1 Módulo Transversal de Comprensión y Motivación**.

@@ -215,6 +215,13 @@ body {
   75% { transform: translate(-8vw, -5vh) rotate(10deg) scale(1.1); }
 }
 .flota { animation: subir linear infinite; cursor: pointer; opacity: 0.85; }
+/* Estaciones: hojas de otoño y nieve de invierno caen meciéndose. */
+@keyframes caer {
+  from { transform: translate(0, 0); }
+  50% { transform: translate(1.5rem, 62vh); }
+  to { transform: translate(0, 125vh); }
+}
+.cae { animation: caer linear infinite; cursor: pointer; opacity: 0.85; }
 .balanceo { animation: balanceo 4s ease-in-out infinite; }
 .nube {
   position: absolute;

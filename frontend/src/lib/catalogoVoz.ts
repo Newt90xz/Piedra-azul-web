@@ -173,6 +173,10 @@ export function frasesDeRonda(r: Ronda): string[] {
     case 'choque':
       f.push(r.consonante + r.vocal)
       break
+    case 'oracion':
+      // El altavoz, el «despacio» y tocar cada palabra.
+      f.push(FRASES.oracionCompleta(r.oracion), FRASES.oracionDespacio(r.palabras.map((p) => p.texto)), ...r.palabras.map((p) => enFrase(p.texto.toLowerCase())))
+      break
     case 'escribir':
       f.push(enFrase(r.audio))
       break

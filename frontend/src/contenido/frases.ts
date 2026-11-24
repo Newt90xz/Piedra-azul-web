@@ -44,3 +44,9 @@ export const frasePrecio = (precio: number) => `${precio} monedas`
 export const articuloConPrecio = (nombre: string, precio: number) => `${nombre}, ${precio} monedas`
 export const colorDePiel = (i: number) => `Color de piel ${i + 1}`
 export const letraParaRepasar = (letra: string) => `Letra ${letra}`
+
+// ---------- Conciencia léxica ----------
+
+// La oración entera (el altavoz) y palabra por palabra (la tortuga): «El. Perro. Corre.»
+export const oracionCompleta = (oracion: string) => `${oracion}.`
+export const oracionDespacio = (palabras: readonly string[]) => palabras.join('… ')

@@ -7,7 +7,8 @@ import type { Tema } from '../contenido/temas.ts'
 export type ModoImagen = 'foto' | 'picto' | 'mixto'
 export type TamanoLetra = 'normal' | 'grande' | 'muy-grande'
 export type Emocion = 'alegria' | 'calma' | 'tristeza' | 'enojo'
-export type Tematica = 'animales' | 'dinosaurios' | 'futbol' | 'oceano' | 'vehiculos' | 'piratas'
+// «estaciones»: el fondo cambia solo con la estación del año (contenido/estaciones.ts).
+export type Tematica = 'animales' | 'dinosaurios' | 'futbol' | 'oceano' | 'vehiculos' | 'piratas' | 'estaciones'
 // Nivel de exigencia de los desafíos (contenido/exigencia.ts): cuántas opciones,
 // rondas y ayudas tiene cada actividad, y cuánto hay que lograr para pasar.
 export type Exigencia = 'inicial' | 'intermedio' | 'avanzado'

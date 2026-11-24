@@ -51,7 +51,11 @@ describe.each(temasPreguntables())('vocabulario: %s', (tema: Tema) => {
         opcionesValidas(r)
         expect(r.item).toBe(TEMAS[tema].nombre)
         const delTema = r.opciones.filter((o) => temaDe(o.id) === tema)
-        expect(delTema).toHaveLength(nivel.maxOpciones - 1)
+        // Las del nivel, o menos (nunca menos de dos) si el tema no tiene tantos
+        // dibujos que no se confundan (ropa: el zapato y la bota).
+        expect(delTema.length).toBeLessThanOrEqual(nivel.maxOpciones - 1)
+        expect(delTema.length).toBeGreaterThanOrEqual(2)
+        for (const a of delTema) for (const b of delTema) if (a !== b) expect(parecidos(a.id, b.id), `${a.id} / ${b.id}`).toBe(false)
         expect(r.opciones.filter((o) => temaDe(o.id) !== tema).map((o) => o.id)).toEqual([r.correctaId])
         expect(contrastables(tema, temaDe(r.correctaId))).toBe(true)
       }

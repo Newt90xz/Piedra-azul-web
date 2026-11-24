@@ -93,7 +93,7 @@ const AZAR_MAXIMO = 0.25
 export const META = 'Pasa con 3 de 5 rondas al primer intento (4 de 5 si son solo dos opciones, como sí o no).'
 
 // Probabilidad de acertar al primer intento tocando al azar.
-const alAzar = (r: Ronda) => (r.tipo === 'elegir' ? 1 / r.opciones.length : 0)
+const alAzar = (r: Ronda) => (r.tipo === 'elegir' || r.tipo === 'oracion' ? 1 / r.opciones.length : 0)
 
 // Cuántas rondas hay que lograr en esta partida.
 export function metaDe(rondas: Ronda[]) {
@@ -148,6 +148,12 @@ function ajustarRonda(r: Ronda, n: NivelExigencia): Ronda {
       if (r.opciones.length <= max) return r
       const otras = mezclar(r.opciones.filter((o) => o.id !== r.correctaId)).slice(0, max - 1)
       // Se conserva el orden original (las sílabas vienen ordenadas por vocal).
+      return { ...r, opciones: r.opciones.filter((o) => o.id === r.correctaId || otras.includes(o)) }
+    }
+    case 'oracion': {
+      // Los números ya vienen según el nivel (seguidos); aquí solo las de dibujos.
+      if (r.modo !== 'falta' || r.opciones.length <= n.maxOpciones) return r
+      const otras = mezclar(r.opciones.filter((o) => o.id !== r.correctaId)).slice(0, n.maxOpciones - 1)
       return { ...r, opciones: r.opciones.filter((o) => o.id === r.correctaId || otras.includes(o)) }
     }
     case 'escribir': {

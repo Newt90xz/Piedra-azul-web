@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { ESTACIONES, estacionDe } from '../contenido/estaciones.ts'
 import type { Tematica } from '../dominio/tipos.ts'
 import { efecto } from '../lib/audio.ts'
 
@@ -6,7 +7,7 @@ import { efecto } from '../lib/audio.ts'
 // estímulo), siempre a los costados para no competir con la actividad. Tocar uno
 // lo hace rebotar. Con «reducir animaciones» no se dibujan.
 
-export const PERSONAJES: Record<Tematica, string[]> = {
+export const PERSONAJES: Record<Exclude<Tematica, 'estaciones'>, string[]> = {
   animales: ['🦊', '🐰', '🐻', '🐼', '🦉', '🐸'],
   dinosaurios: ['🦖', '🦕', '🥚', '🌿', '🦴', '🌋'],
   futbol: ['⚽', '🥅', '🏆', '👟', '🎽', '🏟️'],
@@ -14,6 +15,9 @@ export const PERSONAJES: Record<Tematica, string[]> = {
   vehiculos: ['🚒', '🚓', '🚌', '🚜', '✈️', '🚀'],
   piratas: ['🦜', '⚓', '💎', '🗺️', '🧭', '🏴‍☠️'],
 }
+
+// Con «Estaciones del año», los de la estación de hoy.
+const personajesDe = (tematica: Tematica) => (tematica === 'estaciones' ? ESTACIONES[estacionDe()].personajes : PERSONAJES[tematica])
 
 // Posición, tamaño y ritmo fijos: el fondo no cambia entre recargas.
 const SITIOS = [
@@ -26,18 +30,29 @@ const SITIOS = [
 ]
 
 export function FondoNino({ tematica, silenciado = false }: { tematica: Tematica; silenciado?: boolean }) {
-  const personajes = PERSONAJES[tematica]
+  const personajes = personajesDe(tematica)
+  const estacion = tematica === 'estaciones' ? ESTACIONES[estacionDe()] : null
   const [saltando, setSaltando] = useState<number | null>(null)
 
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+      {estacion && (
+        // Cielo y pasto teñidos de la estación, sobre el fondo de siempre.
+        <span
+          className="absolute inset-0 opacity-70"
+          style={{
+            background: `radial-gradient(130% 22% at 50% 100%, ${estacion.suelo} 0 60%, transparent 61%), linear-gradient(180deg, ${estacion.cielo} 0%, transparent 70%)`,
+          }}
+        />
+      )}
       <span className="nube" style={{ top: '14%', left: '-10rem', animationDuration: '90s' }} />
       <span className="nube" style={{ top: '38%', left: '-10rem', animationDuration: '130s', animationDelay: '-50s', scale: '0.7' }} />
       {SITIOS.map((s, i) => (
         <button
           key={i}
           tabIndex={-1}
-          className="flota pointer-events-auto absolute top-full leading-none select-none"
+          // Hojas y nieve caen desde arriba; lo demás sube desde abajo.
+          className={`${estacion?.caen ? 'cae -top-16' : 'flota top-full'} pointer-events-auto absolute leading-none select-none`}
           style={{ left: s.izq, fontSize: `${s.tam}rem`, animationDuration: `${s.dur}s`, animationDelay: `-${s.ret}s` }}
           onPointerDown={() => {
             setSaltando(i)
@@ -76,7 +91,7 @@ export function ProtectorPantalla({ tematica, esperaMs = 90_000 }: { tematica: T
   }, [esperaMs, activo])
 
   if (!activo) return null
-  const personajes = PERSONAJES[tematica]
+  const personajes = personajesDe(tematica)
   return (
     <button
       aria-label="Toca para seguir jugando"

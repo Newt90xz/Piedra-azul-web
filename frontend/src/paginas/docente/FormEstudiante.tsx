@@ -28,7 +28,7 @@ const esquema = z.object({
     altoContraste: z.boolean(),
     reducirAnimaciones: z.boolean(),
     silenciarEfectos: z.boolean(),
-    tematica: z.enum(['animales', 'dinosaurios', 'futbol', 'oceano', 'vehiculos', 'piratas']),
+    tematica: z.enum(['animales', 'dinosaurios', 'futbol', 'oceano', 'vehiculos', 'piratas', 'estaciones']),
     // Vacío: la del plan de la sala.
     dificultad: z
       .union([z.literal(''), z.enum(['inicial', 'intermedio', 'avanzado'])])
@@ -138,6 +138,7 @@ export function FormEstudiante({ inicial, cursoId, alGuardar }: { inicial?: Estu
             <option value="oceano">Océano</option>
             <option value="vehiculos">Vehículos</option>
             <option value="piratas">Piratas</option>
+            <option value="estaciones">Estaciones del año (cambia sola)</option>
           </select>
         </Campo>
         <Campo etiqueta="Dificultad de las actividades">

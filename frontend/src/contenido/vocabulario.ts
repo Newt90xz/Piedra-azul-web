@@ -1,5 +1,5 @@
 import type { Palabra } from '../dominio/tipos.ts'
-import { mezclar, type Opcion, type Ronda } from './actividades.ts'
+import { mezclar, type Opcion, type Ronda, type Tarjeta } from './actividades.ts'
 import { palabrasDelTema, PALABRAS } from './banco.ts'
 import type { NivelExigencia } from './exigencia.ts'
 import { TEMAS, TEMAS_PREGUNTABLES, contrastables, parecidos, type Tema } from './temas.ts'
@@ -27,7 +27,8 @@ const choca = (a: Palabra, b: Palabra) => parecidos(a.id, b.id) || a.imagen.emoj
 // de cada tema, para que no sean todas animales, y ninguna que se confunda con
 // las ya elegidas.
 function deOtrosTemas(tema: Tema, n: number, con: Palabra[]) {
-  const candidatas = mezclar(PALABRAS.filter((w) => w.tema && contrastables(tema, w.tema)))
+  // Meses y estaciones (dibujos que no se distinguen sin leer) solo si se pregunta por ellos.
+  const candidatas = mezclar(PALABRAS.filter((w) => w.tema && contrastables(tema, w.tema) && (!TEMAS[w.tema].abstracto || TEMAS[tema].abstracto)))
   const r: Palabra[] = []
   for (const unaPorTema of [true, false]) {
     for (const w of candidatas) {
@@ -47,11 +48,14 @@ function turnos(temas: Tema[]) {
   const pendientes = new Map<Tema, Palabra[]>()
   const sacar = (t: Tema, n: number) => {
     const r: Palabra[] = []
+    // Nunca dos que se confunden en la misma ronda (la doctora y la veterinaria).
+    const sirve = (w: Palabra) => !r.some((x) => x.id === w.id || choca(x, w))
     while (r.length < n) {
-      if (!pendientes.get(t)?.length) pendientes.set(t, mezclar(palabrasDelTema(t).filter((w) => !r.some((x) => x.id === w.id))))
-      const w = pendientes.get(t)!.shift()
-      if (!w) break
-      r.push(w)
+      if (!pendientes.get(t)?.some(sirve)) pendientes.set(t, mezclar(palabrasDelTema(t).filter(sirve)))
+      const lista = pendientes.get(t)!
+      const i = lista.findIndex(sirve)
+      if (i < 0) break
+      r.push(...lista.splice(i, 1))
     }
     return r
   }
@@ -102,6 +106,33 @@ export function cualNoVa(temas: readonly string[], nivel?: NivelExigencia): Rond
       instruccion: `¿Cuál no es ${uno}?`,
       pista: `¡Casi! Busca el dibujo que no es ${uno}. ¡Otra vez!`,
       refuerzo: `¡Sí! ${intrusa.texto} no es ${uno}.`,
+    }
+  })
+}
+
+// Categorías como la ficha «Marca con una X todas las frutas»: una grilla con
+// dibujos del tema y de otros temas que no se confunden con él. Cuántas
+// tarjetas quedan lo decide el nivel (exigencia.ts).
+const TARJETAS_CATEGORIA = 8
+
+export function marcaLaCategoria(temas: readonly string[]): Ronda[] {
+  const elegidos = validos(temas)
+  if (elegidos.length === 0) return []
+  return turnos(elegidos).map(({ tema, sacar }) => {
+    const uno = TEMAS[tema].uno!
+    // Entre 3 y 4 del tema, el resto de otros temas.
+    const si = sacar(3 + Math.floor(Math.random() * 2))
+    const no = deOtrosTemas(tema, TARJETAS_CATEGORIA - si.length, si)
+    const tarjeta = (w: Palabra, corresponde: boolean): Tarjeta => ({ id: w.id, imagen: w.imagen, texto: w.texto.toUpperCase(), audio: w.texto, corresponde })
+    return {
+      tipo: 'marcar',
+      item: TEMAS[tema].nombre,
+      consigna: `${TEMAS[tema].icono} ${TEMAS[tema].nombre.toUpperCase()}`,
+      tarjetas: mezclar([...si.map((w) => tarjeta(w, true)), ...no.map((w) => tarjeta(w, false))]),
+      // Sin «todas las…»: «las oficios» no va. «Cada dibujo que sea un oficio» sirve para todos.
+      instruccion: `Marca con una X cada dibujo que sea ${uno}.`,
+      pista: `¡Casi! Mira bien cada dibujo: ¿es ${uno}? ¡Otra vez!`,
+      refuerzo: `¡Muy bien! Marcaste cada dibujo que es ${uno}.`,
     }
   })
 }

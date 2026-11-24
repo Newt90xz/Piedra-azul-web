@@ -15,9 +15,10 @@ import {
 import { CONSONANTES_SILABAS, LETRAS, PALABRAS_NIVEL_3, VOCALES, bancoGeneral, laLetra, nombreLetra, palabra, quitarTildes, sinAcentos } from './banco.ts'
 import { bancoDe, cercaniaDe, distractores, objetivos, opcionesDe, type Contexto } from './elegir.ts'
 import type { NivelExigencia } from './exigencia.ts'
-import { palabrasDelDibujo } from './lexica.ts'
+import { cuentaLasPalabras, escuchaYCuenta, laPalabraQueFalta, palabrasDelDibujo } from './lexica.ts'
 import { juegoConfigurable } from './plantillas.ts'
 import { parecidos, type Tema } from './temas.ts'
+import { cualEs, cualNoVa, marcaLaCategoria, temasPreguntables } from './vocabulario.ts'
 
 // Contenidos de las Bases Curriculares de la Educación Parvularia (MINEDUC,
 // 2018), núcleo Lenguaje Verbal, Tercer Nivel (Transición):
@@ -42,19 +43,46 @@ export const OA = {
   'OA 8': 'Representar gráficamente algunos trazos, letras, signos, palabras significativas y mensajes simples legibles.',
 } as const
 
-// Áreas en que se agrupan los contenidos al armar el plan: las actividades
-// auditivas (solo escuchar, sin letras) van aparte de las de sílabas.
-export const AREAS = {
-  auditiva: { nombre: 'Escuchar', icono: '👂', descripcion: 'Distinguir palabras y sonidos de oído, sin letras.' },
-  oraciones: { nombre: 'Conciencia léxica', icono: '🗣️', descripcion: 'Reconocer las palabras que corresponden con un dibujo.' },
-  vocabulario: { nombre: 'Vocabulario', icono: '📚', descripcion: 'Agrupar palabras por tema: frutas, oficios, medios de transporte…' },
-  letras: { nombre: 'Vocales y letras', icono: '🔤', descripcion: 'Sonido de cada letra y su forma.' },
-  silabas: { nombre: 'Sílabas', icono: '👏', descripcion: 'Reconocer, contar y comparar sílabas.' },
-  palabras: { nombre: 'Palabras', icono: '🧩', descripcion: 'Formar y completar palabras con sílabas.' },
-  escritura: { nombre: 'Escritura', icono: '✏️', descripcion: 'Escribir letras y palabras, siempre en mayúscula.' },
-} as const
+// Áreas en que se agrupan los contenidos al armar el plan, en el orden que
+// sugirió el equipo PIE del colegio para la conciencia fonológica:
+//   1. Conciencia léxica: las oraciones están formadas por palabras.
+//   2. Conciencia silábica.
+//   3. Conciencia intrasilábica (rimas).
+//   4. Conciencia fonémica: primero las vocales, después las consonantes.
+// Después, formar palabras con sílabas. Vocabulario (el léxico: las palabras
+// de la lengua, por categorías) y escritura no tienen etapa: se suman cuando
+// la docente quiera. Es solo una sugerencia: la docente ordena el plan a su gusto.
+export type Area = 'oraciones' | 'silabas' | 'rimas' | 'letras' | 'palabras' | 'vocabulario' | 'escritura'
 
-export type Area = keyof typeof AREAS
+interface DatosArea {
+  nombre: string
+  icono: string
+  descripcion: string
+  // Lugar en la progresión sugerida; sin etapa, va al final.
+  etapa?: number
+}
+
+export const AREAS: Record<Area, DatosArea> = {
+  oraciones: {
+    etapa: 1,
+    nombre: 'Conciencia léxica',
+    icono: '💬',
+    descripcion: 'Las oraciones están formadas por palabras: identificarlas, contarlas y encontrar la que falta.',
+  },
+  silabas: { etapa: 2, nombre: 'Conciencia silábica', icono: '👏', descripcion: 'Las palabras están formadas por sílabas: contarlas y compararlas.' },
+  rimas: { etapa: 3, nombre: 'Conciencia intrasilábica (rimas)', icono: '🐱', descripcion: 'Una parte de la sílaba: cómo terminan las palabras.' },
+  letras: { etapa: 4, nombre: 'Conciencia fonémica', icono: '🔤', descripcion: 'Los sonidos de las letras: primero las vocales, después las consonantes.' },
+  palabras: { etapa: 5, nombre: 'Formo palabras', icono: '🧩', descripcion: 'Juntar sílabas para formar y completar palabras.' },
+  vocabulario: {
+    nombre: 'Vocabulario (léxico)',
+    icono: '📚',
+    descripcion: 'El léxico: palabras agrupadas por categorías (frutas, profesiones, oficios…). No es lo mismo que la conciencia léxica.',
+  },
+  escritura: { nombre: 'Escritura', icono: '✏️', descripcion: 'Escribir letras y palabras, siempre en mayúscula.' },
+}
+
+// Las áreas con etapa, en orden: lo que se muestra como «orden sugerido».
+export const ETAPAS = (Object.keys(AREAS) as Area[]).filter((a) => AREAS[a].etapa).sort((a, b) => AREAS[a].etapa! - AREAS[b].etapa!)
 
 export type CodigoOA = keyof typeof OA
 
@@ -256,7 +284,8 @@ function contenidoSilabas(consonante: (typeof CONSONANTES_SILABAS)[number]): Con
     id: `silabas-${consonante}`,
     oa: ['OA 7', 'OA 3'],
     titulo: `Sílabas con ${MAYUS(consonante)}`,
-    area: 'silabas',
+    // Conciencia fonémica, después de las vocales: el sonido de la consonante en sus sílabas.
+    area: 'letras',
     descripcion: `Sílabas directas ${silabas}: reconocerlas al inicio de palabras, buscarlas entre dibujos y, al final, solo de oído.`,
     categoria: 'silabas',
     ...NOMBRE_SILABAS[consonante],
@@ -551,12 +580,91 @@ function escribePalabra(): Ronda[] {
 
 // ---------- Catálogo ----------
 
+// Las categorías del equipo PIE; con un tema elegido (y que se pueda preguntar), solo ese.
+const CATEGORIAS_PIE: Tema[] = ['frutas', 'profesiones', 'oficios']
+const categoriasDe = (c?: Contexto) => (c?.tema && temasPreguntables().includes(c.tema) ? [c.tema] : CATEGORIAS_PIE)
+
+// En el orden sugerido (AREAS): así aparecen en el catálogo de la docente.
 export const CONTENIDOS: Contenido[] = [
+  {
+    id: 'conciencia-lexica',
+    oa: ['OA 3'],
+    titulo: 'Las oraciones tienen palabras',
+    area: 'oraciones',
+    descripcion: 'Conciencia léxica: las oraciones están formadas por palabras. Contar las palabras de una oración viéndolas, encontrar la palabra que falta y, al final, contarlas solo de oído.',
+    categoria: 'oraciones',
+    icono: '💬',
+    color: 'var(--color-nino-lila)',
+    pasos: [
+      {
+        titulo: 'Cuenta las palabras de la oración',
+        generar: cuentaLasPalabras,
+        instrucciones: 'Escucha la oración. Toca cada palabra para contarla y después toca el número.',
+      },
+      { titulo: '¿Qué palabra falta?', generar: laPalabraQueFalta, instrucciones: 'Escucha la oración y toca la palabra que falta.' },
+      {
+        titulo: 'Escucha y cuenta las palabras',
+        generar: escuchaYCuenta,
+        instrucciones: 'Escucha la oración sin mirar las palabras. Aplaude una vez por cada palabra y después toca el número.',
+      },
+    ],
+  },
+  {
+    id: 'largas-cortas',
+    oa: ['OA 3'],
+    titulo: 'Palabras largas y cortas',
+    area: 'silabas',
+    descripcion: 'Comparar palabras por su cantidad de sílabas: cuál es más larga, cuál más corta y la más larga entre varias.',
+    categoria: 'conteo',
+    icono: '🐘',
+    color: 'var(--color-nino-azul)',
+    pasos: [
+      { titulo: '¿Cuál es más larga?', generar: (c) => compararLargo(true, c), conTema: true },
+      { titulo: '¿Cuál es más corta?', generar: (c) => compararLargo(false, c), conTema: true },
+      { titulo: 'Encuentra la palabra más larga', generar: laMasLarga, conTema: true },
+    ],
+  },
+  {
+    id: 'rimas',
+    oa: ['OA 3'],
+    titulo: 'Rimas: ¿cuál termina igual?',
+    area: 'rimas',
+    descripcion: 'Identificar la sílaba final de palabras conocidas (GATO / PATO): buscar la que rima, encontrar la que no rima y, al final, decidir solo de oído si dos palabras terminan igual.',
+    categoria: 'rimas',
+    icono: '🐱',
+    color: 'var(--color-nino-menta)',
+    pasos: [
+      { titulo: 'Encuentra la que termina igual', generar: encuentraLaRima, conTema: true },
+      { titulo: '¿Cuál no termina igual?', generar: cualNoRima, conTema: true, instrucciones: 'Escucha las palabras y toca la que no termina igual que las otras.' },
+      {
+        titulo: '¿Terminan igual?',
+        generar: terminanIgual,
+        conTema: true,
+        instrucciones: 'Escucha dos palabras. Si terminan igual toca el pulgar arriba; si no, el pulgar abajo.',
+      },
+    ],
+  },
+  {
+    id: 'vocales',
+    oa: ['OA 7', 'OA 3'],
+    titulo: 'Las vocales',
+    area: 'letras',
+    descripcion: 'Vocales A, E, I, O, U: con qué vocal empieza un dibujo, buscar dibujos por su vocal y, al final, reconocerlas solo de oído.',
+    categoria: 'letras',
+    icono: '🐝',
+    color: 'var(--color-nino-amarillo)',
+    pasos: [
+      { titulo: 'Escucha y toca la vocal', generar: escucharVocal },
+      { titulo: '¿Con qué vocal empieza?', generar: vocalInicial, conTema: true },
+      { titulo: 'Busca el dibujo de la vocal', generar: imagenConVocal, conTema: true },
+    ],
+    ordenPorDefecto: [2, 3, 1],
+  },
   {
     id: 'escucho',
     oa: ['OA 3'],
     titulo: 'Escucho y reconozco',
-    area: 'auditiva',
+    area: 'letras',
     descripcion: 'Discriminación auditiva sin letras: reconocer la palabra escuchada, buscar el dibujo que empieza igual y, al final, comparar sonidos iniciales solo de oído.',
     categoria: 'auditiva',
     icono: '👂',
@@ -578,71 +686,7 @@ export const CONTENIDOS: Contenido[] = [
     ],
     ordenPorDefecto: [1, 3, 2],
   },
-  {
-    id: 'lexica',
-    oa: ['OA 3'],
-    titulo: 'Palabras y dibujos',
-    area: 'oraciones',
-    descripcion: 'Conciencia léxica, como la ficha «marca con una X»: una grilla de tarjetas con dibujo y palabra, y se marcan las palabras que corresponden con su dibujo.',
-    categoria: 'oraciones',
-    icono: '🗣️',
-    color: 'var(--color-nino-lila)',
-    pasos: [
-      { titulo: 'Marca las palabras del dibujo', generar: palabrasDelDibujo, conTema: true },
-    ],
-  },
-  {
-    id: 'vocales',
-    oa: ['OA 7', 'OA 3'],
-    titulo: 'Las vocales',
-    area: 'letras',
-    descripcion: 'Vocales A, E, I, O, U: con qué vocal empieza un dibujo, buscar dibujos por su vocal y, al final, reconocerlas solo de oído.',
-    categoria: 'letras',
-    icono: '🐝',
-    color: 'var(--color-nino-amarillo)',
-    pasos: [
-      { titulo: 'Escucha y toca la vocal', generar: escucharVocal },
-      { titulo: '¿Con qué vocal empieza?', generar: vocalInicial, conTema: true },
-      { titulo: 'Busca el dibujo de la vocal', generar: imagenConVocal, conTema: true },
-    ],
-    ordenPorDefecto: [2, 3, 1],
-  },
   ...CONSONANTES_SILABAS.map(contenidoSilabas),
-  {
-    id: 'largas-cortas',
-    oa: ['OA 3'],
-    titulo: 'Palabras largas y cortas',
-    area: 'silabas',
-    descripcion: 'Comparar palabras por su cantidad de sílabas: cuál es más larga, cuál más corta y la más larga entre varias.',
-    categoria: 'conteo',
-    icono: '🐘',
-    color: 'var(--color-nino-azul)',
-    pasos: [
-      { titulo: '¿Cuál es más larga?', generar: (c) => compararLargo(true, c), conTema: true },
-      { titulo: '¿Cuál es más corta?', generar: (c) => compararLargo(false, c), conTema: true },
-      { titulo: 'Encuentra la palabra más larga', generar: laMasLarga, conTema: true },
-    ],
-  },
-  {
-    id: 'rimas',
-    oa: ['OA 3'],
-    titulo: 'Rimas: ¿cuál termina igual?',
-    area: 'auditiva',
-    descripcion: 'Identificar la sílaba final de palabras conocidas (GATO / PATO): buscar la que rima, encontrar la que no rima y, al final, decidir solo de oído si dos palabras terminan igual.',
-    categoria: 'rimas',
-    icono: '🐱',
-    color: 'var(--color-nino-menta)',
-    pasos: [
-      { titulo: 'Encuentra la que termina igual', generar: encuentraLaRima, conTema: true },
-      { titulo: '¿Cuál no termina igual?', generar: cualNoRima, conTema: true, instrucciones: 'Escucha las palabras y toca la que no termina igual que las otras.' },
-      {
-        titulo: '¿Terminan igual?',
-        generar: terminanIgual,
-        conTema: true,
-        instrucciones: 'Escucha dos palabras. Si terminan igual toca el pulgar arriba; si no, el pulgar abajo.',
-      },
-    ],
-  },
   {
     id: 'formo-palabras',
     oa: ['OA 7', 'OA 3'],
@@ -660,6 +704,39 @@ export const CONTENIDOS: Contenido[] = [
     ordenPorDefecto: [3, 1, 2],
   },
   {
+    id: 'categorias',
+    oa: ['OA 4'],
+    titulo: 'Categorías: frutas, profesiones y oficios',
+    area: 'vocabulario',
+    descripcion: 'Léxico por categorías: buscar el que es una fruta, una profesión o un oficio, marcar todos los de una categoría y encontrar el que no va. Si eliges un tema, se trabaja solo esa categoría.',
+    categoria: 'vocabulario',
+    icono: '🧺',
+    color: 'var(--color-nino-amarillo)',
+    pasos: [
+      { titulo: '¿Cuál es…?', generar: (c) => cualEs(categoriasDe(c), c?.nivel), conTema: true },
+      {
+        titulo: 'Marca todos los de la categoría',
+        generar: (c) => marcaLaCategoria(categoriasDe(c)),
+        conTema: true,
+        instrucciones: 'Toca cada tarjeta para escucharla. Marca con una X los dibujos de la categoría y toca el visto bueno.',
+      },
+      { titulo: '¿Cuál no va?', generar: (c) => cualNoVa(categoriasDe(c), c?.nivel), conTema: true },
+    ],
+  },
+  {
+    id: 'lexica',
+    oa: ['OA 3'],
+    titulo: 'Palabras y dibujos',
+    area: 'vocabulario',
+    descripcion: 'Léxico, como la ficha «marca con una X»: una grilla de tarjetas con dibujo y palabra, y se marcan las palabras que corresponden con su dibujo.',
+    categoria: 'vocabulario',
+    icono: '🗣️',
+    color: 'var(--color-nino-lila)',
+    pasos: [
+      { titulo: 'Marca las palabras del dibujo', generar: palabrasDelDibujo, conTema: true },
+    ],
+  },
+  {
     id: 'escribo',
     oa: ['OA 8', 'OA 7'],
     titulo: 'Escribo',
@@ -674,6 +751,7 @@ export const CONTENIDOS: Contenido[] = [
       { titulo: 'Escribe la palabra', generar: () => escribePalabra(), instrucciones: 'Mira el dibujo y escribe la palabra completa, letra por letra.' },
     ],
   },
+
 ]
 
 export function contenido(id: string) {
@@ -775,6 +853,35 @@ export type BloquePlan = { contenido: string; pasos: number[]; exigencia?: Exige
 export function bloqueContenido(id: string): BloquePlan {
   const c = contenido(id)
   return { contenido: id, pasos: c ? ordenDe(c) : [] }
+}
+
+// ---------- Orden sugerido (equipo PIE) ----------
+
+const VOCALES_IDS: readonly string[] = VOCALES
+const posicion = (id: string) => CONTENIDOS.findIndex((c) => c.id === id)
+
+// Lugar de un bloque en la progresión: su etapa y, dentro de ella, el orden del catálogo.
+function lugarDe(b: BloquePlan): [number, number] {
+  if ('contenido' in b) {
+    const c = contenido(b.contenido)
+    return c ? [AREAS[c.area].etapa ?? 99, posicion(c.id)] : [99, 0]
+  }
+  const j = juegoConfigurable(b.paso.juego)
+  if (!j) return [99, 0]
+  // «Escucha y toca la letra» solo con vocales va junto a las vocales; con consonantes, después.
+  const letras = b.paso.parametros?.letras
+  const soloVocales = Array.isArray(letras) && letras.length > 0 && letras.every((l) => VOCALES_IDS.includes(String(l)))
+  return [AREAS[j.area].etapa ?? 99, soloVocales ? posicion('vocales') + 0.5 : CONTENIDOS.length]
+}
+
+// El plan ordenado como sugiere el equipo PIE: léxica → silábica → intrasilábica
+// (rimas) → fonémica (vocales, después consonantes) → formar palabras, y al final
+// vocabulario y escritura. Lo que empata conserva el orden que tenía.
+export function ordenSugerido(bloques: BloquePlan[]): BloquePlan[] {
+  return bloques
+    .map((b, i) => ({ b, i, lugar: lugarDe(b) }))
+    .sort((x, y) => x.lugar[0] - y.lugar[0] || x.lugar[1] - y.lugar[1] || x.i - y.i)
+    .map((x) => x.b)
 }
 
 // Pasos seguidos del mismo contenido forman un bloque; si un número se repite o

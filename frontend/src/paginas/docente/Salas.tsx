@@ -2,7 +2,21 @@ import { createContext, use, useEffect, useState, type DragEvent, type FormEvent
 import { useSesion } from '../../app/Sesion.tsx'
 import { JUEGOS } from '../../contenido/actividades.ts'
 import { palabrasDelTema } from '../../contenido/banco.ts'
-import { AREAS, CONTENIDOS, bloqueContenido, bloquesDePlan, contenido, planDeBloques, planDeSala, usaTema, type Area, type BloquePlan, type Contenido } from '../../contenido/contenidos.ts'
+import {
+  AREAS,
+  CONTENIDOS,
+  ETAPAS,
+  bloqueContenido,
+  bloquesDePlan,
+  contenido,
+  ordenSugerido,
+  planDeBloques,
+  planDeSala,
+  usaTema,
+  type Area,
+  type BloquePlan,
+  type Contenido,
+} from '../../contenido/contenidos.ts'
 import { JUEGOS_CONFIGURABLES, juegoConfigurable } from '../../contenido/plantillas.ts'
 import { TEMAS, TEMAS_FILTRO, type Tema } from '../../contenido/temas.ts'
 import { EXIGENCIAS, META, masDificil, masFacil } from '../../contenido/exigencia.ts'
@@ -1077,6 +1091,12 @@ function EditorPlan({ sala, conAvance, ejecutar, alCerrar }: { sala: Sala; conAv
           </button>
         </div>
 
+        <OrdenSugerido
+          ordenado={bloques.every((b, i) => b === ordenSugerido(bloques)[i])}
+          hayPlan={bloques.length > 1}
+          alOrdenar={() => setBloques((x) => ordenSugerido(x))}
+        />
+
         {bloques.length > 0 && (
           <ol className="grid gap-2">
             {bloques.map((b, i) => {
@@ -1153,6 +1173,11 @@ function EditorPlan({ sala, conAvance, ejecutar, alCerrar }: { sala: Sala; conAv
               return (
                 <section key={area} aria-label={AREAS[area].nombre}>
                   <h4 className="mb-1.5 flex items-baseline gap-2 text-sm font-bold text-tinta">
+                    {AREAS[area].etapa && (
+                      <span className="grid size-6 shrink-0 place-items-center self-center rounded-full bg-menta text-xs text-white" title="Lugar en el orden sugerido">
+                        {AREAS[area].etapa}
+                      </span>
+                    )}
                     <span aria-hidden="true">{AREAS[area].icono}</span> {AREAS[area].nombre}
                     <span className="text-xs font-normal text-tinta-suave">{AREAS[area].descripcion}</span>
                   </h4>
@@ -1198,6 +1223,39 @@ function EditorPlan({ sala, conAvance, ejecutar, alCerrar }: { sala: Sala; conAv
         </div>
       </div>
     </div>
+  )
+}
+
+// El orden que sugirió el equipo PIE del colegio (contenido/contenidos.ts:
+// AREAS). Es solo una sugerencia: la docente puede ordenar el plan como quiera
+// con las flechas, y este botón lo deja en el orden sugerido.
+function OrdenSugerido({ ordenado, hayPlan, alOrdenar }: { ordenado: boolean; hayPlan: boolean; alOrdenar: () => void }) {
+  return (
+    <section aria-label="Orden sugerido" className="grid gap-2 rounded-2xl border border-menta bg-menta-fondo/40 p-3 text-sm text-tinta">
+      <h3 className="font-bold">Orden sugerido de la conciencia fonológica</h3>
+      <ol className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+        {ETAPAS.map((a, i) => (
+          <li key={a} className="flex items-center gap-1.5">
+            {i > 0 && <span aria-hidden="true" className="text-tinta-suave">→</span>}
+            <span className="flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-xs font-semibold">
+              <span className="grid size-5 place-items-center rounded-full bg-menta text-[10px] text-white">{AREAS[a].etapa}</span>
+              {AREAS[a].nombre}
+            </span>
+          </li>
+        ))}
+      </ol>
+      <p className="text-xs text-tinta-suave">
+        En la conciencia fonémica van primero las vocales y después las consonantes. Vocabulario (el léxico) y escritura se suman cuando quieras. Es una
+        sugerencia: cambia el orden con ↑ ↓ cuando lo necesites.
+      </p>
+      {hayPlan && (
+        <div>
+          <Boton variante="suave" disabled={ordenado} onClick={alOrdenar} className="min-h-10 text-xs">
+            {ordenado ? 'El plan ya sigue el orden sugerido' : 'Ordenar el plan como se sugiere'}
+          </Boton>
+        </div>
+      )}
+    </section>
   )
 }
 

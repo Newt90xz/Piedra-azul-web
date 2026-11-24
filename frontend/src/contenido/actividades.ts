@@ -19,6 +19,13 @@ export interface Tarjeta {
   corresponde: boolean
 }
 
+// Una palabra de una oración (conciencia léxica): con su dibujo si lo tiene
+// (los artículos y los verbos van solo con la palabra escrita).
+export interface PalabraOracion {
+  texto: string
+  imagen?: Imagen
+}
+
 export interface Opcion {
   id: string
   texto?: string
@@ -53,8 +60,23 @@ export type Ronda =
   | (RondaBase & { tipo: 'escribir'; respuesta: string; imagen?: Imagen; audio: string; letras: string[]; pista: string })
   // Globos con sílabas que suben: se revientan en orden para formar la palabra.
   | (RondaBase & { tipo: 'globos'; palabra: Palabra; fichas: string[]; pista: string })
-  // Conciencia léxica: una grilla de tarjetas y se marcan con una X las que corresponden.
-  | (RondaBase & { tipo: 'marcar'; tarjetas: Tarjeta[]; pista: string })
+  // Una grilla de tarjetas y se marcan con una X las que corresponden.
+  // `consigna`: lo que hay que marcar, a la vista («🍎 FRUTAS»).
+  | (RondaBase & { tipo: 'marcar'; tarjetas: Tarjeta[]; pista: string; consigna?: string })
+  // Conciencia léxica: las oraciones están formadas por palabras. `contar`: se
+  // ven las palabras (un bloque por palabra) y se cuentan; `escuchar`: se
+  // cuentan solo de oído; `falta`: se ven todas menos una (`hueco`) y se elige cuál falta.
+  | (RondaBase & {
+      tipo: 'oracion'
+      modo: 'contar' | 'escuchar' | 'falta'
+      // Cómo la dice la voz, y sus palabras en orden.
+      oracion: string
+      palabras: PalabraOracion[]
+      hueco?: number
+      opciones: Opcion[]
+      correctaId: string
+      pista: string
+    })
 
 // Qué mide una actividad, para los reportes de la docente: así una letra no se
 // compara con una sílaba, una rima o una palabra. Orden = orden en pantalla.
@@ -95,7 +117,8 @@ export const COMO_SE_JUEGA: Record<Ronda['tipo'], string> = {
   choque: 'Toca el botón y mira cómo se juntan los sonidos.',
   escribir: 'Mira el dibujo y escribe con las letras grandes de abajo.',
   globos: 'Revienta los globos con las sílabas en orden para formar la palabra.',
-  marcar: 'Toca cada tarjeta para escucharla. Marca con una X las que corresponden con el dibujo y toca el visto bueno.',
+  marcar: 'Toca cada tarjeta para escucharla. Marca con una X las que corresponden y toca el visto bueno.',
+  oracion: 'Escucha la oración. Las oraciones están formadas por palabras.',
 }
 
 export const instruccionesDe = (rondas: Ronda[], propias?: string) => propias ?? (rondas[0] ? COMO_SE_JUEGA[rondas[0].tipo] : '')

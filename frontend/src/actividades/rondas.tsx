@@ -1,9 +1,10 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import type { Opcion, Ronda } from '../contenido/actividades.ts'
-import { hablar } from '../lib/audio.ts'
+import { oracionCompleta, oracionDespacio } from '../contenido/frases.ts'
+import { efecto, hablar } from '../lib/audio.ts'
 import { enFrase } from '../lib/textoVoz.ts'
 import { Icono } from '../ui/Icono.tsx'
-import { BotonNino, ImagenNino } from '../ui/nino.tsx'
+import { BotonNino, ImagenNino, useNino } from '../ui/nino.tsx'
 
 interface PropsRonda<T extends Ronda['tipo']> {
   ronda: Extract<Ronda, { tipo: T }>
@@ -30,6 +31,8 @@ export function RondaActual({ ronda, ...resto }: Omit<PropsRonda<Ronda['tipo']>,
       return <RondaGlobos ronda={ronda} {...resto} />
     case 'marcar':
       return <RondaMarcar ronda={ronda} {...resto} />
+    case 'oracion':
+      return <RondaOracion ronda={ronda} {...resto} />
   }
 }
 
@@ -411,14 +414,170 @@ function RondaMarcar({ ronda, resuelta, revelar, alIntentar }: PropsRonda<'marca
           )
         })}
       </ul>
-      {!resuelta && (
-        <BotonNino voz="Listo" disabled={marcadas.length === 0} onClick={revisar} className="grid size-20 place-items-center border-nino-ok bg-nino-menta disabled:opacity-40">
-          <Icono nombre="check" className="size-10" />
-        </BotonNino>
-      )}
+      <div className="flex min-h-20 items-center gap-6">
+        {ronda.consigna && (
+          // Qué hay que marcar, a la vista (la voz puede estar apagada): «🍎 FRUTAS».
+          // Junto al visto bueno, para no quitarle alto a la grilla.
+          <p className="rounded-full border-3 border-nino-borde bg-white px-6 py-1 text-[0.9em] leading-tight font-bold">{ronda.consigna}</p>
+        )}
+        {!resuelta && (
+          <BotonNino voz="Listo" disabled={marcadas.length === 0} onClick={revisar} className="grid size-20 place-items-center border-nino-ok bg-nino-menta disabled:opacity-40">
+            <Icono nombre="check" className="size-10" />
+          </BotonNino>
+        )}
+      </div>
     </div>
   )
 }
+
+// ---------- Conciencia léxica: las oraciones están formadas por palabras ----------
+
+// Un bloque por palabra, con su dibujo si lo tiene y la palabra en mayúscula.
+// `contar`: se tocan los bloques para contarlos (cada uno dice su palabra y
+// muestra su número); `falta`: un bloque vacío y se elige la palabra que falta;
+// `escuchar`: sin bloques, solo de oído: el niño aplaude una vez por palabra.
+function RondaOracion({ ronda, resuelta, revelar, alIntentar }: PropsRonda<'oracion'>) {
+  const { silenciado } = useNino()
+  const [descartadas, setDescartadas] = useState<string[]>([])
+  const [sacudir, setSacudir] = useState<string | null>(null)
+  // En `contar`: los bloques tocados, en el orden en que se tocaron.
+  const [contadas, setContadas] = useState<number[]>([])
+  const [aplausos, setAplausos] = useState(0)
+  const { modo, palabras } = ronda
+
+  const responder = (o: Opcion) => {
+    if (resuelta || descartadas.includes(o.id)) return
+    if (o.id === ronda.correctaId) return alIntentar(true)
+    setDescartadas((d) => [...d, o.id])
+    setSacudir(o.id)
+    window.setTimeout(() => setSacudir(null), 450)
+    alIntentar(false, o.texto ?? o.audio)
+  }
+
+  const tocarPalabra = (i: number) => {
+    hablar(enFrase(palabras[i].texto.toLowerCase()))
+    if (modo === 'contar') setContadas((c) => (c.includes(i) ? c : [...c, i]))
+  }
+
+  const aplaudir = () => {
+    if (resuelta) return
+    setAplausos((n) => Math.min(n + 1, 8))
+    efecto('toque', silenciado)
+  }
+
+  const conImagen = ronda.opciones.some((o) => o.imagen)
+
+  return (
+    <div className="grid justify-items-center gap-6">
+      <div className="flex items-center gap-4">
+        <BotonNino voz="Escuchar la oración" onClick={() => hablar(oracionCompleta(ronda.oracion))} className="grid size-[2.6em] place-items-center border-nino-ok bg-nino-menta">
+          <Icono nombre="altavoz" className="size-[1.4em]" />
+        </BotonNino>
+        {modo === 'escuchar' && (
+          // Más lento, palabra por palabra: «El. Perro. Corre.»
+          <BotonNino voz="Escuchar despacio" onClick={() => hablar(oracionDespacio(palabras.map((p) => p.texto)))} className="grid size-[2.6em] place-items-center bg-nino-amarillo">
+            <span aria-hidden="true" className="text-[1.3em]">🐢</span>
+          </BotonNino>
+        )}
+      </div>
+
+      {modo === 'escuchar' ? (
+        <div className="flex flex-wrap items-center justify-center gap-4">
+          <BotonNino voz="Aplaudir" onClick={aplaudir} className="grid size-[2.8em] place-items-center rounded-full border-nino-ok bg-nino-menta text-[1.4em]">
+            <span aria-hidden="true">👏</span>
+          </BotonNino>
+          <span className="flex min-h-[1.4em] min-w-[8em] items-center gap-2 rounded-full bg-white/80 px-4 py-2" aria-label={`${aplausos} aplausos`}>
+            {Array.from({ length: aplausos }, (_, k) => (
+              <span key={k} className="animate-pop size-[0.8em] rounded-full bg-nino-ok" />
+            ))}
+          </span>
+          <BotonNino voz="Contar de nuevo" disabled={aplausos === 0} onClick={() => setAplausos(0)} className="grid size-[2em] place-items-center bg-[#f6d1d1] disabled:opacity-40">
+            <Icono nombre="reintentar" className="size-[1.2em]" />
+          </BotonNino>
+        </div>
+      ) : (
+        <ol className="flex flex-wrap items-end justify-center gap-3" aria-label="Las palabras de la oración">
+          {palabras.map((p, i) => {
+            const vacia = modo === 'falta' && i === ronda.hueco
+            const orden = contadas.indexOf(i)
+            if (vacia)
+              return (
+                <li
+                  key={i}
+                  className={`${tile} min-h-[3.6em] min-w-[3.4em] content-end gap-1 border-dashed px-3 py-2 ${
+                    resuelta ? 'animate-pop border-nino-ok bg-nino-menta' : revelar ? 'border-[#e6c84d] bg-nino-amarillo' : 'border-nino-borde bg-white'
+                  }`}
+                >
+                  {resuelta || revelar ? (
+                    <>
+                      {p.imagen && <ImagenNino imagen={p.imagen} className="size-[1.8em] text-[1.8em]" />}
+                      <span className="text-[0.8em] leading-tight">{MAYUS(p.texto)}</span>
+                    </>
+                  ) : (
+                    <span className="self-center text-[1.4em] text-nino-borde">?</span>
+                  )}
+                </li>
+              )
+            return (
+              <li key={i} className="relative">
+                <button
+                  onClick={() => tocarPalabra(i)}
+                  aria-label={`Escuchar: ${p.texto}`}
+                  className={`${tile} min-h-[3.6em] min-w-[3.4em] content-end gap-1 px-3 py-2 ${orden >= 0 ? 'border-nino-ok bg-nino-menta' : normal}`}
+                >
+                  {p.imagen ? <ImagenNino imagen={p.imagen} className="size-[1.8em] text-[1.8em]" /> : <span className="h-[1.8em]" />}
+                  <span className="text-[0.8em] leading-tight">{MAYUS(p.texto)}</span>
+                </button>
+                {orden >= 0 && (
+                  <span
+                    aria-hidden="true"
+                    className="animate-pop absolute -top-3 -right-3 grid size-[1.4em] place-items-center rounded-full border-3 border-nino-borde bg-nino-amarillo text-[0.7em] font-bold"
+                  >
+                    {orden + 1}
+                  </span>
+                )}
+              </li>
+            )
+          })}
+        </ol>
+      )}
+
+      <div className="grid w-full max-w-3xl gap-5" style={{ gridTemplateColumns: `repeat(${ronda.opciones.length}, minmax(0, 1fr))` }}>
+        {ronda.opciones.map((o) => {
+          const correcta = o.id === ronda.correctaId
+          const descartada = descartadas.includes(o.id)
+          return (
+            <BotonNino
+              key={o.id}
+              voz={o.audio}
+              leerAlApuntar={false}
+              disabled={descartada || resuelta}
+              onClick={() => responder(o)}
+              className={`grid place-items-center gap-1 py-3 ${conImagen ? 'min-h-[4.6em]' : 'min-h-[3em]'} ${descartada ? 'opacity-35 grayscale' : ''} ${
+                sacudir === o.id ? 'animate-sacudir' : ''
+              } ${resuelta && correcta ? 'animate-pop border-nino-ok bg-nino-menta' : ''} ${revelar && correcta ? 'revelada border-[#e6c84d] bg-nino-amarillo' : ''}`}
+            >
+              {o.imagen ? (
+                <ImagenNino imagen={o.imagen} className="text-[3em]" />
+              ) : (
+                <>
+                  <span className="text-[1.5em] font-bold">{o.texto}</span>
+                  {/* Puntos para contar sin saber leer el número. */}
+                  <span aria-hidden="true" className="flex gap-1">
+                    {Array.from({ length: Number(o.texto) }, (_, k) => (
+                      <span key={k} className="size-3 rounded-full bg-nino-tinta/70" />
+                    ))}
+                  </span>
+                </>
+              )}
+            </BotonNino>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 
 // ---------- El choque de sonidos (RF-05) ----------
 

@@ -22,7 +22,7 @@ export default function Entrada() {
 
   return (
     <PantallaNino
-      fondo={<FondoNino tematica="animales" />}
+      fondo={<FondoNino tematica="estaciones" />}
       encabezado={
         <span className="flex w-full items-center gap-4 font-sans text-base">
           <span className="font-bold text-tinta">Leer para Todos</span>
