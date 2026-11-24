@@ -205,6 +205,8 @@ export interface Sala {
   siguienteSala?: string
   // Cambia cada vez que la docente asigna un plan nuevo: el avance vuelve a cero.
   asignacion: string
+  // Cuándo se cierra (ISO). Al vencer, todos sus niños vuelven a la espera. Sin esto, no tiene límite.
+  cierraEn?: string
 }
 
 export interface MiembroSala {

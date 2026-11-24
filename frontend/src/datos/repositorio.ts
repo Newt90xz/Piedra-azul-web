@@ -82,6 +82,9 @@ export interface Repositorio {
   configurarRecreo(salaId: string, actividad: ActividadRecreo, juegos: string[]): Promise<void>
   // A qué sala pasan los niños al terminar el plan; null: se quedan esperando a la docente.
   conectarSalas(salaId: string, destino: string | null): Promise<void>
+  // La sala se cierra en `minutos` desde ahora (null: sin límite). Al vencer,
+  // todos sus niños vuelven a la espera.
+  programarCierre(salaId: string, minutos: number | null): Promise<void>
   eliminarSala(id: string): Promise<void>
   // Miembros de todas las salas del curso.
   listarMiembros(cursoId: string): Promise<MiembroSala[]>

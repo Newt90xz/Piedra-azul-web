@@ -130,7 +130,18 @@ const aSala = (f: FilaSala): Sala => ({
   contenidos: f.contenidos,
   juegos: f.juegos,
   asignacion: f.asignacion,
+  cierraEn: f.cierra_en ?? undefined,
 })
+
+// Antes de leer salas o miembros, el servidor saca a los niños de las salas
+// cuyo tiempo venció. Las dos lecturas van juntas (Promise.all): se comparte
+// una sola llamada. Sin la migración 20261124120000 falla y se sigue igual.
+let cierre: Promise<void> | null = null
+const cerrarVencidas = () =>
+  (cierre ??= Promise.resolve(supabase.rpc('cerrar_salas_vencidas'))
+    .then(() => {})
+    .catch(() => {})
+    .finally(() => (cierre = null)))
 
 type FilaAlumno = Database['public']['Functions']['alumno_actual']['Returns'][number]
 
@@ -407,6 +418,7 @@ export const repositorioSupabase: Repositorio = {
   },
 
   async listarSalas(cursoId) {
+    await cerrarVencidas()
     const filas = sinError(await supabase.from('salas').select().eq('curso_id', cursoId).order('creado_en'))
     return filas.map(aSala)
   },
@@ -451,10 +463,15 @@ export const repositorioSupabase: Repositorio = {
   async conectarSalas(salaId, destino) {
     sinError(await supabase.from('salas').update({ siguiente_sala: destino }).eq('id', salaId))
   },
+  async programarCierre(salaId, minutos) {
+    const { error } = await supabase.rpc('programar_cierre_sala', { p_sala: salaId, p_minutos: minutos })
+    if (error) throw new Error(error.code === 'PGRST202' ? 'Para ponerle tiempo a las salas falta aplicar la migración 20261124120000 en la base.' : error.message)
+  },
   async eliminarSala(id) {
     sinError(await supabase.from('salas').delete().eq('id', id))
   },
   async listarMiembros(cursoId) {
+    await cerrarVencidas()
     const filas = sinError(
       await supabase.from('sala_miembros').select('estudiante_id, sala_id, salas!inner(curso_id)').eq('salas.curso_id', cursoId),
     )

@@ -322,6 +322,7 @@ export type Database = {
           siguiente_sala: string | null
           canal_parque: string
           plan: Json
+          cierra_en: string | null
         }
         Insert: {
           actividad?: string
@@ -429,6 +430,8 @@ export type Database = {
         }[]
       }
       pasar_sala_conectada: { Args: { p_estudiante: string; p_token: string }; Returns: undefined }
+      cerrar_salas_vencidas: { Args: Record<PropertyKey, never>; Returns: undefined }
+      programar_cierre_sala: { Args: { p_sala: string; p_minutos: number | null }; Returns: undefined }
       comprar_articulo: { Args: { p_articulo: string; p_estudiante: string; p_token: string }; Returns: undefined }
       entrar_alumno: { Args: { p_estudiante: string }; Returns: string }
       enviar_mensaje: { Args: { p_estudiante: string; p_picto: string; p_token: string }; Returns: undefined }

@@ -5,11 +5,9 @@ import { palabrasDelTema } from '../../contenido/banco.ts'
 import {
   AREAS,
   CONTENIDOS,
-  ETAPAS,
   bloqueContenido,
   bloquesDePlan,
   contenido,
-  ordenSugerido,
   planDeBloques,
   planDeSala,
   usaTema,
@@ -758,6 +756,7 @@ function TarjetaSala({
           </Boton>
         }
       />
+      <TiempoSala sala={sala} ejecutar={ejecutar} />
       <ResumenPlan sala={sala} pasos={dentro.map((e) => pasoDe(e.id))} alEditar={() => setEditando(true)} />
       {editando && <EditorPlan sala={sala} conAvance={conAvance} ejecutar={ejecutar} alCerrar={() => setEditando(false)} />}
 
@@ -769,6 +768,65 @@ function TarjetaSala({
       </ListaNinos>
       <AlTerminar sala={sala} datos={datos} ejecutar={ejecutar} creandoRecreo={creandoRecreo} alCrearRecreo={alCrearRecreo} />
     </ZonaSoltar>
+  )
+}
+
+const MINUTOS_SALA = [5, 10, 15, 20, 30, 45, 60]
+
+// Cuánto dura abierta la sala. Al vencer, el servidor saca a todos a la espera
+// (ver migración 20261124120000) y la sala queda otra vez sin límite.
+function TiempoSala({ sala, ejecutar }: { sala: Sala; ejecutar: Ejecutar }) {
+  const cierra = sala.cierraEn ? Date.parse(sala.cierraEn) : null
+  const [ahora, setAhora] = useState(() => Date.now())
+  useEffect(() => {
+    if (cierra === null) return
+    const tic = () => setAhora(Date.now())
+    tic()
+    const t = window.setInterval(tic, 1000)
+    return () => window.clearInterval(t)
+  }, [cierra])
+  const programar = (minutos: number | null) => void ejecutar(() => repo.programarCierre(sala.id, minutos))
+
+  if (cierra === null)
+    return (
+      <label className="grid gap-1 text-xs font-bold text-tinta-suave">
+        <span>
+          <span aria-hidden="true">⏱</span> Tiempo de la sala
+        </span>
+        <select value="" onChange={(e) => e.target.value && programar(Number(e.target.value))} className={claseEntrada}>
+          <option value="">Sin límite</option>
+          {MINUTOS_SALA.map((m) => (
+            <option key={m} value={m}>
+              Se cierra en {m} min
+            </option>
+          ))}
+        </select>
+      </label>
+    )
+
+  const resta = Math.max(0, cierra - ahora)
+  const min = Math.floor(resta / 60_000)
+  const seg = Math.floor((resta % 60_000) / 1000)
+  const poco = resta < 60_000
+  return (
+    <div className={`flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm font-bold ${poco ? 'bg-[#fdf1e4] text-[#9a4d00]' : 'bg-menta-fondo text-tinta'}`}>
+      <span aria-hidden="true">⏱</span>
+      <span className="flex-1 tabular-nums" title="Al terminar el tiempo, todos vuelven a la espera.">
+        {resta === 0 ? 'Cerrando la sala…' : `Se cierra en ${min}:${String(seg).padStart(2, '0')}`}
+      </span>
+      <Boton variante="suave" className="min-h-9 px-2 text-xs" onClick={() => programar(Math.min(480, Math.ceil(resta / 60_000) + 5))}>
+        +5 min
+      </Boton>
+      <button
+        type="button"
+        aria-label="Quitar el límite de tiempo"
+        title="Quitar el límite de tiempo"
+        onClick={() => programar(null)}
+        className="grid size-9 shrink-0 place-items-center rounded-lg text-tinta-suave hover:bg-white"
+      >
+        ✕
+      </button>
+    </div>
   )
 }
 
@@ -1088,18 +1146,12 @@ function EditorPlan({ sala, conAvance, ejecutar, alCerrar }: { sala: Sala; conAv
             <h2 id={`plan-${sala.id}`} className="text-xl font-bold text-tinta">
               Plan de «{sala.nombre}»
             </h2>
-            <p className="text-sm text-tinta-suave">En orden: contenidos y actividades que configuras tú. En cada contenido toca una actividad para quitarla o cambiarla de lugar. Sus actividades van de más apoyo a menos. La dificultad (Medio si no eliges otra) cambia qué tan difíciles son las preguntas; también puedes elegir el tema de sus palabras.</p>
+            <p className="text-sm text-tinta-suave">Elige las actividades y ordénalas con ↑ ↓. En cada una puedes ajustar la dificultad y el tema.</p>
           </div>
           <button type="button" aria-label="Cerrar" onClick={alCerrar} className="grid size-11 place-items-center rounded-xl text-tinta-suave hover:bg-fondo">
             ✕
           </button>
         </div>
-
-        <OrdenSugerido
-          ordenado={bloques.every((b, i) => b === ordenSugerido(bloques)[i])}
-          hayPlan={bloques.length > 1}
-          alOrdenar={() => setBloques((x) => ordenSugerido(x))}
-        />
 
         {bloques.length > 0 && (
           <ol className="grid gap-2">
@@ -1243,38 +1295,6 @@ function EditorPlan({ sala, conAvance, ejecutar, alCerrar }: { sala: Sala; conAv
   )
 }
 
-// El orden que sugirió el equipo PIE del colegio (contenido/contenidos.ts:
-// AREAS). Es solo una sugerencia: la docente puede ordenar el plan como quiera
-// con las flechas, y este botón lo deja en el orden sugerido.
-function OrdenSugerido({ ordenado, hayPlan, alOrdenar }: { ordenado: boolean; hayPlan: boolean; alOrdenar: () => void }) {
-  return (
-    <section aria-label="Orden sugerido" className="grid gap-2 rounded-2xl border border-menta bg-menta-fondo/40 p-3 text-sm text-tinta">
-      <h3 className="font-bold">Orden sugerido de la conciencia fonológica</h3>
-      <ol className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
-        {ETAPAS.map((a, i) => (
-          <li key={a} className="flex items-center gap-1.5">
-            {i > 0 && <span aria-hidden="true" className="text-tinta-suave">→</span>}
-            <span className="flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-xs font-semibold">
-              <span className="grid size-5 place-items-center rounded-full bg-menta text-[10px] text-white">{AREAS[a].etapa}</span>
-              {AREAS[a].nombre}
-            </span>
-          </li>
-        ))}
-      </ol>
-      <p className="text-xs text-tinta-suave">
-        En la conciencia fonémica van primero las vocales y después las consonantes. Vocabulario (el léxico) y escritura se suman cuando quieras. Es una
-        sugerencia: cambia el orden con ↑ ↓ cuando lo necesites.
-      </p>
-      {hayPlan && (
-        <div>
-          <Boton variante="suave" disabled={ordenado} onClick={alOrdenar} className="min-h-10 text-xs">
-            {ordenado ? 'El plan ya sigue el orden sugerido' : 'Ordenar el plan como se sugiere'}
-          </Boton>
-        </div>
-      )}
-    </section>
-  )
-}
 
 // Las actividades de un contenido, en el orden en que se juegan. Tocar una
 // encendida la quita; tocar una apagada la agrega al final. Así «Escucha y toca»
@@ -1372,6 +1392,7 @@ function TarjetaRecreo({ sala, dentro, datos, ejecutar }: { sala: Sala; dentro: 
   return (
     <ZonaSoltar destino={sala.id} nombre={sala.nombre} className="grid w-80 content-start gap-4 p-4">
       <EncabezadoSala sala={sala} n={dentro.length} ejecutar={ejecutar} />
+      <TiempoSala sala={sala} ejecutar={ejecutar} />
       <fieldset>
         <legend className="mb-1.5 text-xs font-bold text-tinta-suave">¿Qué se hace en este recreo?</legend>
         <div className="grid grid-cols-4 gap-1.5">

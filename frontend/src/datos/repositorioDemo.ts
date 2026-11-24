@@ -146,13 +146,28 @@ function semilla(): Estado {
 function leer(): Estado {
   try {
     const crudo = localStorage.getItem(CLAVE)
-    if (crudo) return JSON.parse(crudo) as Estado
+    if (crudo) {
+      const e = JSON.parse(crudo) as Estado
+      if (cerrarVencidas(e)) escribir(e)
+      return e
+    }
   } catch {
     // Almacenamiento bloqueado o dañado: se vuelve a la semilla.
   }
   const inicial = semilla()
   escribir(inicial)
   return inicial
+}
+
+// Como en la base: las salas cuyo tiempo venció quedan vacías y sin límite.
+// Se aplica en cada lectura. Devuelve si cambió algo.
+function cerrarVencidas(e: Estado) {
+  const ahora = new Date().toISOString()
+  const vencidas = new Set(e.salas.filter((s) => s.cierraEn && s.cierraEn <= ahora).map((s) => s.id))
+  if (vencidas.size === 0) return false
+  e.miembros = e.miembros.filter((m) => !vencidas.has(m.salaId))
+  e.salas = e.salas.map((s) => (vencidas.has(s.id) ? { ...s, cierraEn: undefined } : s))
+  return true
 }
 
 function escribir(e: Estado) {
@@ -339,6 +354,10 @@ export const repositorioDemo: Repositorio = {
   },
   async conectarSalas(salaId, destino) {
     mutar((e) => (e.salas = e.salas.map((s) => (s.id === salaId ? { ...s, siguienteSala: destino ?? undefined } : s))))
+  },
+  async programarCierre(salaId, minutos) {
+    const cierraEn = minutos === null ? undefined : new Date(Date.now() + minutos * 60_000).toISOString()
+    mutar((e) => (e.salas = e.salas.map((s) => (s.id === salaId ? { ...s, cierraEn } : s))))
   },
   async eliminarSala(salaId) {
     mutar((e) => {
