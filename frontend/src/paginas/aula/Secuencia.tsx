@@ -270,7 +270,7 @@ export function Juegos({ ids }: { ids: string[] }) {
   const terminar = useCallback((fin: FinPartida) => setPremio(fin.monedas), [])
 
   // La docente aún no elige juegos para este recreo.
-  if (juegos.length === 0) return <MiniJuego saludo={SALUDO_RECREO_GLOBOS} esperando={false} />
+  if (juegos.length === 0) return <MiniJuego saludo={SALUDO_RECREO_GLOBOS} />
 
   if (jugando && premio !== null) {
     return (

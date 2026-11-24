@@ -43,24 +43,25 @@ export default function Espera({ recreo = false }: { recreo?: boolean }) {
   return (
     <div className="flex h-full flex-col">
       <nav aria-label="Recreo" className="mx-auto flex max-w-5xl shrink-0 flex-wrap items-center justify-center gap-6 px-6 pt-4">
-        <Pestana activa={vista === 'globos'} voz="Globos" icono="🎈" alTocar={() => setVista('globos')} />
-        <Pestana activa={vista === 'tienda'} voz="Tienda" icono="🛍️" alTocar={() => setVista('tienda')} />
+        <Pestana activa={vista === 'globos'} voz="Globos" icono="🎈" palabra="GLOBOS" alTocar={() => setVista('globos')} />
+        <Pestana activa={vista === 'tienda'} voz="Tienda" icono="🛍️" palabra="TIENDA" alTocar={() => setVista('tienda')} />
         {!silenciado && (
           <BotonNino
             voz={musica ? 'Apagar la música' : 'Poner música'}
             aria-pressed={musica}
             onClick={alternarMusica}
-            className={`centro-emoji relative size-16 text-[1.4em] ${musica ? 'bg-nino-lila' : 'opacity-70'}`}
+            className={`grid h-20 w-28 place-content-center justify-items-center gap-1 text-[1.4em] leading-none ${musica ? 'bg-nino-lila' : 'opacity-70'}`}
           >
-            <span aria-hidden="true">🎵</span>
-            {!musica && (
-              <span aria-hidden="true" className="absolute inset-x-2 top-1/2 h-1 -rotate-45 rounded-full bg-nino-tinta/70" />
-            )}
+            <span aria-hidden="true" className="relative">
+              🎵
+              {!musica && <span className="absolute inset-x-0 top-1/2 h-1 -rotate-45 rounded-full bg-nino-tinta/70" />}
+            </span>
+            <Rotulo>MÚSICA</Rotulo>
           </BotonNino>
         )}
       </nav>
       <div key={vista} className="animate-pantalla min-h-0 flex-1">
-        {vista === 'globos' ? <MiniJuego saludo={recreo ? SALUDO_RECREO_GLOBOS : SALUDO_ESPERA} esperando={!recreo} /> : <Tienda />}
+        {vista === 'globos' ? <MiniJuego saludo={recreo ? SALUDO_RECREO_GLOBOS : SALUDO_ESPERA} /> : <Tienda />}
       </div>
     </div>
   )
@@ -76,15 +77,26 @@ function musicaGuardada() {
   }
 }
 
-function Pestana({ activa, voz, icono, alTocar }: { activa: boolean; voz: string; icono: string; alTocar: () => void }) {
+// La palabra bajo el pictograma, como en los saludos del parque. La voz ya la
+// dice el botón, así que es solo visual.
+function Rotulo({ children }: { children: string }) {
+  return (
+    <span aria-hidden="true" className="text-[0.4em] leading-none font-bold">
+      {children}
+    </span>
+  )
+}
+
+function Pestana({ activa, voz, icono, palabra, alTocar }: { activa: boolean; voz: string; icono: string; palabra: string; alTocar: () => void }) {
   return (
     <BotonNino
       voz={voz}
       aria-pressed={activa}
       onClick={alTocar}
-      className={`centro-emoji h-16 w-28 text-[1.6em] ${activa ? 'bg-nino-amarillo' : 'opacity-70'}`}
+      className={`grid h-20 w-28 place-content-center justify-items-center gap-1 text-[1.6em] leading-none ${activa ? 'bg-nino-amarillo' : 'opacity-70'}`}
     >
       <span aria-hidden="true">{icono}</span>
+      <Rotulo>{palabra}</Rotulo>
     </BotonNino>
   )
 }

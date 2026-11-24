@@ -38,8 +38,7 @@ function nuevoGlobo(): Globo {
 
 const sinMovimiento = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 
-// `esperando`: espera a que la docente lo asigne (muestra el reloj); en un recreo, no.
-export function MiniJuego({ saludo = SALUDO_ESPERA, esperando = true }: { saludo?: string; esperando?: boolean }) {
+export function MiniJuego({ saludo = SALUDO_ESPERA }: { saludo?: string }) {
   const [quieto] = useState(sinMovimiento)
   const [globos, setGlobos] = useState<Globo[]>(() => (quieto ? Array.from({ length: 4 }, nuevoGlobo) : []))
   const [puntos, setPuntos] = useState(0)
@@ -68,12 +67,6 @@ export function MiniJuego({ saludo = SALUDO_ESPERA, esperando = true }: { saludo
   return (
     <main className="mx-auto flex h-full max-w-5xl flex-col px-6 pt-4 pb-5">
       <div className="mb-3 flex shrink-0 flex-wrap items-center justify-center gap-4 text-center">
-        {esperando && (
-          <p className="flex items-center gap-2 text-[1.4em] leading-none" aria-label="Esperando a tu profe">
-            <span aria-hidden="true" className="animate-bounce">⏳</span>
-            <span aria-hidden="true">🧑‍🏫</span>
-          </p>
-        )}
         <p
           aria-live="polite"
           aria-label={`${puntos} globos`}

@@ -235,12 +235,18 @@ export function NinoShell() {
               voz={mudo ? 'Activar la voz' : 'Apagar la voz'}
               aria-pressed={!mudo}
               onClick={() => setMudo(!mudo)}
-              className="grid size-16 place-items-center rounded-2xl border-nino-azul"
+              className="grid h-16 w-20 place-content-center justify-items-center gap-0.5 rounded-2xl border-nino-azul"
             >
-              <Icono nombre={mudo ? 'silencio' : 'altavoz'} className="size-8" />
+              <Icono nombre={mudo ? 'silencio' : 'altavoz'} className="size-7" />
+              <span aria-hidden="true" className="text-[0.45em] leading-none font-bold">{mudo ? 'SIN VOZ' : 'VOZ'}</span>
             </BotonNino>
-            <BotonNino voz="Salir" onClick={() => void salir()} className="grid size-16 place-items-center rounded-2xl border-nino-azul bg-[#f6d1d1]">
-              <Icono nombre="salir" className="size-8" />
+            <BotonNino
+              voz="Salir"
+              onClick={() => void salir()}
+              className="grid h-16 w-20 place-content-center justify-items-center gap-0.5 rounded-2xl border-nino-azul bg-[#f6d1d1]"
+            >
+              <Icono nombre="salir" className="size-7" />
+              <span aria-hidden="true" className="text-[0.45em] leading-none font-bold">SALIR</span>
             </BotonNino>
           </>
         }
