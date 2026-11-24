@@ -3,7 +3,7 @@ import type { NivelExigencia } from './exigencia.ts'
 import { ALFABETO, CONSONANTES_SILABAS, PALABRAS_NIVEL_3, VOCALES, bancoGeneral, laLetra, nombreLetra, palabra, quitarTildes } from './banco.ts'
 
 // Mecánicas de las rondas y los juegos del recreo. Lo que el niño trabaja en una
-// sala de actividades está en contenidos.ts (contenidos de 3 o 4 actividades) y
+// sala de actividades está en contenidos.ts (contenidos de hasta 3 actividades) y
 // plantillas.ts (actividades que configura la docente).
 
 // Regla de oro 3: nunca más de 4 opciones por pantalla.

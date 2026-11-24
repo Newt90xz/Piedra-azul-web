@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { MAX_OPCIONES, ordenarSilabas, type Ronda } from './actividades.ts'
-import { PALABRAS, quitarTildes, sinAcentos } from './banco.ts'
+import { PALABRAS, quitarTildes, sonido } from './banco.ts'
 import { CONTENIDOS, contenido, nombreActividad, planDe } from './contenidos.ts'
 import { EXIGENCIAS, partidaConExigencia } from './exigencia.ts'
 import { TEMAS_FILTRO, parecidos } from './temas.ts'
@@ -15,10 +15,13 @@ const elegir = (r: Ronda) => {
   return r
 }
 const palabraDe = (id: string) => PALABRAS.find((w) => w.id === id)!
+// Se compara cómo suenan (banco.ts: sonido), no cómo se escriben: en Chile
+// «zapato» empieza con SA y «cereza» termina igual que «mesa».
 const finDe = (id: string) => {
   const s = palabraDe(id).silabas
-  return sinAcentos(s[s.length - 1])
+  return sonido(s[s.length - 1])
 }
+const empiezaSonando = (texto: string, inicio: string) => sonido(texto).startsWith(sonido(inicio))
 
 // 4 o 5 rondas; en las de elegir, de 2 a 4 opciones distintas que incluyen la
 // correcta. El ítem, como rondas_resultado.item en la base: de 1 a 20 caracteres.
@@ -82,13 +85,13 @@ describe('filtro por tema', () => {
 })
 
 describe('una sola respuesta correcta', () => {
-  it('sílabas: solo una imagen empieza con la sílaba pedida, aunque las otras compartan consonante', () => {
+  it('sílabas: solo una imagen empieza sonando con la sílaba pedida (zapato no va con SA)', () => {
     for (const c of CONTENIDOS.filter((x) => x.id.startsWith('silabas-'))) {
       for (const e of NIVELES) {
         for (let n = 0; n < VECES / 4; n++) {
           for (const r of c.pasos[2].generar({ nivel: EXIGENCIAS[e] }).map(elegir)) {
             const silaba = r.item.toLowerCase()
-            const empiezan = r.opciones.filter((o) => quitarTildes(o.audio).startsWith(silaba))
+            const empiezan = r.opciones.filter((o) => empiezaSonando(o.audio, silaba))
             expect(empiezan.map((o) => o.id)).toEqual([r.correctaId])
           }
         }
@@ -96,36 +99,52 @@ describe('una sola respuesta correcta', () => {
     }
   })
 
-  it('vocales: solo una imagen empieza con la vocal pedida', () => {
+  it('vocales: solo una imagen empieza sonando con la vocal pedida (helado no va con la E)', () => {
     const vocales = contenido('vocales')!
     for (const e of NIVELES) {
       for (let n = 0; n < VECES / 2; n++) {
         for (const r of vocales.pasos[2].generar({ nivel: EXIGENCIAS[e] }).map(elegir)) {
-          const empiezan = r.opciones.filter((o) => quitarTildes(o.audio).startsWith(r.item.toLowerCase()))
+          const empiezan = r.opciones.filter((o) => empiezaSonando(o.audio, r.item))
           expect(empiezan.map((o) => o.id)).toEqual([r.correctaId])
         }
       }
     }
   })
 
-  it('rimas: la que termina igual es la correcta; en «¿Cuál no termina igual?», la única distinta', () => {
+  it('rimas: la que termina sonando igual es la correcta (cereza rima con mesa); en «¿Cuál no termina igual?», la única distinta', () => {
     const rimas = contenido('rimas')!
     for (const e of NIVELES) {
       const nivel = EXIGENCIAS[e]
       for (let n = 0; n < VECES / 2; n++) {
         for (const r of rimas.pasos[0].generar({ nivel }).map(elegir)) {
-          const fin = r.item.slice(1).toLowerCase()
+          const fin = sonido(r.item.slice(1))
           expect(r.opciones.filter((o) => finDe(o.id) === fin).map((o) => o.id)).toEqual([r.correctaId])
           expect(r.estimulo.imagen?.alt).not.toBe(palabraDe(r.correctaId).texto)
         }
         for (const r of rimas.pasos[1].generar({ nivel }).map(elegir)) {
-          const fin = r.item.slice(1).toLowerCase()
+          const fin = sonido(r.item.slice(1))
           expect(r.opciones.filter((o) => finDe(o.id) !== fin).map((o) => o.id)).toEqual([r.correctaId])
           expect(r.opciones.length).toBeGreaterThanOrEqual(3)
         }
         for (const r of rimas.pasos[2].generar({ nivel }).map(elegir)) {
           const [a, b] = r.estimulo.audio!.split('… ').map((t) => PALABRAS.find((w) => w.texto === t)!.id)
           expect(r.correctaId).toBe(finDe(a) === finDe(b) ? 'si' : 'no')
+        }
+      }
+    }
+  })
+
+  it('escuchar: solo un dibujo empieza con el mismo sonido que la palabra escuchada', () => {
+    const escucho = contenido('escucho')!
+    for (const e of NIVELES) {
+      for (let n = 0; n < VECES / 2; n++) {
+        for (const r of escucho.pasos[2].generar({ nivel: EXIGENCIAS[e] }).map(elegir)) {
+          const inicio = sonido(r.estimulo.audio!)[0]
+          expect(r.opciones.filter((o) => sonido(o.audio)[0] === inicio).map((o) => o.id)).toEqual([r.correctaId])
+        }
+        for (const r of escucho.pasos[1].generar({ nivel: EXIGENCIAS[e] }).map(elegir)) {
+          const [a, b] = r.estimulo.audio!.split('… ')
+          expect(r.correctaId).toBe(sonido(a)[0] === sonido(b)[0] ? 'si' : 'no')
         }
       }
     }

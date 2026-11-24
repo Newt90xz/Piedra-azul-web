@@ -5,7 +5,7 @@ import { efecto, hablar } from '../../lib/audio.ts'
 import { Icono } from '../../ui/Icono.tsx'
 import { BotonNino, useNino } from '../../ui/nino.tsx'
 
-// Sala de dibujo: dibujo libre con colores grandes, grosores, goma y sellos.
+// Dibujo del recreo: dibujo libre con colores grandes, grosores, goma y sellos.
 // «Repasar» pone una letra tenue de fondo para seguirla con el dedo (apresto
 // para la escritura). Todo sin texto: cada botón dice su nombre al apuntarlo.
 // El dibujo se guarda en coordenadas relativas, así sobrevive a girar la tableta
@@ -37,7 +37,7 @@ export default function Dibujo() {
   const [confirmarBorrar, setConfirmarBorrar] = useState(false)
   const hayTrazos = cantidad > 0
 
-  useEffect(() => hablar('¡La sala de dibujo! Elige un color y dibuja.'), [])
+  useEffect(() => hablar('¡A dibujar! Elige un color y dibuja.'), [])
 
   const redibujar = () => {
     const c = lienzo.current

@@ -12,7 +12,7 @@ import {
   type Opcion,
   type Ronda,
 } from './actividades.ts'
-import { CONSONANTES_SILABAS, LETRAS, PALABRAS_NIVEL_3, VOCALES, bancoGeneral, laLetra, nombreLetra, palabra, quitarTildes, sinAcentos } from './banco.ts'
+import { CONSONANTES_SILABAS, LETRAS, PALABRAS_NIVEL_3, VOCALES, bancoGeneral, laLetra, nombreLetra, palabra, quitarTildes, sinAcentos, sonido } from './banco.ts'
 import { bancoDe, cercaniaDe, distractores, objetivos, opcionesDe, type Contexto } from './elegir.ts'
 import type { NivelExigencia } from './exigencia.ts'
 import { cuentaLasPalabras, escuchaYCuenta, laPalabraQueFalta, palabrasDelDibujo } from './lexica.ts'
@@ -137,6 +137,10 @@ function silabaInicialCV(w: Palabra) {
   return /^[bcdfgjklmnñprstvz][aeiou]$/.test(s) ? s : null
 }
 const silabaFinal = (w: Palabra) => sinAcentos(w.silabas[w.silabas.length - 1])
+// Para comparar se usa cómo suenan, no cómo se escriben (banco.ts: sonido): en
+// Chile «cereza» termina igual que «mesa» y «zapato» empieza con SA.
+const finalSuena = (w: Palabra) => sonido(w.silabas[w.silabas.length - 1])
+const empiezaSonando = (w: Palabra, inicio: string) => sonido(w.texto).startsWith(sonido(inicio))
 const ultimaLetra = (w: Palabra) => sinAcentos(w.texto).at(-1)
 const empiezaCon = (w: Palabra, prefijo: string) => quitarTildes(w.texto).startsWith(prefijo)
 
@@ -183,7 +187,7 @@ function vocalInicial(c: Contexto = {}): Ronda[] {
       correctaId: v.id,
       instruccion: `${w.texto}. ¿Con qué letra empieza ${w.texto}?`,
       pista: `¡Casi! Escucha bien: ${w.texto}. ¡Otra vez!`,
-      refuerzo: '¡Si! Muy bien.',
+      refuerzo: '¡Sí! Muy bien.',
     }
   })
 }
@@ -193,7 +197,7 @@ function imagenConVocal(c: Contexto = {}): Ronda[] {
   const b = banco(c)
   return objetivos(b, RONDAS, empiezaConVocal).map((correcta) => {
     const v = LETRAS_VOCALES.find((x) => empiezaCon(correcta, x.id))!
-    const otras = distractores(b, otrasDe(c), [correcta], (w) => !empiezaCon(w, v.id), cercaniaDe(empiezaConVocal, c.nivel))
+    const otras = distractores(b, otrasDe(c), [correcta], (w) => !empiezaSonando(w, v.id), cercaniaDe(empiezaConVocal, c.nivel))
     return {
       tipo: 'elegir',
       item: v.grafema,
@@ -257,7 +261,7 @@ function imagenDeLaSilaba(consonante: string, c: Contexto = {}): Ronda[] {
   const b = banco(c)
   return objetivos(b, RONDAS, deFamilia(consonante)).map((correcta) => {
     const s = silabaInicialCV(correcta)!
-    const otras = distractores(b, otrasDe(c), [correcta], (w) => !empiezaCon(w, s), cercaniaDe((w) => empiezaCon(w, consonante), c.nivel))
+    const otras = distractores(b, otrasDe(c), [correcta], (w) => !empiezaSonando(w, s), cercaniaDe((w) => empiezaSonando(w, consonante), c.nivel))
     return {
       tipo: 'elegir',
       item: MAYUS(s),
@@ -360,7 +364,7 @@ function laMasLarga(c: Contexto = {}): Ronda[] {
 // ---------- Rimas: sonido final (OA 3) ----------
 
 // Otra palabra que termina igual y no se confunde con ella (flor / flores).
-const rimaCon = (w: Palabra) => (x: Palabra) => !parecidos(x.id, w.id) && silabaFinal(x) === silabaFinal(w)
+const rimaCon = (w: Palabra) => (x: Palabra) => !parecidos(x.id, w.id) && finalSuena(x) === finalSuena(w)
 // Con cuántas palabras rima cada una (se cuenta una vez: se consulta mucho).
 const RIMAS = new Map(BANCO.map((w) => [w.id, BANCO.filter(rimaCon(w)).length]))
 // Con al menos `n` palabras que riman con ella.
@@ -374,7 +378,7 @@ function encuentraLaRima(c: Contexto = {}): Ronda[] {
   return objetivos(b, RONDAS, conRimas(1)).map((w) => {
     const fin = silabaFinal(w)
     const correcta = distractores(b, 1, [w], rimaCon(w))[0]
-    const otras = distractores(b, otrasDe(c), [w, correcta], (x) => silabaFinal(x) !== fin, terminaParecido(w, c))
+    const otras = distractores(b, otrasDe(c), [w, correcta], (x) => finalSuena(x) !== finalSuena(w), terminaParecido(w, c))
     return {
       tipo: 'elegir',
       item: `-${MAYUS(fin)}`,
@@ -397,7 +401,7 @@ function cualNoRima(c: Contexto = {}): Ronda[] {
   return objetivos(b, RONDAS, conRimas(riman - 1)).map((w) => {
     const fin = silabaFinal(w)
     const grupo = [w, ...distractores(b, riman - 1, [w], rimaCon(w))]
-    const intrusa = distractores(b, 1, grupo, (x) => silabaFinal(x) !== fin, terminaParecido(w, c))[0]
+    const intrusa = distractores(b, 1, grupo, (x) => finalSuena(x) !== finalSuena(w), terminaParecido(w, c))[0]
     const opciones = mezclar([...grupo, intrusa])
     return {
       tipo: 'elegir',
@@ -422,7 +426,7 @@ function terminanIgual(c: Contexto = {}): Ronda[] {
     const igual = Math.random() < 0.5
     const otra = igual
       ? distractores(b, 1, [a], rimaCon(a))[0]
-      : distractores(b, 1, [a], (x) => silabaFinal(x) !== silabaFinal(a), terminaParecido(a, c))[0]
+      : distractores(b, 1, [a], (x) => finalSuena(x) !== finalSuena(a), terminaParecido(a, c))[0]
     const [fa, fb] = [silabaFinal(a), silabaFinal(otra)]
     return {
       tipo: 'elegir',
@@ -442,6 +446,7 @@ function terminanIgual(c: Contexto = {}): Ronda[] {
 // Palabras que empiezan con una letra del banco (vocal o M, P, L, S, T): su
 // primer sonido se puede decir solo («mmm…») en las pistas.
 const inicial = (w: Palabra) => quitarTildes(w.texto)[0]
+const inicialSuena = (w: Palabra) => sonido(w.texto)[0]
 const conSonidoInicial = (w: Palabra) => LETRAS.some((l) => l.id === inicial(w))
 const empiezaIgualQue = (w: Palabra) => (x: Palabra) => conSonidoInicial(x) && inicial(x) === inicial(w)
 const primeraSilaba = (w: Palabra) => quitarTildes(w.silabas[0])
@@ -451,7 +456,7 @@ const primeraSilaba = (w: Palabra) => quitarTildes(w.silabas[0])
 function palabraEscuchada(c: Contexto = {}): Ronda[] {
   const b = banco(c)
   return objetivos(b, RONDAS).map((w) => {
-    const parecida = (x: Palabra) => inicial(x) === inicial(w) || silabaFinal(x) === silabaFinal(w)
+    const parecida = (x: Palabra) => inicialSuena(x) === inicialSuena(w) || finalSuena(x) === finalSuena(w)
     const otras = distractores(b, otrasDe(c), [w], undefined, cercaniaDe(parecida, c.nivel))
     return {
       tipo: 'elegir',
@@ -481,7 +486,7 @@ function empiezanIgual(c: Contexto = {}): Ronda[] {
     const igual = Math.random() < 0.5
     const otra = igual
       ? distractores(b, 1, [a], empiezaIgualQue(a), cercaniaDe((x) => primeraSilaba(x) !== primeraSilaba(a), c.nivel))[0]
-      : distractores(b, 1, [a], (x) => conSonidoInicial(x) && inicial(x) !== inicial(a), cercaniaDe((x) => silabaFinal(x) === silabaFinal(a), c.nivel))[0]
+      : distractores(b, 1, [a], (x) => conSonidoInicial(x) && inicialSuena(x) !== inicialSuena(a), cercaniaDe((x) => finalSuena(x) === finalSuena(a), c.nivel))[0]
     const [ia, ib] = [inicial(a), inicial(otra)]
     return {
       tipo: 'elegir',
@@ -506,8 +511,8 @@ function mismoSonidoInicial(c: Contexto = {}): Ronda[] {
   const b = banco(c)
   return objetivos(b, RONDAS, conPareja).map((w) => {
     const correcta = distractores(b, 1, [w], empiezaIgualQue(w))[0]
-    const rima = (x: Palabra) => silabaFinal(x) === silabaFinal(w) || silabaFinal(x) === silabaFinal(correcta)
-    const otras = distractores(b, otrasDe(c), [w, correcta], (x) => inicial(x) !== inicial(w), cercaniaDe(rima, c.nivel))
+    const rima = (x: Palabra) => finalSuena(x) === finalSuena(w) || finalSuena(x) === finalSuena(correcta)
+    const otras = distractores(b, otrasDe(c), [w, correcta], (x) => inicialSuena(x) !== inicialSuena(w), cercaniaDe(rima, c.nivel))
     return {
       tipo: 'elegir',
       item: MAYUS(inicial(w)),
@@ -551,7 +556,7 @@ function escribeVocal(c: Contexto = {}): Ronda[] {
       v,
       `${w.texto}. Escribe la vocal con que empieza ${w.texto}.`,
       `¡Casi! Escucha bien: ${w.texto}. ¡Otra vez!`,
-      '¡Si! Muy bien.',
+      '¡Sí! Muy bien.',
       'AEIOU',
     )
   })

@@ -8,8 +8,8 @@ Ejemplos:
   mamá        -> mama.png
   zanahoria   -> zanahoria.png
 
-ImagenNino busca primero las URLs configuradas en la imagen (foto o pictograma,
-segun el modo del estudiante), despues este archivo local y finalmente muestra
+ImagenNino busca primero las URLs configuradas en la imagen (pictograma y luego
+foto), despues este archivo local y finalmente muestra
 el emoji de respaldo. Si la imagen no existe o no carga, pasa a la siguiente
 opcion.
 

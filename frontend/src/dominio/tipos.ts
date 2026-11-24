@@ -4,7 +4,6 @@ import type { Categoria } from '../contenido/actividades.ts'
 import type { EspacioOpcional } from '../contenido/tienda.ts'
 import type { Tema } from '../contenido/temas.ts'
 
-export type ModoImagen = 'foto' | 'picto' | 'mixto'
 export type TamanoLetra = 'normal' | 'grande' | 'muy-grande'
 export type Emocion = 'alegria' | 'calma' | 'tristeza' | 'enojo'
 // «estaciones»: el fondo cambia solo con la estación del año (contenido/estaciones.ts).
@@ -29,7 +28,6 @@ export interface Curso {
 
 // RF-21: ajustes que se aplican solos al entrar el estudiante.
 export interface Ajustes {
-  modoImagen: ModoImagen
   tamanoLetra: TamanoLetra
   altoContraste: boolean
   reducirAnimaciones: boolean
@@ -65,8 +63,6 @@ export interface Estudiante {
   color: string
   fotoUrl?: string
   activo: boolean
-  // RF-09 / RF-15: nivel más alto habilitado por avance o por la docente.
-  nivelHabilitado: Nivel
   monedas: number
   personaje?: Personaje
   ajustes: Ajustes
@@ -279,7 +275,7 @@ export interface MiembroParque {
 }
 
 export interface DatosParque {
-  // Nombre secreto del canal de esta sala; null si el alumno ya no está en un playground.
+  // Nombre secreto del canal de esta sala; null si el alumno ya no está en un recreo con parque.
   canal: string | null
   miembros: MiembroParque[]
 }

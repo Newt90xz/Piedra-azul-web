@@ -94,11 +94,17 @@ const aEstudiante = (f: FilaEstudiante): Estudiante => ({
   color: f.color,
   fotoUrl: f.foto_url ?? undefined,
   activo: f.activo,
-  nivelHabilitado: f.nivel_habilitado as Nivel,
   monedas: f.monedas,
   personaje: aPersonaje(f.personaje),
-  ajustes: { ...AJUSTES_POR_DEFECTO, ...(f.ajustes as Partial<Ajustes>) },
+  ajustes: ajustesDe(f.ajustes),
 })
+
+// Las claves que la app ya no usa (modoImagen) se descartan: así desaparecen
+// de la base la próxima vez que se guarda el perfil.
+function ajustesDe(guardados: unknown): Ajustes {
+  const { modoImagen: _, ...resto } = (guardados ?? {}) as Partial<Ajustes> & { modoImagen?: unknown }
+  return { ...AJUSTES_POR_DEFECTO, ...resto }
+}
 
 // `monedas` no se envía: solo la suma el trigger al guardar un resultado (RF-25).
 const aFila = (e: Omit<Estudiante, 'id' | 'monedas'>) => ({
@@ -108,7 +114,6 @@ const aFila = (e: Omit<Estudiante, 'id' | 'monedas'>) => ({
   color: e.color,
   foto_url: e.fotoUrl ?? null,
   activo: e.activo,
-  nivel_habilitado: e.nivelHabilitado,
   personaje: (e.personaje ?? null) as unknown as Json,
   ajustes: { ...e.ajustes },
 })

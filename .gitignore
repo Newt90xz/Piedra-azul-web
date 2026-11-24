@@ -11,3 +11,6 @@ test-results/
 
 # Frases de voz generadas en tiempo real (backend)
 .cache-voz/
+
+# Archivos de bloqueo de Word/Excel
+~$*

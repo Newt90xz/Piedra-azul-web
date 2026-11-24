@@ -136,7 +136,6 @@ export interface Repositorio {
 export type NuevoEstudiante = Omit<Estudiante, 'id' | 'monedas'>
 
 export const AJUSTES_POR_DEFECTO: Ajustes = {
-  modoImagen: 'mixto',
   tamanoLetra: 'normal',
   altoContraste: false,
   reducirAnimaciones: false,
